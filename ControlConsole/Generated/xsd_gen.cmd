@@ -1,1 +1,0 @@
-xsd C:\Work\DeviceConfigurationSchema.xsd /f /c /order /out:C:\Work /namespace:PE.ControlConsole.Generated
