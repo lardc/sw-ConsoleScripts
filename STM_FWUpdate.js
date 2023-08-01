@@ -437,3 +437,20 @@ function FWU_RestoreIGTU()
 	dev.Restore("../../hw-IGTUControlBoard/Firmware/Release/IGTUControlBoard.regdump");
 }
 //------------------------
+
+// LCSU
+function FWU_LCSU()
+{
+	FWUpdateSTM("../../hw-LCSUControlBoard/Firmware/Release/LCSUControlBoard.binary");
+}
+
+function FWU_DumpLCSU()
+{
+	dev.Dump("../../hw-LCSUControlBoard/Firmware/LCSUControlBoard.regdump", 0, 126);
+}
+
+function FWU_RestoreLCSU()
+{
+	dev.Restore("../../hw-LCSUControlBoard/Firmware/LCSUControlBoard.regdump");
+}
+//------------------------
