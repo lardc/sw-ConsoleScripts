@@ -100,7 +100,7 @@ cdvdt_HVProbeScale = "1000"
 cdvdt_SelectedRange = cdvdt_def_NO_RANGE;
 cdvdt_DeviderRate = 1;
 cdvdt_def_UseAverage = cdvdt_AVERAGES_4;
-CdVdt_Init(1, 3, 1);
+CdVdt_Init(1,4,1);
 dev.nid(7);
 CdVdt_CellCalibrateRateA([1]);
 
@@ -114,14 +114,16 @@ cdvdt_Vmin = 500;
 cdvdt_Vmax = 4400;
 cdvdt_Vstp = 500;
 cdvdt_def_UseHandMeasure = 0;
-CdVdt_Init(1,3,1);
+CdVdt_Init(1,4,1);
 dev.nid(7);
 
 CdVdt_CollectFixedRate(1); 
-CdVdt_SaveA(“500_4400_verify”);
+CdVdt_SaveA(“dvdt_000”);
 
 
-
-
-
+// Отладка в комплексе
+dev.co(1)
+dev.nid(1)
+dev.c(115)
+dev.nid(7)
 
