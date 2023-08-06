@@ -77,8 +77,7 @@ cbvt_Iterations = 3;
 cbvt_RangeV = 1;
 cbvt_VminAC = 200;
 cbvt_VmaxAC = 999;
-cbvt_VstpAC = (cbvt_VmaxAC - cbvt_VminAC) / 9;
-cbvt_StartVLow = 100;
+cbvt_Points = 10;
 CBVT_Init(11,5,1,2);
 //dev.nid(4);
 
@@ -94,8 +93,7 @@ cbvt_Iterations = 3;
 cbvt_RangeV = 2;
 cbvt_VminAC = 1000;
 cbvt_VmaxAC = 8000;
-cbvt_VstpAC = (cbvt_VmaxAC - cbvt_VminAC) / 9;
-cbvt_StartVLow = 100;
+cbvt_Points = 10;
 CBVT_Init(11,5,1,2);
 //dev.nid(4);
 
@@ -108,10 +106,10 @@ CBVT_CalibrateV();
 / [P0: 118] [P1: 113] [P2: 112]
 i("CalBVT.js");
 cbvt_Iterations = 3;
-cbvt_SelI0 = 1;
-cbvt_UseMicroAmps = 1;
+cbvt_RangeI = 0;
 cbvt_VmaxAC = 5370; 
 cbvt_VminAC = 130;
+cbvt_Points = 10;
 cbvt_StartVLow = 100;
 cbvt_R = 1005600;
 cbvt_Shunt = 5600;
@@ -129,9 +127,9 @@ CBVT_CalibrateI();
 i("CalBVT.js");
 cbvt_Iterations = 3;
 cbvt_RangeI = 1;
-cbvt_UseMicroAmps = 1;
 cbvt_VmaxAC = 6700; 
 cbvt_VminAC = 1170;
+cbvt_Points = 10;
 cbvt_StartVLow = 100;
 cbvt_R = 220100;
 cbvt_Shunt = 100;
@@ -149,9 +147,9 @@ CBVT_CalibrateI();
 i("CalBVT.js");
 cbvt_Iterations = 3;
 cbvt_RangeI = 1;
-cbvt_UseMicroAmps = 1;
 cbvt_VmaxAC = 6700; 
 cbvt_VminAC = 115;
+cbvt_Points = 10;
 cbvt_StartVLow = 100;
 cbvt_R = 220100;
 cbvt_Shunt = 100;
@@ -169,19 +167,19 @@ CBVT_CalibrateI();
 i("CalBVT.js");
 cbvt_Iterations = 3;
 cbvt_RangeI = 2;
-cbvt_UseMicroAmps = 1;
 cbvt_VmaxAC = 6800; 
 cbvt_VminAC = 710;
+cbvt_Points = 10;
 cbvt_StartVLow = 300;
-cbvt_RP = 22010;
-cbvt_ShuntP = 10;
+cbvt_R = 22010;
+cbvt_Shunt = 10;
 bvt_test_time = 3000;
 CBVT_Init(11,5,1,2);
 //dev.nid(4);
 
-CBVT_VerifyIP();
+CBVT_VerifyI();
 
-CBVT_CalibrateIP();
+CBVT_CalibrateI();
 
 
 БЛОК BVT HP DC. Функционал DC

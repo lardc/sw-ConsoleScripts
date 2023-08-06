@@ -1,5 +1,5 @@
 // Пояснения
-CAL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channelSync);
+CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channelSync);
 LSLH_StartMeasure(Current);
 
 // Посмотреть версию прошивки
@@ -33,66 +33,68 @@ LSLH_StartMeasure(200);
 / (Offset: 2) (K: 3)
 / [P0: 4] [P1: 5] [P2: 6]
 i("CalLSL.js");
-cal_ItmMin = [400, 1351];
-cal_ItmMax = [1349, 12600];
-cal_Rshunt = 750;
-cal_CurrentRange = 0;
-cal_UseAvg = 0;
-cal_Iterations = 1;
-CAL_Init(8,9,1,2,3);
+clsl_ItmMin = 160
+clsl_ItmMax = 299
+clsl_Points = 10;
+clsl_Rshunt = 750;
+clsl_CurrentRange = 0;
+clsl_UseAvg = 0;
+clsl_Iterations = 1;
+CLSL_Init(8,9,1,2,3);
 
-CAL_VerifyItm();
+CLSL_VerifyItm();
 
-CAL_CalibrateItm();
+CLSL_CalibrateItm();
 
 // 1 диапазон 301 - 1500А
 / (Offset: 7) (K: 8)
 / [P0: 9] [P1: 10] [P2: 11]
 i("CalLSL.js");
-cal_ItmMin = [400, 1351];
-cal_ItmMax = [1349, 12600];
-cal_Rshunt = 250;
-cal_CurrentRange = 1;
-cal_Iterations = 1;
-cal_UseAvg = 0;
-CAL_Init(8,9,1,2,3);
+clsl_ItmMin = 301
+clsl_ItmMax = 1500
+clsl_Points = 10;
+clsl_Rshunt = 250;
+clsl_CurrentRange = 1;
+clsl_Iterations = 1;
+clsl_UseAvg = 0;
+CLSL_Init(8,9,1,2,3);
 
-CAL_VerifyItm();
+CLSL_VerifyItm();
 
-CAL_CalibrateItm();
+CLSL_CalibrateItm();
 
 // Задание тока 160-1500А
 / (Offset: ) (K: )
 / [P0: 41] [P1: 42] [P2: 43]
 i("CalLSL.js");
-cal_IsetMin = 400;	
-cal_IsetMax = 12600;
-cal_IsetStp = (cal_IsetMax - cal_IsetMin) / cal_Points;
-cal_Rshunt = 250;
-cal_CurrentRange = 0;
-cal_Iterations = 1;
-cal_UseAvg = 0;
-CAL_Init(8,9,1,2,3);
+clsl_ItmMin = 160;	
+clsl_ItmMax = 1500;
+clsl_Points = 10;
+clsl_Rshunt = 250;
+clsl_Iterations = 1;
+clsl_UseAvg = 0;
+CLSL_Init(8,9,1,2,3);
 
-CAL_VerifyIset();
+CLSL_VerifyIset();
 
-CAL_CalibrateIset();
+CLSL_CalibrateIset();
 
 // Напряжение 0.5 - 5В
 / (Offset: 12) (K: 13)
 / [P0: 14] [P1: 15] [P2: 16]
 i("CalLSL.js");
-cal_UtmMin = 500;
-cal_UtmMax = 4000;
-cal_Rload = 1300; // 0.22/66*1000000
-cal_CurrentRange = 0;
-cal_Iterations = 5;
-cal_UseAvg = 0;
-CAL_Init(8,9,1,2,3);
+clsl_UtmMin = 500;
+clsl_UtmMax = 4000;
+clsl_Points = 10;
+clsl_Rload = 1300; // 0.22/66*1000000
+clsl_CurrentRange = 0;
+clsl_Iterations = 5;
+clsl_UseAvg = 0;
+CLSL_Init(8,9,1,2,3);
 
-CAL_VerifyUtm();
+CLSL_VerifyUtm();
 
-CAL_CalibrateUtm();
+CLSL_CalibrateUtm();
 
 /// Управление напряжением 1 - 10В
 // Регистры измерения ADC
@@ -102,15 +104,16 @@ CAL_CalibrateUtm();
 / (Offset: 50) (K: 51)
 / [P0: 52] [P1: 53] [P2: 54]
 i("CalLSL.js");
-cal_UgMin = 1000;	
-cal_UgMax = 10000;
-cal_Iterations = 1;
-cal_UseAvg = 0;
-CAL_Init(1,2,1,2,3);
+clsl_UgMin = 1000;	
+clsl_UgMax = 10000;
+clsl_Points = 10;
+clsl_Iterations = 1;
+clsl_UseAvg = 0;
+CLSL_Init(1,2,1,2,3);
 
-CAL_VerifyUg();
+CLSL_VerifyUg();
 
-CAL_CalibrateUg();
+CLSL_CalibrateUg();
 
 /// Управление током 0.1 - 1А
 // Регистры измерения ADC
@@ -120,14 +123,15 @@ CAL_CalibrateUg();
 / (Offset: 55) (K: 56)
 / [P0: 57] [P1: 58] [P2: 59]
 i("CalLSL.js");
-cal_IgMin = 100;	
-cal_IgMax = 950;
-cal_GateRshunt = 9890;
-cal_Iterations = 1;
-cal_UseAvg = 0;
-CAL_Init(1,2,1,2,3);
+clsl_IgMin = 100;
+clsl_IgMax = 950;
+clsl_Points = 10;
+clsl_GateRshunt = 9890;
+clsl_Iterations = 1;
+clsl_UseAvg = 0;
+CLSL_Init(1,2,1,2,3);
 
-CAL_VerifyIg();
+CLSL_VerifyIg();
 
-CAL_CalibrateIg();
+CLSL_CalibrateIg();
 

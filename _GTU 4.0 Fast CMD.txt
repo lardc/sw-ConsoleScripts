@@ -1,5 +1,5 @@
 // Пояснения
-CGTU_Init(portGate, portTek, channelMeasureGate, channelMeasurePower, channelSync);
+CGTU_Init(portGate, portTek, channelMeasure, channelSync);
 GTU_All(Num, Pause);
 GTU_PulseVd(Voltage); //  in mV
 GTU_PulseId(Current); //  in mA
@@ -51,13 +51,14 @@ GTU_ResourceTest(3000);
 / (Offset: 109) (K: 108)
 / [P0: 107] [P1: 106] [P2: 105]
 i("CalGTU_4.0.js");
-cgtu_ResGate = 19.76;
+cgtu_Res = 19.76;
 cgtu_Imax = 100;
 cgtu_Imin = 10;
-cgtu_Istp = (cgtu_Imax - cgtu_Imin) / 8;
+cgtu_Points = 10;
+cgtu_RangeIgt = 0;
 cgtu_Iterations = 3;
 cgtu_UseAvg = 1;
-CGTU_Init(12,14,1,2,3);
+CGTU_Init(12,14,1,3);
 CGTU_VerifyIGate();
 
 /// Igt 50 - 1000мА
@@ -68,13 +69,14 @@ CGTU_VerifyIGate();
 / (Offset: 51) (K: 50)
 / [P0: 49] [P1: 48] [P2: 47]
 i("CalGTU_4.0.js");
-cgtu_ResGate = 9.83;
+cgtu_Res = 9.83;
 cgtu_Imax = 600;
 cgtu_Imin = 50;
-cgtu_Istp = (cgtu_Imax - cgtu_Imin) / 8;
 cgtu_Iterations = 3;
+cgtu_Points = 10;
+cgtu_RangeIgt = 0;
 cgtu_UseAvg = 0;
-CGTU_Init(12,14,1,1,3);
+CGTU_Init(12,14,1,3);
 CGTU_CalibrateIGate();
 
 CGTU_VerifyIGate();
@@ -87,12 +89,12 @@ CGTU_VerifyIGate();
 / (Offset: 46) (K: 45)
 / [P0: -] [P1: -] [P2: -]
 i("CalGTU_4.0.js");
-cgtu_Vgmax = 5000;
-cgtu_Vgmin = 500;
-cgtu_Vgstp = (cgtu_Vgmax - cgtu_Vgmin) / 8;
+cgtu_Vmax = 5000;
+cgtu_Vmin = 500;
+cgtu_Points = 10;
 cgtu_Iterations = 3;
 cgtu_UseAvg = 0;
-CGTU_Init(12,14,1,1,3);
+CGTU_Init(12,14,1,3);
 CGTU_CalibrateVGate();
 
 CGTU_VerifyVGate();
@@ -105,13 +107,13 @@ CGTU_VerifyVGate();
 / (Offset: 44) (K: 43)
 / [P0: 42] [P1: 41] [P2: 40]
 i("CalGTU_4.0.js");
-cgtu_ResPower = 9.87;
+cgtu_Res = 9.87;
 cgtu_Imax = 1000;
 cgtu_Imin = 50;
-cgtu_Istp = (cgtu_Imax - cgtu_Imin) / 8;
+cgtu_Points = 10;
 cgtu_Iterations = 3;
 cgtu_UseAvg = 0;
-CGTU_Init(12,14,1,1,3);
+CGTU_Init(12,14,1,3);
 CGTU_CalibrateIPower();
 
 CGTU_VerifyIPower();
@@ -124,12 +126,12 @@ CGTU_VerifyIPower();
 / (Offset: 39) (K: 38)
 / [P0: -] [P1: -] [P2: -]
 i("CalGTU_4.0.js");
-cgtu_Vdmax = 12000;
-cgtu_Vdmin = 12000;
-cgtu_Vdstp = (cgtu_Vdmax - cgtu_Vdmin) / 8;
+cgtu_Vmax = 12000;
+cgtu_Vmin = 12000;
+cgtu_Points = 10;
 cgtu_Iterations = 3;
 cgtu_UseAvg = 0;
-CGTU_Init(12,14,1,1,3);
+CGTU_Init(12,14,1,3);
 CGTU_CalibrateVPower();
 
 CGTU_VerifyVPower();
