@@ -24,7 +24,7 @@ cfdvdt_def_UseAverage = cfdvdt_AVERAGES_4;
 cfdvdt_RatePoint = [20, 50, 100, 200];
 
 // Definition range config
-cfdvdt_def_NO_RANGE = 3;
+cfdvdt_def_NO_RANGE = 3; 		// for compibility old pcb
 cfdvdt_def_SetpointStartAddr = {}
 cfdvdt_def_SetpointStartAddr[cfdvdt_def_NO_RANGE] = 20;
 //
@@ -380,7 +380,7 @@ function fdVdt_StartDebugTek2(portTek)
 	TEK_Send("measurement:meas4:source ch" + 4);
 	TEK_Send("measurement:meas4:type maximum");
 
-	TEK_TriggerInit(1, (520 / 2));
+	TEK_TriggerInit(1, (320 / 2));
 
 	TEK_Horizontal("5e-6", "20e-6");
 

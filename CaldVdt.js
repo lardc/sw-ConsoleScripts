@@ -325,7 +325,7 @@ function CdVdt_CellCalibrateRate(CellNumber)
 		
 		if (anykey()) return 1;
 	}
-	scattern(GateSetpointV, cfdvdt_ratesc, "Gate voltage (in mV)", "Rate voltage (in V/us)", "Проверка на линейную зависимость параметров");
+	scattern(GateSetpointV, cdvdt_ratesc, "Gate voltage (in mV)", "Rate voltage (in V/us)", "Проверка на линейную зависимость параметров");
 	// Power disable cell
 	sleep(3000);
 	dVdt_CellCall(CellNumber, 2);
@@ -477,7 +477,7 @@ function CdVdt_CollectFixedRate(Repeat)
 				dVdt_err = ((rate - cdvdt_RatePoint[i]) / cdvdt_RatePoint[i] * 100).toFixed(1);
 				V_err = ((v - VoltageArray[k]) / VoltageArray[k] * 100).toFixed(1)
 
-				print("  " + cdvdt_RatePoint[i] + (cdvdt_RatePoint[i] < 100 ? " " : "") + "  | " + rate + (rate < 100 ? " " : "") + " | " + (dVdt_err >= 0 ? " " : "") + dVdt_err + (Math.abs(dVdt_err) < 10 ? " " : "") + " | " + VoltageArray[k] + (VoltageArray[k] < 1000 ? " " : "") + "  | " + v + (v < 1000 ? " " : "") + "  |  " + (V_err >= 0 ? " " : "") + V_err);
+				print("  " + cdvdt_RatePoint[i] + (cdvdt_RatePoint[i] < 100 ? " " : "") + (cdvdt_RatePoint[i] < 1000 ? " " : "") + " | " + rate + (rate < 100 ? " " : "") + (rate < 1000 ? " " : "") + "| " + (dVdt_err >= 0 ? " " : "") + dVdt_err + (Math.abs(dVdt_err) < 10 ? " " : "") + " |  " + VoltageArray[k] + (VoltageArray[k] < 100 ? " " : "") + (VoltageArray[k] < 1000 ? " " : "") + " | " + v + (v < 100 ? " " : "") + (v < 1000 ? " " : "") + "  | " + (V_err >= 0 ? " " : "") + V_err);
 
 				//print("dV/dt set, V/us: " + cdvdt_RatePoint[i]);
 				//print("dV/dt osc, V/us: " + rate);
