@@ -35,9 +35,8 @@ cal_V_Vset			= 4
 cal_I_Iset			= 5
 cal_I_Vco			= 6
 cal_I_Vneg			= 7
-cal_I_Vmeas			= 8
 	
-cal_CalibrationType = cal_I_Vmeas
+cal_CalibrationType = cal_I_Vneg
 
 // Calibration points
 //
@@ -172,7 +171,6 @@ function CAL_I_Process(Calibration)
 			Xmax = cal_I_Ihigh
 			break
 			
-		case cal_I_Vmeas:
 		case cal_I_Vco:
 		case cal_I_Vneg:
 			Xmin = cal_I_Vlow;
@@ -213,30 +211,27 @@ function CAL_Collect(SetpointValues, IterationsCount)
 			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --")
 			//
 			
-			if(cal_CalibrationType != cal_I_Vmeas)
+			switch(cal_CalibrationType)
 			{
-				switch(cal_CalibrationType)
-				{
-					case cal_I_Vco:
-					case cal_I_Vneg:
-					case cal_V_Vmeas:
-					case cal_V_Vset:
-						KEI_SetVoltageRange(SetpointValues[j] * 1.2)
-						break
-						
-					case cal_V_Imeas_R0:			
-					case cal_V_Imeas_R1:			
-					case cal_V_Imeas_R2:
-						KEI_SetCurrentRange(SetpointValues[j] / cal_V_Rext[cal_CalibrationType] * 1.2)
-						break;
-						
-					case cal_I_Iset:
-						KEI_SetCurrentRange(SetpointValues[j] / 1000 * 1.2)
-						break
-				}
-				KEI_ActivateTrigger()
-				sleep(500)
+				case cal_I_Vco:
+				case cal_I_Vneg:
+				case cal_V_Vmeas:
+				case cal_V_Vset:
+					KEI_SetVoltageRange(SetpointValues[j] * 1.2)
+					break
+					
+				case cal_V_Imeas_R0:			
+				case cal_V_Imeas_R1:			
+				case cal_V_Imeas_R2:
+					KEI_SetCurrentRange(SetpointValues[j] / cal_V_Rext[cal_CalibrationType] * 1.2)
+					break;
+					
+				case cal_I_Iset:
+					KEI_SetCurrentRange(SetpointValues[j] / 1000 * 1.2)
+					break
 			}
+			KEI_ActivateTrigger()
+			sleep(500)
 			
 			switch(cal_CalibrationType)
 			{
@@ -267,7 +262,6 @@ function CAL_Collect(SetpointValues, IterationsCount)
 					print("Iset,    mA: " + SetpointValues[j])
 					break
 					
-				case cal_I_Vmeas:
 				case cal_I_Vco:
 				case cal_I_Vneg:
 					dev.wf(140, SetpointValues[j])
@@ -294,18 +288,52 @@ function CAL_Collect(SetpointValues, IterationsCount)
 					print("Uread,   V: " + Uread)
 
 					// Relative error
-					var Uerr = ((Uread - KEIData) / KEIData * 100).toFixed(2)
-					cal_Err.push(Uerr)
-					print("Uerr,    %: " + Uerr)
+					var Verr = ((Uread - KEIData) / KEIData * 100).toFixed(2)
+					cal_Err.push(Verr)
+					print("Verr,    %: " + Verr)
 					break
 					
-				case cal_I_Vco:
-				case cal_I_Vneg:
+				case cal_I_Vco:					
+					var Vco = dev.rf(210)
+					cal_V.push(Vco)
+					print("Vco,   V: " + Vco)
+					
+					var KEIData = KEI_ReadAverage()
+					cal_KEIData.push(KEIData)
+					print("KEI,     V: " + KEIData)
+
+					// Relative error
+					var Verr = ((Vco - SetpointValues[j]) / SetpointValues[j] * 100).toFixed(2)
+					cal_Err.push(Verr)
+					print("VcoErr,    %: " + Verr)
+					
+					var VsetErr = ((KEIData - SetpointValues[j]) / SetpointValues[j] * 100).toFixed(2)
+					cal_SetErr.push(VsetErr)
+					print("VsetErr, %: " + VsetErr)
+					break
+					
+				case cal_I_Vneg:					
+					var Vneg = dev.rf(211)
+					cal_V.push(Vneg)
+					print("Vneg,  V: " + Vneg)
+					
+					var KEIData = KEI_ReadAverage()
+					KEIData = KEIData * (-1)
+					cal_KEIData.push(KEIData)
+					print("KEI,     V: " + KEIData)
+
+					// Relative error
+					var Verr = ((Vneg - SetpointValues[j]) / SetpointValues[j] * 100).toFixed(2)
+					cal_Err.push(Verr)
+					print("VnegErr,    %: " + Verr)
+					
+					var VsetErr = ((KEIData - SetpointValues[j]) / SetpointValues[j] * 100).toFixed(2)
+					cal_SetErr.push(VsetErr)
+					print("VsetErr, %: " + VsetErr)
+					break
+					
 				case cal_V_Vset:
 					var KEIData = KEI_ReadAverage()
-					
-					if(KEIData < 0)
-						KEIData = KEIData * (-1)
 					cal_KEIData.push(KEIData)
 					print("KEI,     V: " + KEIData)
 				
@@ -339,26 +367,6 @@ function CAL_Collect(SetpointValues, IterationsCount)
 						print("IsetErr,  %: " + IsetErr)
 					}
 					break;
-					
-				case cal_I_Vmeas:					
-					var Uco = dev.rf(210)
-					cal_V.push(Uco)
-					print("Uco,   V: " + Uco)
-					
-					Setpoint.push((-1) * SetpointValues[j])
-					var Uneg = dev.rf(211)
-					cal_V.push(Uneg)
-					print("Uneg,  V: " + Uneg)
-
-					// Relative error
-					var Uerr = ((Uco - SetpointValues[j]) / SetpointValues[j] * 100).toFixed(2)
-					cal_Err.push(Uerr)
-					print("UcoErr,    %: " + Uerr)
-
-					Uerr = ((Uneg - (-1) * SetpointValues[j]) / ((-1) * SetpointValues[j]) * 100).toFixed(2)
-					cal_Err.push(Uerr)
-					print("UnegErr,    %: " + Uerr)
-					break
 			}			
 
 			print("--------------------")
@@ -379,10 +387,11 @@ function CAL_PlotGraph()
 		case cal_V_Vmeas:
 			scattern(cal_KEIData, cal_Err, "Voltage (in V)", "Error (in %)", "Voltage relative error")
 			break
-			
-		case cal_V_Vset:
+		
 		case cal_I_Vco:
 		case cal_I_Vneg:
+			scattern(Setpoint, cal_Err, "Voltage (in V)", "Error (in %)", "Voltage relative error")
+		case cal_V_Vset:
 			scattern(Setpoint, cal_SetErr, "Voltage (in V)", "Error (in %)", "Set voltage relative error")
 			break
 			
@@ -395,10 +404,6 @@ function CAL_PlotGraph()
 		case cal_I_Iset:
 			scattern(Setpoint, cal_SetErr, "Current (in mA)", "Error (in %)", "Set current relative error")
 			scattern(cal_KEIData, cal_Err, "Current (in mA)", "Error (in %)", "Current relative error")
-			break
-			
-		case cal_I_Vmeas:
-			scattern(Setpoint, cal_Err, "Voltage (in V)", "Error (in %)", "Voltage relative error")
 			break
 	}
 }
@@ -456,18 +461,27 @@ function CAL_CalculateCorrection(Calibration)
 				break
 				
 			case cal_I_Vco:
+				Reg = [40,41,42]		// [P2, P1, P0]
+				cal_Corr = CGEN_GetCorrection2("IGTU_V")
+				CAL_SetCoef(Reg, cal_Corr)
+				p('Voltage set coefficients:')
+				CAL_PrintCoef(Reg)
+				p('')
+				
 				Reg = [30,31,32]		// [P2, P1, P0]
 				cal_Corr = CGEN_GetCorrection2("IGTU_Vset")
 				break
 				
 			case cal_I_Vneg:
+				Reg = [79,80,81]		// [P2, P1, P0]
+				cal_Corr = CGEN_GetCorrection2("IGTU_V")
+				CAL_SetCoef(Reg, cal_Corr)
+				p('Voltage set coefficients:')
+				CAL_PrintCoef(Reg)
+				p('')
+				
 				Reg = [35,36,37]		// [P2, P1, P0]
 				cal_Corr = CGEN_GetCorrection2("IGTU_Vset")
-				break
-				
-			case cal_I_Vmeas:
-				Reg = [40,41,42]		// [P2, P1, P0]
-				cal_Corr = CGEN_GetCorrection2("IGTU_V")
 				break
 		}
 		
@@ -512,15 +526,13 @@ function CAL_ResetCalibration(Calibration)
 				break
 				
 			case cal_I_Vco:
+				CAL_SetCoef([40,41,42], Data)	// [P2, P1, P0]
 				CAL_SetCoef([30,31,32], Data)	// [P2, P1, P0]	
 				break
 				
 			case cal_I_Vneg:
+				CAL_SetCoef([79,80,81], Data)	// [P2, P1, P0]
 				CAL_SetCoef([35,36,37], Data)	// [P2, P1, P0]	
-				break
-				
-			case cal_I_Vmeas:
-				CAL_SetCoef([40,41,42], Data)	// [P2, P1, P0]	
 				break
 		}
 	}
@@ -551,9 +563,10 @@ function CAL_Save()
 			CGEN_SaveArrays("IGTU_V", cal_V, cal_KEIData, cal_Err)
 			break
 			
-		case cal_V_Vset:
 		case cal_I_Vco:
 		case cal_I_Vneg:
+			CGEN_SaveArrays("IGTU_V", cal_V, Setpoint, cal_Err)
+		case cal_V_Vset:
 			CGEN_SaveArrays("IGTU_Vset", cal_KEIData, Setpoint, cal_SetErr)
 			break
 			
@@ -566,10 +579,6 @@ function CAL_Save()
 		case cal_I_Iset:
 			CGEN_SaveArrays("IGTU_I", cal_I, cal_KEIData, cal_Err)
 			CGEN_SaveArrays("IGTU_Iset", cal_KEIData, Setpoint, cal_SetErr)
-			break
-			
-		case cal_I_Vmeas:
-			CGEN_SaveArrays("IGTU_V", cal_V, Setpoint, cal_Err)
 			break
 	}
 }
