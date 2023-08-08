@@ -5,24 +5,25 @@ include("CalGeneral.js")
 
 // Voltage source
 //
-cal_V_PulsePlate 	= 4000 				// us
-cal_V_TriggerDelay	= 500e-6			// s
-cal_V_Ilow 			= [0.1, 2, 20]		// mA
-cal_V_Ihigh 		= [1, 20, 200]		// mA
-cal_V_Rint 			= [8600, 34, 34]	// Ohm
-cal_Vset_Low 		= 2;				// V
-cal_Vset_High 		= 30;				// V
-cal_Vmsr_Low 		= 2;				// V
-cal_Vmsr_High 		= 10;				// V
+cal_V_PulsePlate 	= 4000 					// us
+cal_V_TriggerDelay	= 500e-6				// s
+cal_V_Ilow 			= [0.1, 2, 20]			// mA
+cal_V_Ihigh 		= [1, 20, 200]			// mA
+cal_V_Rint 			= [8600, 34, 34]		// Ohm
+cal_V_Rext			= [11000, 1100, 100]	// Ohm
+cal_Vset_Low 		= 2;					// V
+cal_Vset_High 		= 30;					// V
+cal_Vmsr_Low 		= 2;					// V
+cal_Vmsr_High 		= 10;					// V
 
 // Current source
 //
-cal_I_PulsePlate 	= 250 				// us
-cal_I_TriggerDelay	= 330e-6			// s
-cal_I_Ilow			= 20				// mA
-cal_I_Ihigh			= 500				// mA
-cal_I_Vlow			= 0.5				// V
-cal_I_Vhigh			= 20				// V
+cal_I_PulsePlate 	= 100 					// us
+cal_I_TriggerDelay	= 480e-6				// s
+cal_I_Ilow			= 20					// mA
+cal_I_Ihigh			= 500					// mA
+cal_I_Vlow			= 2						// V
+cal_I_Vhigh			= 20					// V
 
 // Calibration types
 //
@@ -36,16 +37,12 @@ cal_I_Vco			= 6
 cal_I_Vneg			= 7
 cal_I_Vmeas			= 8
 	
-cal_CalibrationType = cal_I_Iset
+cal_CalibrationType = cal_I_Vmeas
 
 // Calibration points
 //
 cal_Points 			= 10
 cal_Iterations 		= 5
-
-// Load resistance
-//
-cal_Rload 			= 100				// Ohm
 //------------------------------------------
 
 // Counters
@@ -116,13 +113,24 @@ function CAL_V_Process(Calibration)
 		case cal_V_Imeas_R0:
 		case cal_V_Imeas_R1:
 		case cal_V_Imeas_R2:
-			Xmin = cal_V_Ilow[cal_CalibrationType] / 1000 * cal_Rload + cal_V_Rint[cal_CalibrationType] * cal_V_Ilow[cal_CalibrationType] / 1000
-			Xmax = cal_V_Ihigh[cal_CalibrationType] / 1000 * cal_Rload + cal_V_Rint[cal_CalibrationType] * cal_V_Ihigh[cal_CalibrationType] / 1000
+			Xmin = cal_V_Ilow[cal_CalibrationType] / 1000 * cal_V_Rext[cal_CalibrationType] + cal_V_Rint[cal_CalibrationType] * cal_V_Ilow[cal_CalibrationType] / 1000
+			Xmax = cal_V_Ihigh[cal_CalibrationType] / 1000 * cal_V_Rext[cal_CalibrationType] + cal_V_Rint[cal_CalibrationType] * cal_V_Ihigh[cal_CalibrationType] / 1000
 			
 			if(Xmin < cal_Vset_Low || Xmax > cal_Vset_High)
 			{
 				p("Wrong calibration parameters!")
 				return
+			}
+			else
+			{
+				p("Please connect load resistor " + cal_V_Rext[cal_CalibrationType] + " Ohm " + "and press y")
+				
+				var key
+				
+				while(key != "Y")
+				{
+					key = readline()
+				}
 			}
 			break
 			
@@ -219,7 +227,7 @@ function CAL_Collect(SetpointValues, IterationsCount)
 					case cal_V_Imeas_R0:			
 					case cal_V_Imeas_R1:			
 					case cal_V_Imeas_R2:
-						KEI_SetCurrentRange(SetpointValues[j] / cal_Rload * 1.2)
+						KEI_SetCurrentRange(SetpointValues[j] / cal_V_Rext[cal_CalibrationType] * 1.2)
 						break;
 						
 					case cal_I_Iset:
@@ -386,7 +394,7 @@ function CAL_PlotGraph()
 			
 		case cal_I_Iset:
 			scattern(Setpoint, cal_SetErr, "Current (in mA)", "Error (in %)", "Set current relative error")
-			scattern(cal_KEIData, cal_Err, "Current (in V)", "Error (in %)", "Current relative error")
+			scattern(cal_KEIData, cal_Err, "Current (in mA)", "Error (in %)", "Current relative error")
 			break
 			
 		case cal_I_Vmeas:
@@ -576,7 +584,7 @@ function CAL_V_SetCurrentRange()
 		case cal_V_Imeas_R0:
 		case cal_V_Imeas_R1:
 		case cal_V_Imeas_R2:
-			CurrentMax = Xmax / (cal_Rload + cal_V_Rint[cal_CalibrationType]) * 1000
+			CurrentMax = Xmax / (cal_V_Rext[cal_CalibrationType] + cal_V_Rint[cal_CalibrationType]) * 1000
 			
 		case cal_V_Vmeas:
 		case cal_V_Vset:
