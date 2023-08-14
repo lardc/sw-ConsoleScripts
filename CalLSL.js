@@ -1,6 +1,7 @@
 include("TestLSLH.js")
 include("Tektronix.js")
 include("CalGeneral.js")
+include("Numeric.js")
 
 // Calibration setup parameters
 clsl_Rshunt = 750;			// in uOhms
@@ -85,7 +86,7 @@ function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channe
 
 	// Init device port
 	dev.Disconnect();
-	dev.Connect(portDevice);
+	dev.co(portDevice);
 
 	// Init Tektronix port
 	TEK_PortInit(portTek);
@@ -955,4 +956,54 @@ function CLSL_ResetUgCal()
 {
 	CLSL_CalUg(0, 1, 0);
 	CLSL_CalUgSet(0, 1, 0);
+}
+
+// HMIU calibration
+function Measuring_Filter()
+{
+	allowedMeasuring = "TPS2000";
+	return allowedMeasuring;
+}
+
+function CSL_Initialize()
+{
+	clsl_chMeasureI = 1;
+	clsl_chMeasureU = 2;
+	clsl_chSync = 3;
+	for (var i = 1; i <= 4; i++) {
+		if ((i == clsl_chMeasureU) || (i == clsl_chMeasureI) || (i == clsl_chSync))
+			TEK_ChannelOn(i);
+		else
+			TEK_ChannelOff(i);
+	}
+	TEK_ChannelInit(clsl_chSync, "1", "1");
+	CLSL_TriggerInit(clsl_chSync);
+}
+
+function CSL_VerifyItm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+{
+	clsl_CurrentRange = rangeId;
+	clsl_ItmMin = rangeMin;
+	clsl_ItmMax = rangeMax;
+	clsl_Points = count;
+	clsl_Iterations = verificationCount;
+	clsl_Rshunt = resistance;
+	clsl_UseAvg = 0;
+	CSL_Initialize();
+	CLSL_VerifyIset();
+	return [clsl_IsetSc, clsl_Iset, clsl_IsetSc, clsl_IsetErr];
+}
+
+function CSL_VerifyVtm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+{
+	clsl_CurrentRange = rangeId;
+	clsl_UtmMin = rangeMin;
+	clsl_UtmMax = rangeMax;
+	clsl_Points = count;
+	clsl_Iterations = verificationCount;
+	clsl_Rload = resistance;
+	clsl_UseAvg = 0;
+	CSL_Initialize();
+	CLSL_VerifyUtm();
+	return [clsl_UtmSc, clsl_Utm, clsl_UtmSc, clsl_UtmErr];
 }
