@@ -1,6 +1,6 @@
-include("TestGTU_4.0.js")
 include("Tektronix.js")
 include("CalGeneral.js")
+include("Numeric.js")
 
 // Global definitions
 cgtu_CompatibleMode = 1; // GTU with SL = 1; for other GTU = 0
@@ -101,7 +101,7 @@ function CGTU_Init(portGate, portTek, channelMeasure, channelSync)
 
 	// Init GTU
 	dev.Disconnect();
-	dev.Connect(portGate);
+	dev.co(portGate);
 	
 	// Init Tektronix
 	TEK_PortInit(portTek);
@@ -400,7 +400,7 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 					case 110:	// VG
 						CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] / 1000);
 						//TEK_TriggerLevelF(cgtu_Values[j] / (1000 * 2));
-						sleep(1000);
+						sleep(2000);
 						
 						// Configure GTU
 						dev.w(130 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
@@ -410,7 +410,7 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 					case 111:	// IG
 						CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] * Resistance / 1000);
 						//TEK_TriggerLevelF(cgtu_Values[j] * Resistance / (580 * 2));
-						sleep(1000);
+						sleep(2000);
 						
 						// Configure GTU
 						dev.w(131 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
@@ -420,7 +420,7 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 					case 112:	// VD
 						CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] / 1000);
 						//TEK_TriggerLevelF(cgtu_Values[j] / (1000 * 2));
-						sleep(1000);
+						sleep(2000);
 						
 						// Configure GTU
 						dev.w(128 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
@@ -430,7 +430,7 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 					case 113:	// ID
 						CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] * Resistance / 1000);
 						//TEK_TriggerLevelF(cgtu_Values[j] * Resistance / (600 * 2));
-						sleep(1000);
+						sleep(2000);
 						
 						// Configure GTU
 						dev.w(129 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
@@ -478,11 +478,12 @@ function CGTU_Probe(ProbeCMD)
 	{
 		f = CGTU_Measure(cgtu_chMeasure);
 		var vgt = (dev.r(204) + dev.r(233) / 1000).toFixed(2);
-		var vgt_sc = f;
+		var vgt_sc = f.toFixed(2);
 		var vgt_set = dev.r(130 + (cgtu_CompatibleMode ? 3 : 0));
 		
 		// gtu data
 		cgtu_vgt.push(vgt);
+		cgtu_vgt_set.push(vgt_set);
 		// tektronix data
 		cgtu_vgt_sc.push(vgt_sc);
 		// relative error
@@ -605,8 +606,10 @@ function CGTU_TekCursor(Channel)
 
 function CGTU_TekScale(Channel, Value)
 {
-	Value = Value / 7;
-	TEK_Send("ch" + Channel + ":scale " + Value);
+	// 0.9 - use 90% of full range
+	// 8 - number of scope grids in full scale
+	var scale = (Value / (8 * 0.8));
+	TEK_Send("ch" + Channel + ":scale " + scale);
 }
 
 function CGTU_Measure(Channel)
@@ -857,4 +860,68 @@ function CGTU_ResetIPowerCal()
 {
 	CGTU_CalID(0, 1, 0);
 	CGTU_CalID_SET(0, 1, 0);
+}
+
+// HMIU calibration
+function Measuring_Filter()
+{
+	allowedMeasuring = "TPS2000";
+	return allowedMeasuring;
+}
+
+function CGTU_Initialize()
+{
+	channelMeasure = 1;
+	channelSync = 3;
+	TEK_ChannelInit(cgtu_chMeasure, "1", "1");
+	TEK_ChannelInit(cgtu_chSync, "1", "1");
+	TEK_TriggerPulseInit(cgtu_chSync, "2.5");
+	CGTU_TriggerTune();
+	TEK_Horizontal("1e-3", "-4e-3");
+	for (var i = 1; i <= 4; i++) {
+		if (i == cgtu_chMeasure || i == cgtu_chSync)
+			TEK_ChannelOn(i);
+		else
+			TEK_ChannelOff(i);
+	}
+	CGTU_TekCursor(cgtu_chMeasure);
+}
+
+function CGTU_VerifyIgt(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+{
+	cgtu_RangeIgt = rangeId;
+	cgtu_Imin = rangeMin;
+	cgtu_Imax = rangeMax;
+	cgtu_Points = count;
+	cgtu_Iterations = verificationCount;
+	cgtu_Res = resistance;
+	cgtu_UseAvg = 0;
+	CGTU_Initialize();
+	CGTU_VerifyIGate();
+	return [cgtu_igt_set, cgtu_igt, cgtu_igt_sc, cgtu_igt_set_err];
+}
+
+function CGTU_VerifyVgt(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+{
+	cgtu_Vmin = rangeMin;
+	cgtu_Vmax = rangeMax;
+	cgtu_Points = count;
+	cgtu_Iterations = verificationCount;
+	cgtu_UseAvg = 0;
+	CGTU_Initialize();
+	CGTU_VerifyVGate();
+	return [cgtu_vgt_set, cgtu_vgt, cgtu_vgt_sc, cgtu_vgt_err];
+}
+
+function CGTU_VerifyIh(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+{
+	cgtu_Imin = rangeMin;
+	cgtu_Imax = rangeMax;
+	cgtu_Points = count;
+	cgtu_Iterations = verificationCount;
+	cgtu_Res = resistance;
+	cgtu_UseAvg = 0;
+	CGTU_Initialize();
+	CGTU_VerifyIPower();
+	return [cgtu_id_set, cgtu_id, cgtu_id_sc, cgtu_id_set_err];
 }
