@@ -1,11 +1,16 @@
-include("TestBVT.js")
 include("Tektronix.js")
 include("CalGeneral.js")
+include("Numeric.js")
 
-p("New Scripts");
+print("Scripts CalBVT.js initialize");
+
 // Global definitions
 cbvt_VmaxAC = 8000;		// in V
 cbvt_VminAC = 1000;		// in V
+//
+cbvt_ImaxAC = 300;		// in mA * 10
+cbvt_IminAC = 5;		// in mA * 10
+//
 cbvt_Points = 10;
 
 cbvt_VoltageProbeRatio = 1000;	// Коэффициент деление пробника напряжения
@@ -49,12 +54,15 @@ cbvt_Vmax	= 0;
 cbvt_Vmin	= 0;
 cbvt_Vstp	= 0;
 
+cbvt_test_time = 1000;
+cbvt_pulse_sleep = 1000;
 // Counters
 cbvt_cntTotal = 0;
 cbvt_cntDone = 0;
 
 // Results storage
 cbvt_v = [];
+cbvt_v_set = [];
 cbvt_i = [];
 
 // Tektronix data
@@ -103,7 +111,7 @@ function CBVT_Init(portBVT, portTek, channelMeasureV, channelMeasureI)
 	
 	// Init BVT
 	dev.Disconnect();
-	dev.Connect(portBVT);
+	dev.co(portBVT);
 	
 	// Init Tektronix
 	TEK_PortInit(portTek);
@@ -178,8 +186,8 @@ function CBVT_VerifyV()
 
 function CBVT_CalibrateI()
 {
-	var Vmax = Math.round(CBVT_GetILim() * cbvt_R * 0.95 / 1000);
-	cbvt_Vmin = cbvt_VminAC;
+	var Vmax = Math.round((cbvt_ImaxAC / 10) * cbvt_R * 0.95 / 1000);
+	cbvt_Vmin = Math.round((cbvt_IminAC / 10) * cbvt_R * 1.05 / 1000);
 	cbvt_Vmax = (Vmax > cbvt_VmaxAC) ? cbvt_VmaxAC : Vmax;
 	cbvt_Vstp = Math.round((cbvt_Vmax - cbvt_Vmin) / (cbvt_Points - 1));
 	
@@ -212,8 +220,8 @@ function CBVT_CalibrateI()
 
 function CBVT_VerifyI()
 {
-	var Vmax = Math.round(CBVT_GetILim() * cbvt_R * 0.95 / 1000);
-	cbvt_Vmin = cbvt_VminAC;
+	var Vmax = Math.round((cbvt_ImaxAC / 10) * cbvt_R * 0.95 / 1000);
+	cbvt_Vmin = Math.round((cbvt_IminAC / 10) * cbvt_R * 1.05 / 1000);
 	cbvt_Vmax = (Vmax > cbvt_VmaxAC) ? cbvt_VmaxAC : Vmax;
 	cbvt_Vstp = Math.round((cbvt_Vmax - cbvt_Vmin) / (cbvt_Points - 1));
 
@@ -374,7 +382,7 @@ function CBVT_Collect(VoltageValues, IterationsCount, PrintMode)
 	// Global configuration
 	dev.w(128, 3);																// Test type - reverse pulse
 	dev.w(130, CBVT_GetILim() * 10);											// Current limit
-	dev.w(132, bvt_test_time);													// Plate time
+	dev.w(132, cbvt_test_time);													// Plate time
 	dev.w(133, 10);																// Rise rate
 	dev.w(136, Math.round(50 / ((cbvt_RangeI < 2) ? cbvt_Freq1 : cbvt_Freq2)));	// Frequency divisor
 	
@@ -526,7 +534,7 @@ function CBVT_MeasureIDC(Channel)
 function CBVT_Probe(PrintMode)
 {
 	dev.c(100);
-	while (dev.r(192) == 5) sleep(100);
+	while (dev.r(192) == 5) sleep(500);
 	
 	sleep(600);
 	var f_v = CBVT_MeasureV(cbvt_chMeasureV);
@@ -535,7 +543,10 @@ function CBVT_Probe(PrintMode)
 	var v = Math.abs(dev.rs(198));
 	var i = CBVT_ReadCurrent(cbvt_UseMicroAmps);
 
+	var v_set = dev.r(131);
+
 	cbvt_v.push(v.toFixed(0));
+	cbvt_v_set.push(v_set.toFixed(0));
 	cbvt_i.push(i.toFixed(3));
 	//
 	cbvt_v_sc.push(f_v.toFixed(0));
@@ -569,7 +580,7 @@ function CBVT_Probe(PrintMode)
 	if (PrintMode)
 		print("-- result " + cbvt_cntDone + " of " + cbvt_cntTotal + " --");
 	
-	sleep(bvt_pulse_sleep);
+	sleep(cbvt_pulse_sleep);
 }
 
 function CBVT_ProbeDC(PrintMode)
@@ -1177,4 +1188,79 @@ function CBVT_Correct2IDC(P2, P1, P0)
 			print("Incorrect I DC range.");
 			break;
 	}
+}
+
+// HMIU calibration
+function Measuring_Filter()
+{
+	allowedMeasuring = "TPS2000";
+	return allowedMeasuring;
+}
+
+function CBVT_Initialize()
+{
+	cbvt_chMeasureI = 2;
+	cbvt_chMeasureV = 1;
+	TEK_ChannelInit(cbvt_chMeasureV, cbvt_VoltageProbeRatio, "100");
+	TEK_ChannelInit(cbvt_chMeasureI, "1", "1");
+	for (var i = 1; i <= 4; i++) {
+		if (i == cbvt_chMeasureV || i == cbvt_chMeasureI)
+			TEK_ChannelOn(i);
+		else
+			TEK_ChannelOff(i);
+	}
+}
+
+function CBVT_VerifyIdrm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+{
+	cbvt_RangeI = rangeId;
+	cbvt_IminAC = rangeMin;
+	cbvt_ImaxAC = rangeMax;
+	cbvt_Points = count;
+	cbvt_Iterations = verificationCount;
+	cbvt_Shunt = resistance;
+	cbvt_R = 22010;
+	cbvt_test_time = 2000;
+	CBVT_Initialize();
+	CBVT_VerifyI();
+	return [cbvt_v_set, cbvt_i, cbvt_i_sc, cbvt_i_err];
+}
+
+function CBVT_VerifyVdrm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+{
+	cbvt_RangeV = rangeId;
+	cbvt_VminAC = rangeMin;
+	cbvt_VmaxAC = rangeMax;
+	cbvt_Points = count;
+	cbvt_Iterations = verificationCount;
+	CBVT_Initialize();
+	CBVT_VerifyV();
+	return [cbvt_v_set, cbvt_v, cbvt_v_sc, cbvt_v_err];
+}
+
+function CBVT_VerifyIrrm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+{
+	cbvt_RangeI = rangeId;
+	cbvt_IminAC = rangeMin;
+	cbvt_ImaxAC = rangeMax;
+	cbvt_Points = count;
+	cbvt_Iterations = verificationCount;
+	cbvt_Shunt = resistance;
+	cbvt_R = 220100;
+	cbvt_test_time = 2000;
+	CBVT_Initialize();
+	CBVT_VerifyI();
+	return [cbvt_v_set, cbvt_i, cbvt_i_sc, cbvt_i_err];
+}
+
+function CBVT_VerifyVrrm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+{
+	cbvt_RangeV = rangeId;
+	cbvt_VminAC = rangeMin;
+	cbvt_VmaxAC = rangeMax;
+	cbvt_Points = count;
+	cbvt_Iterations = verificationCount;
+	CBVT_Initialize();
+	CBVT_VerifyV();
+	return [cbvt_v_set, cbvt_v, cbvt_v_sc, cbvt_v_err];
 }
