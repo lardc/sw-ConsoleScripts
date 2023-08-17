@@ -21,11 +21,11 @@ function CGEN_UseQuadraticCorrection()
 	
 	try
 	{
-		return dev.Read16Silent(254);
+		return dev.r(254);
 	}
 	catch(e)
 	{
-		return dev.Read16Silent(126);
+		return dev.r(126);
 	}
 }
 
