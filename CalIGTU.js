@@ -22,8 +22,10 @@ cal_I_PulsePlate 	= 100 					// us
 cal_I_TriggerDelay	= 480e-6				// s
 cal_I_Ilow			= 20					// mA
 cal_I_Ihigh			= 500					// mA
-cal_I_Vlow			= 2						// V
-cal_I_Vhigh			= 20					// V
+cal_I_Vneglow		= 0.5					// V
+cal_I_Vneghigh		= 20					// V
+cal_I_Vcolow		= 2					// V
+cal_I_Vcohigh		= 20					// V
 
 // Calibration types
 //
@@ -176,9 +178,13 @@ function CAL_I_Process(Calibration)
 			break
 			
 		case cal_I_Vco:
+			Xmin = cal_I_Vcolow;
+			Xmax = cal_I_Vcohigh;
+			break
+			
 		case cal_I_Vneg:
-			Xmin = cal_I_Vlow;
-			Xmax = cal_I_Vhigh;
+			Xmin = cal_I_Vneglow;
+			Xmax = cal_I_Vneghigh;
 			break
 			
 		default:
