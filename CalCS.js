@@ -32,11 +32,11 @@ ccs_tempread_err2 = [];
 
 //Clamping calibration
 force_min = 5;
-force_max = 20;
+force_max = 95;
 force_step = 5;
 PortNumberTerminal = 7;
 
-mode_force = 'q';	// 'a' for an automatic force value input mode, 's' - for a semi-automatic mode
+mode_force = 'q';			// 'a' for an automatic force value input mode, 's' - for a semi-automatic mode
 mode_terminal = 'q';		// 'a' for an automatic mode, 's' - for a semi-automatic mode
  
 function CCS_ADCOffsetCalibrate()
@@ -62,8 +62,8 @@ function CCS_ADCOffsetCalibrate()
 function CCS_ClampCalibrate()
 {
 	ccs_counter = 0;
-	//CCS_ClampResetA();
-	//CCS_ClampCal(0, 1, 0);
+	CCS_ClampResetA();
+	CCS_ClampCal(0, 1, 0);
 
 	
 	if (CCS_ClampCollectAutomatic())
