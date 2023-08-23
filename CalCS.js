@@ -1,6 +1,7 @@
 include("CalGeneral.js")
 include("TestCS.js")
 include("PrintStatus.js")
+include("Tektronix.js")
 
 // Results storage
 ccs_inp = [];
@@ -29,6 +30,15 @@ ccs_tempdac_err2 = [];
 ccs_tempread_err1 = [];
 ccs_tempread_err2 = [];
 
+//Clamping calibration
+force_min = 5;
+force_max = 20;
+force_step = 5;
+PortNumberTerminal = 7;
+
+mode_force = 'q';	// 'a' for an automatic force value input mode, 's' - for a semi-automatic mode
+mode_terminal = 'q';		// 'a' for an automatic mode, 's' - for a semi-automatic mode
+ 
 function CCS_ADCOffsetCalibrate()
 {
 	var num = 50;
@@ -48,13 +58,15 @@ function CCS_ADCOffsetCalibrate()
 	print("Loaded offset value: " + offset);
 }
 
+
 function CCS_ClampCalibrate()
 {
 	ccs_counter = 0;
-	CCS_ClampResetA();
-	CCS_ClampCal(0, 1, 0);
+	//CCS_ClampResetA();
+	//CCS_ClampCal(0, 1, 0);
+
 	
-	if (CCS_ClampCollect())
+	if (CCS_ClampCollectAutomatic())
 	{
 		if (ccs_counter == 0)
 		{
@@ -86,14 +98,14 @@ function CCS_ClampCalibrate()
 		// Print correction
 		CCS_PrintClampCal();
 	}
+
 }
 
 function CCS_ClampVerify()
 {
 	ccs_counter = 0;
 	CCS_ClampResetA();
-	
-	if (CCS_ClampCollect())
+	if (CCS_ClampCollectAutomatic())
 	{
 		if (ccs_counter == 0)
 		{
@@ -108,19 +120,60 @@ function CCS_ClampVerify()
 	}
 }
 
-function CCS_ClampCollect()
+
+
+function CCS_ClampCollectAutomatic()
 {
-	var force_input, force_unit, force_scope;
+	var temp_force = mode_force;
+	var temp_terminal = mode_terminal;
+	if((mode_force != 'a') && (mode_force != 's'))
+	{
+		print("If you prefer an automatic input force values enter 'a' If you prefer input this manually, enter 's':");
+		mode_force = readkey();
+		if((mode_force != 'a') && (mode_force != 's'))
+		{
+			print("Incorrect input");
+			return false;
+		}
+		
+	}
+	if((mode_terminal != 'a') && (mode_terminal != 's'))
+	{
+		print("If you prefer an automatic input data from the weight indicator enter 'a'. If you prefer manual input the data enter 's':");
+		mode_terminal = readkey();
+		if((mode_terminal != 'a') && (mode_terminal != 's'))
+		{
+			print("Incorrect input");
+			return false;
+		}
+	}
 	
+	if(mode_terminal == 'a')
+	{
+		TEK_PortInit(PortNumberTerminal, 9600);
+		re = new RegExp("[0-9]+");
+	}
+	var force_in = CGEN_GetRange(force_min, force_max, force_step);
+	var force_input, force_unit, force_scope;
 	print("----------------------------------")
 	print("Press 'Enter' with empty line to skip.");
 	print("----------------------------------")
+
 	
-	do
+	for(var i = 0; ; i++)
 	{
 		print("# " + (ccs_counter + 1));
-		print("Enter force value (in kN):");
-		force_input = Math.round(parseFloat(readline()) * 1000);
+		if(mode_force == 'a')
+		{
+			if(i == force_in.length)
+				break;
+			force_input = Math.round(parseFloat(force_in[i]) * 1000);
+		}
+		else if (mode_force == 's')
+		{
+			print("Enter force value (in kN):");
+			force_input = Math.round(parseFloat(readline()) * 1000);
+		}
 		
 		if (isNaN(force_input))
 			break;
@@ -128,30 +181,53 @@ function CCS_ClampCollect()
 		dev.w(70, Math.round(force_input / 100));
 		
 		// Start clamping
+		print("Clamping.")
 		while (dev.r(96) == 10) sleep(50);
 		dev.c(102);
-		while (dev.r(96) == 7) sleep(50);
+		while (dev.r(96) == 7) 
+		{
+			if(anykey())
+			{
+				mode_force = temp_force;
+				mode_terminal = temp_terminal;
+				dev.c(105);
+				sleep(50);
+				print("Abort");
+				dev.c(100);
+				while(dev.r(96) == 5)
+					sleep(50);
+				return false;
+			}
+			sleep(50);
+		}
 		
 		// Handle clamping error
 		if (dev.r(96) != 8)
 		{
 			print("Clamping error, exit.");
+			mode_force = temp_force;
+			mode_terminal = temp_terminal;
 			return false;
 		}
 		
 		sleep(2000);
 		pl(dev.rafs(1));
 		force_unit = dev.r(110) * 100;
-		
-		print("Enter force value from scope (in kg):");
-		force_scope = Math.round(parseFloat(readline()) * 9.8);
+		if(mode_terminal == 'a')
+			force_scope = (parseInt(re.exec(TEK_Exec('')).join(""),10));
+		else if (mode_terminal == 's')
+		{
+			print("Enter force value from the weight indicator (in kg):");
+			force_scope = parseFloat(readline());
+		}
+		force_scope = Math.round(force_scope * 9.8);
 		
 		if (isNaN(force_scope))
 			break;
 		
-		print("\nForce setting (in N): 		" + force_input);
-		print("Force value from scope (in N): 	" + force_scope);
-		print("Force value from unit (in N): 	" + force_unit);
+		print("\nForce setting (in N):\t\t\t\t" + force_input);
+		print("Force value from the weight indicator (in N):\t" + force_scope);
+		print("Force value from the unit (in N):\t\t" + force_unit);
 		print("----------------------------------")
 		
 		// Handle unclamping
@@ -161,19 +237,33 @@ function CCS_ClampCollect()
 		else if (cs_state != 3 && cs_state != 10)
 		{
 			print("Unclamping error, exit.");
+			mode_force = temp_force;
+			mode_terminal = temp_terminal;
 			return false;
 		}
 		
 		ccs_inp[ccs_counter] = force_input;
 		ccs_unit[ccs_counter] = force_unit;
 		ccs_scope[ccs_counter] = force_scope;
-		ccs_measure_err[ccs_counter] = ((force_unit - force_scope) / force_scope * 100).toFixed(1);
-		ccs_setpoint_err[ccs_counter] = ((force_scope - force_input) / force_input * 100).toFixed(1);
+		ccs_measure_err[ccs_counter] = ((force_scope - force_unit) / force_unit * 100).toFixed(1);
+		ccs_setpoint_err[ccs_counter] = ((force_input - force_scope) / force_scope * 100).toFixed(1);
 		ccs_counter++;
-
+		if(anykey())
+		{
+			mode_force = temp_force;
+			mode_terminal = temp_terminal;
+			dev.c(105);
+			print("Abort");
+			dev.c(100);
+			while(dev.r(96) == 5)
+					sleep(50);
+			return false;
+		}
 	}
-	while (true);
-	
+	if(mode_terminal == 'a')
+		delete(re);
+	mode_force = temp_force;
+	mode_terminal = temp_terminal;
 	return true;
 }
 
