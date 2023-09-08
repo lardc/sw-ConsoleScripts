@@ -10,7 +10,7 @@ cal_V_TriggerDelay	= 500e-6				// s
 cal_V_Ilow 			= [0.1, 2, 20]			// mA
 cal_V_Ihigh 		= [1, 20, 200]			// mA
 cal_V_Rint 			= [8600, 34, 34]		// Ohm
-cal_V_Rext			= [11000, 1100, 100]	// Ohm
+cal_V_Rext			= [16000, 1200, 100]	// Ohm
 cal_Vset_Low 		= 2;					// V
 cal_Vset_High 		= 30;					// V
 cal_Vmsr_Low 		= 2;					// V
@@ -22,8 +22,10 @@ cal_I_PulsePlate 	= 100 					// us
 cal_I_TriggerDelay	= 480e-6				// s
 cal_I_Ilow			= 20					// mA
 cal_I_Ihigh			= 500					// mA
-cal_I_Vlow			= 2						// V
-cal_I_Vhigh			= 20					// V
+cal_I_Vneglow		= 0.5					// V
+cal_I_Vneghigh		= 20					// V
+cal_I_Vcolow		= 2					// V
+cal_I_Vcohigh		= 20					// V
 
 // Calibration types
 //
@@ -122,13 +124,17 @@ function CAL_V_Process(Calibration)
 			}
 			else
 			{
-				p("Please connect load resistor " + cal_V_Rext[cal_CalibrationType] + " Ohm " + "and press y")
-				
-				var key
-				
-				while(key != "Y")
+				p("Please connect load resistor " + cal_V_Rext[cal_CalibrationType] + " Ohm " + "and press y to start or n to break process")
+								
+				while(1)
 				{
-					key = readline()
+					var key = readkey()
+					
+					if(key == "y")
+						break
+					
+					if(key == "n")
+						return
 				}
 			}
 			break
@@ -172,9 +178,13 @@ function CAL_I_Process(Calibration)
 			break
 			
 		case cal_I_Vco:
+			Xmin = cal_I_Vcolow;
+			Xmax = cal_I_Vcohigh;
+			break
+			
 		case cal_I_Vneg:
-			Xmin = cal_I_Vlow;
-			Xmax = cal_I_Vhigh;
+			Xmin = cal_I_Vneglow;
+			Xmax = cal_I_Vneghigh;
 			break
 			
 		default:
