@@ -3,19 +3,18 @@ include("Tektronix.js")
 include("CalGeneral.js")
 
 // Calibration setup parameters
+cal_Rshunt = 750;	// in uOhms
+
+// Current range number
+cal_CurrentRange = 0; // 0 = Range [ <= 1000 A]; 1 = Range [ < 6500 A]
+//
 cal_Points = 10;
-
-cal_Rshunt = 750;	// uOhm
-
-cal_CurrentRange = 0;
-
-cal_IdMin = [100, 300.1];	
-cal_IdMax = [300, 1650];
-cal_IdStp = (cal_IdMax[cal_CurrentRange] - cal_IdMin[cal_CurrentRange]) / cal_Points;
-
+//
+cal_IdMin = [100, 1001];
+cal_IdMax = [1000, 6500];
+//
 cal_Iterations = 1;
 cal_UseAvg = 1;
-//		
 
 // Counters
 cal_CntTotal = 0;
@@ -23,7 +22,6 @@ cal_CntDone = 0;
 
 // Channels
 cal_chMeasureId = 1;
-cal_chSync = 3;
 
 // Results storage
 cal_Id = [];
@@ -75,6 +73,7 @@ function CAL_CalibrateId()
 	CAL_TekInit(cal_chMeasureId);
 
 	// Reload values
+	var cal_IdStp = Math.round((cal_IdMax[cal_CurrentRange] - cal_IdMin[cal_CurrentRange]) / (cal_Points - 1));
 	var CurrentArray = CGEN_GetRange(cal_IdMin[cal_CurrentRange], cal_IdMax[cal_CurrentRange], cal_IdStp);
 
 	if (CAL_CollectId(CurrentArray, cal_Iterations))
@@ -135,12 +134,10 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 		{
 			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
 			//
-			LSLPC_TekScale(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1000000);
-			sleep(1000);
+			CAL_TekScale(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1000000);
 			
 			for (var k = 0; k < AvgNum; k++)
 			{
-				sleep(500);
 				if(!LSLPC_Start(CurrentValues[j]))
 					return false;
 			}
@@ -149,6 +146,7 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 			var IdSet = dev.r(128) / 10;
 			cal_Id.push(IdSet);
 			print("Idset, A: " + IdSet);
+			// print("IdsetRaw, A: " + (dev.r(21) * Math.pow(IdSet, dev.r(20) / 1000)).toFixed(0)); // для грубой калибровки
 
 			// Scope data
 			var IdSc = (CAL_Measure(cal_chMeasureId) / cal_Rshunt * 1000000).toFixed(2);
@@ -160,8 +158,6 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 			cal_IdErr.push(IdErr);
 			print("IdSetErr, %: " + IdErr);
 			print("--------------------");
-
-
 			
 			if (anykey()) return 0;
 		}
@@ -171,12 +167,16 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 }
 //--------------------
 
-function LSLPC_TekScale(Channel, Value)
+function CAL_TekScale(Channel, Value)
 {
-	Value = Value / 7;
-	TEK_Send("ch" + Channel + ":scale " + Value);
+	// 0.9 - use 90% of full range
+	// 8 - number of scope grids in full scale
+	var scale = (Value / (8 * 0.9));
+	TEK_Send("ch" + Channel + ":scale " + scale);
 	
-	TEK_TriggerPulseInit(cal_chMeasureId, Value * 3);
+	TEK_TriggerPulseInit(cal_chMeasureId, Value / 3);
+	while(TEK_Exec("TRIGger:STATE?") != "REA")
+		sleep(100);
 }
 //--------------------
 
@@ -190,15 +190,10 @@ function CAL_TekInit()
 }
 //--------------------
 
-function CAL_TekScale(Channel, Value)
-{
-	Value = Value / 6;
-	TEK_Send("ch" + Channel + ":scale " + Value);
-}
-//--------------------
-
 function CAL_Measure(Channel)
 {
+	while(TEK_Exec("TRIGger:STATE?") != "REA")
+		sleep(100);
 	return TEK_Measure(Channel);
 }
 //--------------------
