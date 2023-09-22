@@ -1,7 +1,7 @@
 include("TestLSLH.js")
 include("Tektronix.js")
 include("CalGeneral.js")
-include("Numeric.js")
+// include("Numeric.js")
 
 // Calibration setup parameters
 clsl_Rshunt = 750;			// in uOhms
@@ -45,6 +45,7 @@ clsl_Iset = [];
 clsl_Ig = [];
 clsl_IgSet = [];
 clsl_Ug = [];
+clsl_UgSet = [];
 
 // Tektronix data
 clsl_UtmSc = [];
@@ -289,12 +290,16 @@ function CLSL_CalibrateIg()
 		// Calculate correction
 		clsl_IgCorr = CGEN_GetCorrection2("LSL_Ig");
 		CLSL_CalIg(clsl_IgCorr[0], clsl_IgCorr[1], clsl_IgCorr[2]);
-		//
+		
+		// Print correction Ig
+		CLSL_PrintCoefIg();
+		
+		// Calculate correction
 		clsl_IgSetCorr = CGEN_GetCorrection2("LSL_IgSet");
 		CLSL_CalIgSet(clsl_IgSetCorr[0], clsl_IgSetCorr[1], clsl_IgSetCorr[2]);
 
-		// Print correction
-		CLSL_PrintCoefIg();
+		// Print correction IgSet
+		CLSL_PrintCoefIgSet();
 	}
 }
 
@@ -314,7 +319,8 @@ function CLSL_VerifyIg()
 		CLSL_SaveIg("LSL_Ig_fixed", "LSL_IgSet_fixed");
 
 		// Plot relative error distribution
-		scattern(clsl_IgSc, clsl_IgSetErr, "Current (in mA)", "Error (in %)", "Ig relative error " + clsl_IgMin + " ... " + clsl_IgMax + " mA");
+		scattern(clsl_IgSc, clsl_IgErr, "Current (in mA)", "Error (in %)", "Ig relative error " + clsl_IgMin + " ... " + clsl_IgMax + " mA");
+		scattern(clsl_IgSc, clsl_IgSetErr, "Current (in mA)", "Error (in %)", "Ig set relative error " + clsl_IgMin + " ... " + clsl_IgMax + " mA");
 	}
 }
 
@@ -341,12 +347,16 @@ function CLSL_CalibrateUg()
 		// Calculate correction
 		clsl_UgCorr = CGEN_GetCorrection2("LSL_Ug");
 		CLSL_CalUg(clsl_UgCorr[0], clsl_UgCorr[1], clsl_UgCorr[2]);
-		//
+		
+		// Print correction Ug
+		CLSL_PrintCoefUg();
+		
+		// Calculate correction
 		clsl_UgSetCorr = CGEN_GetCorrection2("LSL_UgSet");
 		CLSL_CalUgSet(clsl_UgSetCorr[0], clsl_UgSetCorr[1], clsl_UgSetCorr[2]);
 
-		// Print correction
-		CLSL_PrintCoefUg();
+		// Print correction UgSet
+		CLSL_PrintCoefUgSet();
 	}
 }
 
@@ -356,17 +366,17 @@ function CLSL_VerifyUg()
 	
 	// Tektronix init
 	CLSL_GateTekInit(clsl_chMeasureU);
-	
 	// Reload values
 	var clsl_UgStp = Math.round((clsl_UgMax - clsl_UgMin) / (clsl_Points - 1));
 	var VoltageArray = CGEN_GetRange(clsl_UgMin, clsl_UgMax, clsl_UgStp);
 
 	if (CLSL_CollectUg(VoltageArray, clsl_Iterations))
 	{
-		CLSL_SaveUg("LSL_Ug_fixed");
+		CLSL_SaveUg("LSL_Ug_fixed", "LSL_UgSet_fixed");
 
 		// Plot relative error distribution
 		scattern(clsl_UgSc, clsl_UgErr, "Voltage (in mV)", "Error (in %)", "Ug relative error " + clsl_UgMin + " ... " + clsl_UgMax + " mV");
+		scattern(clsl_UgSc, clsl_UgSetErr, "Voltage (in mV)", "Error (in %)", "Ug set relative error " + clsl_UgMin + " ... " + clsl_UgMax + " mV");
 	}
 }
 
@@ -395,7 +405,6 @@ function CLSL_CollectUtm(VoltageValues, IterationsCount)
 			//
 			
 			CLSL_TekScale(clsl_chMeasureU, VoltageValues[j] / 1000);
-			CLSL_TriggerInit(clsl_chSync)
 			
 			var PrintTemp = LSLH_Print;
 			LSLH_Print = 0;
@@ -414,7 +423,7 @@ function CLSL_CollectUtm(VoltageValues, IterationsCount)
 			print("Utmread, mV: " + UtmRead);
 
 			// Scope data
-			var UtmSc = CLSL_Measure(clsl_chMeasureU).toFixed(3) * 1000;
+			var UtmSc = (CLSL_Measure(clsl_chMeasureU) * 1000).toFixed(2);
 			clsl_UtmSc.push(UtmSc);
 			print("Utmtek,  mV: " + UtmSc);
 
@@ -455,7 +464,6 @@ function CLSL_CollectItm(CurrentValues, IterationsCount)
 			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
 			//
 			CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_Rshunt / 1000000);
-			CLSL_TriggerInit(clsl_chSync);
 			
 			var PrintTemp = LSLH_Print;
 			LSLH_Print = 0;
@@ -515,7 +523,6 @@ function CLSL_CollectIset(CurrentValues, IterationsCount)
 			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
 			//
 			CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_Rshunt / 1000000);
-			CLSL_TriggerInit(clsl_chSync);
 			
 			var PrintTemp = LSLH_Print;
 			LSLH_Print = 0;
@@ -575,9 +582,9 @@ function CLSL_CollectIg(CurrentValues, IterationsCount)
 			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
 			//
 			CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_GateRshunt / 1000000);
-			CLSL_TriggerInit(clsl_chSync)
+			GateCurrent = CurrentValues[j];
 			TEK_Send("trigger:main:edge:slope rise");
-			TEK_Send("horizontal:position " + 0.0001);
+			TEK_Send("horizontal:position " + 0.0002);
 			for (var k = 0; k < AvgNum; k++)
 			{
 				if (!LSLH_StartMeasure(100))
@@ -639,9 +646,9 @@ function CLSL_CollectUg(VoltageValues, IterationsCount)
 			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
 			//
 			CLSL_TekScale(clsl_chMeasureU, VoltageValues[j] / 1000);
-			CLSL_TriggerInit(clsl_chSync)
+			GateVoltage = VoltageValues[j];
 			TEK_Send("trigger:main:edge:slope rise");
-			TEK_Send("horizontal:position " + 0.0001);
+			TEK_Send("horizontal:position " + 0.0002);
 			for (var k = 0; k < AvgNum; k++)
 			{
 				if (!LSLH_StartMeasure(100))
@@ -650,7 +657,7 @@ function CLSL_CollectUg(VoltageValues, IterationsCount)
 			
 			// Unit data
 			var UgSet = VoltageValues[j];
-			clsl_Ug.push(UgSet);
+			clsl_UgSet.push(UgSet);
 			print("UgSet, mV: " + UgSet);
 			//
 			var Ug = dev.r(202);
@@ -658,7 +665,7 @@ function CLSL_CollectUg(VoltageValues, IterationsCount)
 			print("Ug, mV: " + Ug);
 
 			// Scope data
-			var UgSc = CLSL_Measure(clsl_chMeasureU).toFixed(3) * 1000;
+			var UgSc = (CLSL_Measure(clsl_chMeasureU) * 1000).toFixed(2);
 			clsl_UgSc.push(UgSc);
 			print("UgTek,  mV: " + UgSc);
 
@@ -669,7 +676,7 @@ function CLSL_CollectUg(VoltageValues, IterationsCount)
 			//
 			var UgErr = ((UgSc - Ug) / Ug * 100).toFixed(2);
 			clsl_UgErr.push(UgErr);
-			print("UgSetErr,  %: " + UgErr);
+			print("UgErr,  %: " + UgErr);
 			print("--------------------");
 			
 			if (anykey()) return 0;
@@ -698,14 +705,14 @@ function CLSL_TekInit(Channel)
 {
 	TEK_Horizontal("1e-3", "0");
 	TEK_ChannelInit(Channel, "1", "2");
-	CLSL_TekCursor(Channel);
+	CLSL_TekMeasurement(Channel);
 }
 
 function CLSL_GateTekInit(Channel)
 {
-	TEK_Horizontal("25e-6", "0");
+	TEK_Horizontal("25e-6", "5e-6");
 	TEK_ChannelInit(Channel, "1", "2");
-	CLSL_TekCursor(Channel);
+	CLSL_TekMeasurement(Channel);
 }
 
 function CLSL_TekCursor(Channel)
@@ -718,13 +725,14 @@ function CLSL_TekCursor(Channel)
 
 function CLSL_Measure(Channel)
 {
-	TEK_Send("cursor:select:source ch" + Channel);
-	sleep(500);
+	sleep(1000);
+	return TEK_Measure(Channel);
+}
 
-	var f = TEK_Exec("cursor:vbars:hpos2?");
-	if (Math.abs(f) > 2.7e+8)
-		f = 0;
-	return parseFloat(f);
+function CLSL_TekMeasurement(Channel)
+{
+	TEK_Send("measurement:meas" + Channel + ":source ch" + Channel);
+	TEK_Send("measurement:meas" + Channel + ":type maximum");
 }
 
 var OvershootCurrent;
@@ -747,8 +755,10 @@ function CLSL_ResetA()
 	clsl_Utm = [];
 	clsl_Itm = [];
 	clsl_Iset = [];
+	clsl_Ig = [];
 	clsl_IgSet = [];
 	clsl_Ug = [];
+	clsl_UgSet = [];
 
 	// Tektronix data
 	clsl_UtmSc = [];
