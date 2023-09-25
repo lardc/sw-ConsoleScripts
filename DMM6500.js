@@ -80,7 +80,12 @@ function KEI_ActivateTrigger()
 
 function KEI_ReadAverage()
 {
-	tmc.q('TRAC:STAT:AVER? "TestBuffer"');
 	return tmc.q('TRAC:STAT:AVER? "TestBuffer"');
+}
+//--------------------
+
+function KEI_ReadMaximum()
+{
+	return tmc.q('TRAC:STAT:MAX? "TestBuffer"');
 }
 //--------------------
