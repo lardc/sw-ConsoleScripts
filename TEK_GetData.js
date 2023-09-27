@@ -3,9 +3,15 @@ include("CalGeneral.js")
 
 // Channels
 UsePort = 1;
-sic_gd_filter_points = 50;
-sic_gd_filter_factor = 5;
 
+// 
+Cal_RCU = 1;
+
+//
+Use_Min = 0.5;
+Use_Max = 0.9;
+
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
 function TEK_GD_Init(Port)
 {
 	TEK_PortInit(Port, 9600);
@@ -14,7 +20,7 @@ function TEK_GD_Init(Port)
 	TEK_Send("data:start 1");
 	TEK_Send("data:stop 2500");
 }
-
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
 function TEK_Init(PortTek,UsePort)
 {
 
@@ -38,7 +44,7 @@ function TEK_Init(PortTek,UsePort)
 
 	
 }
-
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
 function GetChannelData(Channel) 
 {
 
@@ -64,11 +70,11 @@ function GetChannelData(Channel)
 	// adjust data
 	var res = [];
 	for (var i = 6; i < 2506; ++i)
-		res[i - 6] = ((data_input[i].charCodeAt(0) - 128 - p_position * 25) * p_scale / 25)*10000;
+		res[i - 6] = (((data_input[i].charCodeAt(0) - 128 - p_position * 25) * p_scale / 25)*10000).toFixed(0);
 	
 	return res;
 }
-
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
 function SaveChannelData(NameFile, Data)
 {
 save(cgen_correctionDir + "/" + NameFile + ".csv", Data);
@@ -80,65 +86,115 @@ function ChannelData(NameFile, Channel)
 	Data = (GetChannelData(Channel));
 	SaveChannelData(NameFile, Data);
 }
-
-
-function SiC_GD_Filter(NameFile, ScaleI)
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
+function Use_Data(InNameFile, OutNameFile)
 {
-	var Data = [];
-	Data = load(cgen_correctionDir + "/" + NameFile + ".csv");
-	var filtered_avg = [];
-	var filtered_spl = [];
-	
-	// avg filtering
-	for (var i = 0; i < (Data.length - Math.pow(sic_gd_filter_points, 2)); ++i)
-	{
-		var avg_point = 0;
-		for (var j = i; j < (i + Math.pow(sic_gd_filter_points, 2)); j += sic_gd_filter_points)
-			avg_point += Data[j];
-		filtered_avg[i] = avg_point / sic_gd_filter_points;
-	}
-	
-	// current shunt scale
-	var scale
-	if (typeof ScaleI === 'undefined')
-		scale = 1;
-	else
-		scale = ScaleI;
-	
-	// spline filtering
-	for (var i = 0; i < (filtered_avg.length - 3); ++i)
-	{
-		filtered_spl[i] =	Math.pow(1 - sic_gd_filter_factor, 3) * filtered_avg[i] +
-							3 * sic_gd_filter_factor * Math.pow(1 - sic_gd_filter_factor, 2) * filtered_avg[i + 1] +
-							3 * Math.pow(sic_gd_filter_factor, 2) * (1 - sic_gd_filter_factor) * filtered_avg[i + 2] +
-							Math.pow(sic_gd_filter_factor, 3) * filtered_avg[i + 3];
-		
-		filtered_spl[i] *= scale;
-	}
-	
-	return filtered_spl;
-
-}
-
-function Fil_Data(NameFile,ScaleI,FilFile)
-{
-	var FilData = [];
-	FilData = (SiC_GD_Filter(NameFile, ScaleI));
-	SaveChannelData(FilFile, FilData);
-}
-
-
-function Derivative(NameFile,DerFile)
-{
-	Der = [];
 	Load = [];
-	K = 4 * 1e-2;
-
-	Load = load(cgen_correctionDir + "/" + NameFile + ".csv");
-
-	for (var N = 2; N < 2500; ++N)
-	{	
-		Der.push((Load[N] - Load[N-1])/K);
+	Use_Load =[];
+	Start = 0;
+	End = 0;
+	Load = load(cgen_correctionDir + "/" + InNameFile + ".csv");
+	Measure = TEK_Measure(UsePort) * 1e4;
+	//p("Measure" + Measure);
+	for (var i = 0; i < Load.length; ++i)
+	{
+		if (Load[i] <= Measure * Use_Max && Load[i+1] <= Measure * Use_Max && Load[i+2] <= Measure * Use_Max && Load[i+3] <= Measure * Use_Max && Load[i+4] <= Measure * Use_Max) 
+		//if (Load[i] <= 400)
+		{ 
+			Start = i;
+			//p("Start " + Start);
+			break;
+		}
+	}	
+	for (var i = Load.length ; i > 0 ; --i)	
+	{
+		if (Load[i] >= Measure * Use_Min && Load[i-1] >= Measure * Use_Min && Load[i-2] >= Measure * Use_Min && Load[i-3] >= Measure * Use_Min && Load[i-4] >= Measure * Use_Min)
+		{	
+			End = i;
+			//p("End " + End);
+			break;
+		}
 	}
-	save(cgen_correctionDir + "/" + DerFile + ".csv", Der);
+	
+	for (var i = Start; i < End; ++i)
+	{
+		Use_Load.push(Load[i]);	
+	}
+	save(cgen_correctionDir + "/" + OutNameFile + ".csv", Use_Load);
+
 }
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
+// Нахождение скорости спада  
+function Use_Time(InNameFile)
+{
+	Load = [];
+	Use_Load =[];
+
+	var p_h_scale = TEK_Exec("HORizontal:scale?");
+	T = (p_h_scale * 1e6) / 250; 
+	p("p_h_scale " + p_h_scale * 1e6);
+	p("T " + T);
+	Load = load(cgen_correctionDir + "/" + InNameFile + ".csv");
+	Min = Load[Load.length - 1]/10;
+	p("Min " + Min);
+	Max = Load[0]/10;
+	p("Max " + Max);
+	dI = Max - Min
+	p("dI " + dI);
+	dT = (Load.length) * T;
+	p("dT " + dT)
+	RateScope = (dI / dT).toFixed(3);
+	return RateScope;
+}
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
+// Отзеркаливание массива 
+function InvertData(InNameFile, OutNameFile)
+{
+	Load = [];
+	Invert = [];
+	Load = load(cgen_correctionDir + "/" + InNameFile + ".csv");
+	
+	for (var i = Load.length - 1 ; i > - 1 ; --i)
+	{
+		//p("i" + i);	
+		Invert.push(Load[i]);
+
+	}
+	save(cgen_correctionDir + "/" + OutNameFile + ".csv", Invert);
+}
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
+// Взятие производной массива данных
+function Derivative(InNameFile, OutNameFile)
+{
+	Load = [];
+	Out = [];
+	Der = [];
+	Derout = [];
+	Outder = [];
+	Factor = 3e-2;
+
+	Load = load(cgen_correctionDir + "/" + InNameFile + ".csv");
+
+	for (var N = 0; N < Load.length; ++N)
+	{	
+		Out[0] = Load[0];
+		Out[N] = Load[N] * Factor + (1 - Factor) * Out[N-1];
+	}	
+	for (var K = 0; K < Load.length; ++K)
+	{
+		Der[0] = 0;
+		Der[K] = Out[K] - Out[K-1];
+	}
+	for (var L = 0; L < Load.length; ++L)
+	{	
+		Derout[0] = Der[0];
+		Derout[L] = Der[L] * Factor + (1-Factor) * Derout[L-1];
+	}
+	for (var Q = 0; Q < Load.length; ++Q)
+	{
+		Outder.push(Load[Q] + ";" + Out[Q] + ";" + Der[Q] + ";" + Derout[Q]);
+	}
+	save(cgen_correctionDir + "/" + OutNameFile + ".csv", Outder);
+
+}
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
