@@ -454,3 +454,20 @@ function FWU_RestoreLCSU()
 	dev.Restore("../../hw-LCSUControlBoard/Firmware/LCSUControlBoard.regdump");
 }
 //------------------------
+
+// PMXU
+function FWU_PMXU()
+{
+	FWUpdateSTM("../../hw-PMXUControlBoard/Firmware/Release/PMXUControlBoard.binary");
+}
+
+function FWU_DumpPMXU()
+{
+	dev.Dump("../../hw-PMXUControlBoard/Firmware/PMXUControlBoard.regdump", 0, 126);
+}
+
+function FWU_RestorePMXU()
+{
+	dev.Restore("../../hw-PMXUControlBoard/Firmware/PMXUControlBoard.regdump");
+}
+//------------------------
