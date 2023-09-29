@@ -1,6 +1,7 @@
 include("TestLSLH.js")
 include("Tektronix.js")
 include("CalGeneral.js")
+include("DMM6500.js")
 // include("Numeric.js")
 
 // Calibration setup parameters
@@ -8,6 +9,11 @@ clsl_Rshunt = 750;			// in uOhms
 clsl_Rload = 3333;			// in uOhms
 clsl_GateRshunt = 10000;	// in mOhms
 clsl_GatePulseWidth = 1000;	// in us
+
+// Setup parameters for DMM6000
+clsl_V_PulsePlate 	= 5000 					// us
+clsl_V_TriggerDelay	= 2500e-6				// s
+clsl_measuring_device = "TPS2000"; // DMM6000 or TPS2000
 
 // Current range number
 clsl_CurrentRange = 0;		// 0 = Range [ < 1000 A]; 1 = Range [ < 6500 A] for measure
@@ -72,8 +78,12 @@ clsl_IgSetCorr = [];
 clsl_UgCorr = [];
 clsl_UgSetCorr = [];
 
-function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channelSync)
+function CLSL_Init_Tek(portDevice, portTek, channelMeasureI, channelMeasureU, channelSync)
 {
+	// Init device port
+	dev.Disconnect();
+	dev.co(portDevice);
+
 	if (channelMeasureI < 1 || channelMeasureI > 4)
 	{
 		print("Wrong channel numbers");
@@ -84,10 +94,6 @@ function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channe
 	clsl_chMeasureU = channelMeasureU;
 	clsl_chMeasureI = channelMeasureI;
 	clsl_chSync = channelSync;
-
-	// Init device port
-	dev.Disconnect();
-	dev.co(portDevice);
 
 	// Init Tektronix port
 	TEK_PortInit(portTek);
@@ -105,6 +111,18 @@ function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channe
 	CLSL_TriggerInit(clsl_chSync);
 }
 
+function CLSL_Init_DMM(portDevice)
+{
+	// Init device port
+	dev.Disconnect();
+	dev.co(portDevice);
+
+	// DMM6500 init
+	KEI_Reset()
+	KEI_ConfigVoltage(clsl_V_PulsePlate)
+	KEI_ConfigExtTrigger(clsl_V_TriggerDelay)
+}
+
 function CLSL_CalibrateUtm()
 {
 	CLSL_ResetA();
@@ -113,7 +131,8 @@ function CLSL_CalibrateUtm()
 	OverShootCurrentReset();
 	
 	// Tektronix init
-	CLSL_TekInit(clsl_chMeasureU);
+	if(clsl_measuring_device == "TPS2000")
+		CLSL_TekInit(clsl_chMeasureU);
 	
 	// Reload values
 	var clsl_UtmStp = Math.round((clsl_UtmMax - clsl_UtmMin) / (clsl_Points - 1));
@@ -142,7 +161,8 @@ function CLSL_VerifyUtm()
 	OverShootCurrentReset();
 	
 	// Tektronix init
-	CLSL_TekInit(clsl_chMeasureU);
+	if(clsl_measuring_device == "TPS2000")
+		CLSL_TekInit(clsl_chMeasureU);
 	
 	// Reload values
 	var clsl_UtmStp = Math.round((clsl_UtmMax - clsl_UtmMin) / (clsl_Points - 1));
@@ -385,26 +405,36 @@ function CLSL_CollectUtm(VoltageValues, IterationsCount)
 	clsl_CntTotal = IterationsCount * VoltageValues.length;
 	clsl_CntDone = 1;
 
-	var AvgNum;
-	if (clsl_UseAvg)
+	if(clsl_measuring_device == "TPS2000")
 	{
-		AvgNum = 4;
-		TEK_AcquireAvg(AvgNum);
+		var AvgNum;
+		if (clsl_UseAvg)
+		{
+			AvgNum = 4;
+			TEK_AcquireAvg(AvgNum);
+		}
+		else
+		{
+			AvgNum = 1;
+			TEK_AcquireSample();
+		}
 	}
-	else
-	{
+	else if (clsl_measuring_device == "DMM6000")
 		AvgNum = 1;
-		TEK_AcquireSample();
-	}
-	
+
 	for (var i = 0; i < IterationsCount; i++)
 	{
 		for (var j = 0; j < VoltageValues.length; j++)
 		{
 			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
-			//
 			
-			CLSL_TekScale(clsl_chMeasureU, VoltageValues[j] / 1000);
+			if(clsl_measuring_device == "TPS2000")
+				CLSL_TekScale(clsl_chMeasureU, VoltageValues[j] / 1000);
+			else if (clsl_measuring_device == "DMM6000")
+			{
+				KEI_SetVoltageRange(VoltageValues[j] / 1000 * 1.2);
+				KEI_ActivateTrigger();
+			}
 			
 			var PrintTemp = LSLH_Print;
 			LSLH_Print = 0;
@@ -423,9 +453,17 @@ function CLSL_CollectUtm(VoltageValues, IterationsCount)
 			print("Utmread, mV: " + UtmRead);
 
 			// Scope data
-			var UtmSc = (CLSL_Measure(clsl_chMeasureU) * 1000).toFixed(2);
+			if(clsl_measuring_device == "TPS2000")
+				var UtmSc = (CLSL_Measure(clsl_chMeasureU) * 1000).toFixed(2);
+			else if (clsl_measuring_device == "DMM6000")
+				var UtmSc = (KEI_ReadMaximum() * 1000).toFixed(3);
+
 			clsl_UtmSc.push(UtmSc);
-			print("Utmtek,  mV: " + UtmSc);
+
+			if(clsl_measuring_device == "TPS2000")
+				print("Utmtek,  mV: " + UtmSc);
+			else if (clsl_measuring_device == "DMM6000")
+				print("UtmDMM,  mV: " + UtmSc);
 
 			// Relative error
 			var UtmErr = ((UtmSc - UtmRead) / UtmRead * 100).toFixed(2);

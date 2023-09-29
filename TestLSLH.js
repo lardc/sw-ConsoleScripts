@@ -1,4 +1,11 @@
-﻿include("PrintStatus.js")
+include("PrintStatus.js")
+
+DS_None				= 0
+DS_Fault			= 1
+DS_Disabled			= 2
+DS_BatteryCharge	= 3
+DS_Ready			= 4
+DS_InProcess		= 5
 
 GatePulseTime 	= 1000;		// us
 GateVoltage 	= 10000;	// mV
@@ -15,10 +22,34 @@ function LSLH_StartMeasure(Current)
 	dev.w(153, GatePulseDelay);
 	dev.w(140, Current);
 	
-	if(dev.r(192) == 4)
+	var start = new Date();
+	if(dev.r(192) != DS_Ready)
+	{
+		if (dev.r(192) == DS_Fault)
+		{
+			PrintStatus();
+			p("Сброшены Fault");
+			dev.c(3);
+		}
+
+		if (dev.r(192) == DS_None || dev.r(192) == DS_Disabled)
+			dev.c(1);
+
+		while (dev.r(192) != DS_Ready)
+		{
+			var end = new Date();
+			pinline('\rВремя заряда, с: ' + (end - start) / 1000);
+			sleep(100);
+		}
+		p("");
+	}
+
+	if(anykey()) return 0;
+
+	if(dev.r(192) == DS_Ready)
 	{
 		dev.c(100);
-		while(dev.r(192) != 4){sleep(500);}
+		while(dev.r(192) != DS_Ready){sleep(500);}
 		
 		if(LSLH_Print)
 		{			
@@ -70,15 +101,9 @@ function LSLH_ResourceTest(Current, N)
 function LSLH_GD_Pulse(Current, Voltage, Tpulse)
 {
 	dev.w(150, Tpulse);
-	
 	dev.w(151, Voltage);
-	//dev.c(14);
-	
 	dev.w(152, Current);
-	//dev.c(15);
-	//dev.w(140, 200);
-	dev.c(100);
-	//dev.c(12);
+	dev.c(12);
 }
 //--------------------------
 
