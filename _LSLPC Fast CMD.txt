@@ -42,10 +42,10 @@ cal_IdMin = [50, 1001];
 cal_IdMax = [1000, 6500];
 cal_CurrentRange = 0;
 cal_Points = 10;
-cal_Rshunt = 250; // на 100А шунте
+cal_Rshunt = 750; // на 100А шунте
 cal_UseAvg = 1;
 cal_Iterations = 1;
-CAL_Init(10,11,1);
+CAL_Init(5,6,1);
 
 CAL_VerifyId();
 
@@ -61,8 +61,8 @@ cal_CurrentRange = 1;
 cal_Points = 10;
 cal_Rshunt = 250; // на 300А шунте
 cal_UseAvg = 0;
-cal_Iterations = 1;
-CAL_Init(1,2,1);
+cal_Iterations = 3;
+CAL_Init(5,6,1);
 
 CAL_VerifyId();
 
