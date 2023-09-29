@@ -172,7 +172,7 @@ function dVdt_CellPulse(CellID, Voltage, Gate, Range, NoShutdown)
 {
 	dVdt_CellCall(CellID, 1);
 
-	if(cdvdt_SelectedRange != 3)
+	if(Range != 3)
 		dVdt_SelectRange(CellID, Range);	
 	dVdt_CellSetV(CellID, Voltage);
 	
