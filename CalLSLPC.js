@@ -99,6 +99,7 @@ function CAL_VerifyId()
 	CAL_TekInit();
 
 	// Reload values
+	var cal_IdStp = Math.round((cal_IdMax[cal_CurrentRange] - cal_IdMin[cal_CurrentRange]) / (cal_Points - 1));
 	var CurrentArray = CGEN_GetRange(cal_IdMin[cal_CurrentRange], cal_IdMax[cal_CurrentRange], cal_IdStp);
 
 	if (CAL_CollectId(CurrentArray, cal_Iterations))

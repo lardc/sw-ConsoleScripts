@@ -96,7 +96,7 @@ function LSLPC_ResourceTest(Current, HoursTest)
 		print("#" + i + " Осталось " + (left_time.getHours() - 3) + " ч и " + left_time.getMinutes() + " мин");
 
 		var elapsed_time = new Date((new Date()).getTime() - start.getTime());
-		if (elapsed_time.getTime() > 2 * MinutesInMs * count_plot)
+		if (elapsed_time.getTime() > 10 * MinutesInMs * count_plot)
 		{
 			pl(dev.rafs(1));
 			p("Вывод графика #" + (count_plot + 1) + " спустя " + (elapsed_time.getHours() - 3) + " ч и " + elapsed_time.getMinutes() + " мин");
