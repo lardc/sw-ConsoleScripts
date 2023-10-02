@@ -28,8 +28,8 @@ function LSLH_StartMeasure(Current)
 		if (dev.r(192) == DS_Fault)
 		{
 			PrintStatus();
-			p("Сброшены Fault");
 			dev.c(3);
+			p("Сброшен Fault");
 		}
 
 		if (dev.r(192) == DS_None || dev.r(192) == DS_Disabled)

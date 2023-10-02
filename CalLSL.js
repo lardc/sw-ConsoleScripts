@@ -5,32 +5,32 @@ include("DMM6500.js")
 // include("Numeric.js")
 
 // Calibration setup parameters
-clsl_Rshunt = 750;			// in uOhms
-clsl_Rload = 3333;			// in uOhms
-clsl_GateRshunt = 10000;	// in mOhms
-clsl_GatePulseWidth = 1000;	// in us
+clsl_Rshunt = 750;					// in uOhms
+clsl_Rload = 3333;					// in uOhms
+clsl_GateRshunt = 10000;			// in mOhms
+clsl_GatePulseWidth = 1000;			// in us
 
 // Setup parameters for DMM6000
-clsl_V_PulsePlate 	= 5000 					// us
-clsl_V_TriggerDelay	= 2500e-6				// s
-clsl_measuring_device = "TPS2000"; // DMM6000 or TPS2000
+clsl_V_PulsePlate 	= 5000 			// in us
+clsl_V_TriggerDelay	= 2500e-6		// in s
+clsl_measuring_device = "TPS2000";	// "DMM6000" or "TPS2000"
 
 // Current range number
-clsl_CurrentRange = 0;		// 0 = Range [ < 1000 A]; 1 = Range [ < 6500 A] for measure
+clsl_CurrentRange = 0;				// 0 = Range [ < 1000 A]; 1 = Range [ < 6500 A] for measure
 //
 clsl_Points = 10;
 //
-clsl_UtmMin = 500;			// in mV
-clsl_UtmMax = 5000;			// in mV
+clsl_UtmMin = 500;					// in mV
+clsl_UtmMax = 5000;					// in mV
 //
-clsl_ItmMin = 100			// in A
-clsl_ItmMax = 1500			// in A
+clsl_ItmMin = 100					// in A
+clsl_ItmMax = 1500					// in A
 //
-clsl_IgMin = 100;			// in mA
-clsl_IgMax = 1000;			// in mA
+clsl_IgMin = 100;					// in mA
+clsl_IgMax = 1000;					// in mA
 //
-clsl_UgMin = 1000;			// in mV
-clsl_UgMax = 11000;			// in mV
+clsl_UgMin = 1000;					// in mV
+clsl_UgMax = 11000;					// in mV
 //
 clsl_Iterations = 1;
 clsl_UseAvg = 1;
@@ -118,9 +118,7 @@ function CLSL_Init_DMM(portDevice)
 	dev.co(portDevice);
 
 	// DMM6500 init
-	KEI_Reset()
-	KEI_ConfigVoltage(clsl_V_PulsePlate)
-	KEI_ConfigExtTrigger(clsl_V_TriggerDelay)
+	KEI_Reset();
 }
 
 function CLSL_CalibrateUtm()
@@ -133,7 +131,12 @@ function CLSL_CalibrateUtm()
 	// Tektronix init
 	if(clsl_measuring_device == "TPS2000")
 		CLSL_TekInit(clsl_chMeasureU);
-	
+	else if (clsl_measuring_device == "DMM6000")
+	{
+		KEI_ConfigVoltage(clsl_V_PulsePlate);
+		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+	}
+
 	// Reload values
 	var clsl_UtmStp = Math.round((clsl_UtmMax - clsl_UtmMin) / (clsl_Points - 1));
 	var VoltageArray = CGEN_GetRange(clsl_UtmMin, clsl_UtmMax, clsl_UtmStp);
@@ -159,11 +162,16 @@ function CLSL_VerifyUtm()
 	CLSL_ResetA();
 	
 	OverShootCurrentReset();
-	
+
 	// Tektronix init
 	if(clsl_measuring_device == "TPS2000")
 		CLSL_TekInit(clsl_chMeasureU);
-	
+	else if (clsl_measuring_device == "DMM6000")
+	{
+		KEI_ConfigVoltage(clsl_V_PulsePlate);
+		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+	}
+
 	// Reload values
 	var clsl_UtmStp = Math.round((clsl_UtmMax - clsl_UtmMin) / (clsl_Points - 1));
 	var VoltageArray = CGEN_GetRange(clsl_UtmMin, clsl_UtmMax, clsl_UtmStp);
@@ -185,9 +193,15 @@ function CLSL_CalibrateItm()
 	CLSL_ResetItmCal();
 	
 	OverShootCurrentReset();
-	
+
 	// Tektronix init
-	CLSL_TekInit(clsl_chMeasureI);
+	if(clsl_measuring_device == "TPS2000")
+		CLSL_TekInit(clsl_chMeasureI);
+	else if (clsl_measuring_device == "DMM6000")
+	{
+		KEI_ConfigVoltage(clsl_V_PulsePlate);
+		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+	}
 
 	// Reload values
 	var clsl_ItmStp = Math.round((clsl_ItmMax - clsl_ItmMin) / (clsl_Points - 1));
@@ -216,7 +230,13 @@ function CLSL_VerifyItm()
 	OverShootCurrentReset();
 	
 	// Tektronix init
-	CLSL_TekInit(clsl_chMeasureI);
+	if(clsl_measuring_device == "TPS2000")
+		CLSL_TekInit(clsl_chMeasureI);
+	else if (clsl_measuring_device == "DMM6000")
+	{
+		KEI_ConfigVoltage(clsl_V_PulsePlate);
+		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+	}
 
 	// Reload values
 	var clsl_ItmStp = Math.round((clsl_ItmMax - clsl_ItmMin) / (clsl_Points - 1));
@@ -241,7 +261,13 @@ function CLSL_CalibrateIset()
 	OverShootCurrentReset();
 	
 	// Tektronix init
-	CLSL_TekInit(clsl_chMeasureI);
+	if(clsl_measuring_device == "TPS2000")
+		CLSL_TekInit(clsl_chMeasureI);
+	else if (clsl_measuring_device == "DMM6000")
+	{
+		KEI_ConfigVoltage(clsl_V_PulsePlate);
+		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+	}
 
 	// Reload values
 	var clsl_ItmStp = Math.round((clsl_ItmMax - clsl_ItmMin) / (clsl_Points - 1));
@@ -270,7 +296,13 @@ function CLSL_VerifyIset()
 	OverShootCurrentReset();
 	
 	// Tektronix init
-	CLSL_TekInit(clsl_chMeasureI);
+	if(clsl_measuring_device == "TPS2000")
+		CLSL_TekInit(clsl_chMeasureI);
+	else if (clsl_measuring_device == "DMM6000")
+	{
+		KEI_ConfigVoltage(clsl_V_PulsePlate);
+		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+	}
 
 	// Reload values
 	var clsl_ItmStp = Math.round((clsl_ItmMax - clsl_ItmMin) / (clsl_Points - 1));
@@ -293,7 +325,13 @@ function CLSL_CalibrateIg()
 	CLSL_ResetIgCal();
 	
 	// Tektronix init
-	CLSL_GateTekInit(clsl_chMeasureI);
+	if(clsl_measuring_device == "TPS2000")
+		CLSL_GateTekInit(clsl_chMeasureI);
+	else if (clsl_measuring_device == "DMM6000")
+	{
+		KEI_ConfigVoltage(clsl_V_PulsePlate);
+		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+	}
 
 	// Reload values
 	var clsl_IgStp = Math.round((clsl_IgMax - clsl_IgMin) / (clsl_Points - 1));
@@ -328,7 +366,13 @@ function CLSL_VerifyIg()
 	CLSL_ResetA();
 	
 	// Tektronix init
-	CLSL_GateTekInit(clsl_chMeasureI);
+	if(clsl_measuring_device == "TPS2000")
+		CLSL_GateTekInit(clsl_chMeasureI);
+	else if (clsl_measuring_device == "DMM6000")
+	{
+		KEI_ConfigVoltage(clsl_V_PulsePlate);
+		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+	}
 
 	// Reload values
 	var clsl_IgStp = Math.round((clsl_IgMax - clsl_IgMin) / (clsl_Points - 1));
@@ -350,7 +394,13 @@ function CLSL_CalibrateUg()
 	CLSL_ResetUgCal();
 	
 	// Tektronix init
-	CLSL_GateTekInit(clsl_chMeasureU);
+	if(clsl_measuring_device == "TPS2000")
+		CLSL_GateTekInit(clsl_chMeasureU);
+	else if (clsl_measuring_device == "DMM6000")
+	{
+		KEI_ConfigVoltage(clsl_V_PulsePlate);
+		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+	}
 	
 	// Reload values
 	var clsl_UgStp = Math.round((clsl_UgMax - clsl_UgMin) / (clsl_Points - 1));
@@ -383,9 +433,15 @@ function CLSL_CalibrateUg()
 function CLSL_VerifyUg()
 {
 	CLSL_ResetA();
-	
 	// Tektronix init
-	CLSL_GateTekInit(clsl_chMeasureU);
+	if(clsl_measuring_device == "TPS2000")
+		CLSL_GateTekInit(clsl_chMeasureU);
+	else if (clsl_measuring_device == "DMM6000")
+	{
+		KEI_ConfigVoltage(clsl_V_PulsePlate);
+		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+	}
+
 	// Reload values
 	var clsl_UgStp = Math.round((clsl_UgMax - clsl_UgMin) / (clsl_Points - 1));
 	var VoltageArray = CGEN_GetRange(clsl_UgMin, clsl_UgMax, clsl_UgStp);
@@ -405,9 +461,9 @@ function CLSL_CollectUtm(VoltageValues, IterationsCount)
 	clsl_CntTotal = IterationsCount * VoltageValues.length;
 	clsl_CntDone = 1;
 
+	var AvgNum;
 	if(clsl_measuring_device == "TPS2000")
 	{
-		var AvgNum;
 		if (clsl_UseAvg)
 		{
 			AvgNum = 4;
@@ -432,10 +488,10 @@ function CLSL_CollectUtm(VoltageValues, IterationsCount)
 				CLSL_TekScale(clsl_chMeasureU, VoltageValues[j] / 1000);
 			else if (clsl_measuring_device == "DMM6000")
 			{
-				KEI_SetVoltageRange(VoltageValues[j] / 1000 * 1.2);
+				KEI_SetVoltageRange(VoltageValues[j] / 1000);
 				KEI_ActivateTrigger();
 			}
-			
+
 			var PrintTemp = LSLH_Print;
 			LSLH_Print = 0;
 			
@@ -456,7 +512,7 @@ function CLSL_CollectUtm(VoltageValues, IterationsCount)
 			if(clsl_measuring_device == "TPS2000")
 				var UtmSc = (CLSL_Measure(clsl_chMeasureU) * 1000).toFixed(2);
 			else if (clsl_measuring_device == "DMM6000")
-				var UtmSc = (KEI_ReadMaximum() * 1000).toFixed(3);
+				var UtmSc = (KEI_ReadArrayMaximum() * 1000).toFixed(3);
 
 			clsl_UtmSc.push(UtmSc);
 
@@ -484,16 +540,21 @@ function CLSL_CollectItm(CurrentValues, IterationsCount)
 	clsl_CntDone = 1;
 
 	var AvgNum;
-	if (clsl_UseAvg)
+	if(clsl_measuring_device == "TPS2000")
 	{
-		AvgNum = 4;
-		TEK_AcquireAvg(AvgNum);
+		if (clsl_UseAvg)
+		{
+			AvgNum = 4;
+			TEK_AcquireAvg(AvgNum);
+		}
+		else
+		{
+			AvgNum = 1;
+			TEK_AcquireSample();
+		}
 	}
-	else
-	{
+	else if (clsl_measuring_device == "DMM6000")
 		AvgNum = 1;
-		TEK_AcquireSample();
-	}
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
@@ -501,8 +562,14 @@ function CLSL_CollectItm(CurrentValues, IterationsCount)
 		{
 			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
 			//
-			CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_Rshunt / 1000000);
-			
+			if(clsl_measuring_device == "TPS2000")
+				CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_Rshunt / 1000000);
+			else if (clsl_measuring_device == "DMM6000")
+			{
+				KEI_SetVoltageRange(CurrentValues[j] * clsl_Rshunt / 1000000);
+				KEI_ActivateTrigger();
+			}
+
 			var PrintTemp = LSLH_Print;
 			LSLH_Print = 0;
 			
@@ -515,14 +582,22 @@ function CLSL_CollectItm(CurrentValues, IterationsCount)
 			LSLH_Print = PrintTemp;
 			
 			// Unit data
-			var ItmRead = dev.r(206);
+			var ItmRead = dev.r(206) + dev.r(205) / 10;
 			clsl_Itm.push(ItmRead);
 			print("Itmread, A: " + ItmRead);
 
 			// Scope data
-			var ItmSc = (CLSL_Measure(clsl_chMeasureI) / clsl_Rshunt * 1000000).toFixed(2);
+			if(clsl_measuring_device == "TPS2000")
+				var ItmSc = (CLSL_Measure(clsl_chMeasureI) / clsl_Rshunt * 1000000).toFixed(2);
+			else if (clsl_measuring_device == "DMM6000")
+				var ItmSc = (KEI_ReadArrayMaximum() / clsl_Rshunt * 1000000).toFixed(3);
+
 			clsl_ItmSc.push(ItmSc);
-			print("Itmtek, A: " + ItmSc);
+
+			if(clsl_measuring_device == "TPS2000")
+				print("Itmtek, A: " + ItmSc);
+			else if (clsl_measuring_device == "DMM6000")
+				print("ItmDMM, A: " + ItmSc);
 
 			// Relative error
 			var ItmErr = ((ItmSc - ItmRead) / ItmRead * 100).toFixed(2);
@@ -543,16 +618,21 @@ function CLSL_CollectIset(CurrentValues, IterationsCount)
 	clsl_CntDone = 1;
 
 	var AvgNum;
-	if (clsl_UseAvg)
+	if(clsl_measuring_device == "TPS2000")
 	{
-		AvgNum = 4;
-		TEK_AcquireAvg(AvgNum);
+		if (clsl_UseAvg)
+		{
+			AvgNum = 4;
+			TEK_AcquireAvg(AvgNum);
+		}
+		else
+		{
+			AvgNum = 1;
+			TEK_AcquireSample();
+		}
 	}
-	else
-	{
+	else if (clsl_measuring_device == "DMM6000")
 		AvgNum = 1;
-		TEK_AcquireSample();
-	}
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
@@ -560,7 +640,13 @@ function CLSL_CollectIset(CurrentValues, IterationsCount)
 		{
 			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
 			//
-			CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_Rshunt / 1000000);
+			if(clsl_measuring_device == "TPS2000")
+				CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_Rshunt / 1000000);
+			else if (clsl_measuring_device == "DMM6000")
+			{
+				KEI_SetVoltageRange(CurrentValues[j] * clsl_Rshunt / 1000000);
+				KEI_ActivateTrigger();
+			}
 			
 			var PrintTemp = LSLH_Print;
 			LSLH_Print = 0;
@@ -579,9 +665,17 @@ function CLSL_CollectIset(CurrentValues, IterationsCount)
 			print("Iset, A: " + Iset);
 
 			// Scope data
-			var IsetSc = (CLSL_Measure(clsl_chMeasureI) / clsl_Rshunt * 1000000).toFixed(2);
+			if(clsl_measuring_device == "TPS2000")
+				var IsetSc = (CLSL_Measure(clsl_chMeasureI) / clsl_Rshunt * 1000000).toFixed(2);
+			else if (clsl_measuring_device == "DMM6000")
+				var IsetSc = (KEI_ReadArrayMaximum() / clsl_Rshunt * 1000000).toFixed(3);
+
 			clsl_IsetSc.push(IsetSc);
-			print("Itmtek, A: " + IsetSc);
+
+			if(clsl_measuring_device == "TPS2000")
+				print("ItmSettek, A: " + IsetSc);
+			else if (clsl_measuring_device == "DMM6000")
+				print("ItmSetDMM, A: " + IsetSc);
 
 			// Relative error
 			var IsetErr = ((IsetSc - Iset) / Iset * 100).toFixed(2);
@@ -602,16 +696,21 @@ function CLSL_CollectIg(CurrentValues, IterationsCount)
 	clsl_CntDone = 1;
 
 	var AvgNum;
-	if (clsl_UseAvg)
+	if(clsl_measuring_device == "TPS2000")
 	{
-		AvgNum = 4;
-		TEK_AcquireAvg(AvgNum);
+		if (clsl_UseAvg)
+		{
+			AvgNum = 4;
+			TEK_AcquireAvg(AvgNum);
+		}
+		else
+		{
+			AvgNum = 1;
+			TEK_AcquireSample();
+		}
 	}
-	else
-	{
+	else if (clsl_measuring_device == "DMM6000")
 		AvgNum = 1;
-		TEK_AcquireSample();
-	}
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
@@ -619,16 +718,33 @@ function CLSL_CollectIg(CurrentValues, IterationsCount)
 		{
 			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
 			//
-			CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_GateRshunt / 1000000);
+			if(clsl_measuring_device == "TPS2000")
+				CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_GateRshunt / 1000000);
+			else if (clsl_measuring_device == "DMM6000")
+			{
+				KEI_SetVoltageRange(CurrentValues[j] * clsl_GateRshunt / 1000000);
+				KEI_ActivateTrigger();
+			}
+
 			GateCurrent = CurrentValues[j];
-			TEK_Send("trigger:main:edge:slope rise");
-			TEK_Send("horizontal:position " + 0.0002);
+
+			if(clsl_measuring_device == "TPS2000")
+			{
+				TEK_Send("trigger:main:edge:slope rise");
+				TEK_Send("horizontal:position " + 0.0002);
+			}
+
+			var PrintTemp = LSLH_Print;
+			LSLH_Print = 0;
+
 			for (var k = 0; k < AvgNum; k++)
 			{
 				if (!LSLH_StartMeasure(100))
 				sleep(500);
 			}
-			
+
+			LSLH_Print = PrintTemp;
+
 			// Unit data
 			var IgSet = CurrentValues[j];
 			clsl_IgSet.push(IgSet);
@@ -639,9 +755,17 @@ function CLSL_CollectIg(CurrentValues, IterationsCount)
 			print("Ig, mA: " + Ig);
 
 			// Scope data
-			var IgSc = (CLSL_Measure(clsl_chMeasureI) / clsl_GateRshunt * 1000000).toFixed(2);
+			if(clsl_measuring_device == "TPS2000")
+				var IgSc = (CLSL_Measure(clsl_chMeasureI) / clsl_GateRshunt * 1000000).toFixed(2);
+			else if (clsl_measuring_device == "DMM6000")
+				var IgSc = (KEI_ReadArrayMaximum() / clsl_GateRshunt * 1000000).toFixed(3);
+
 			clsl_IgSc.push(IgSc);
-			print("IgTek, mA: " + IgSc);
+
+			if(clsl_measuring_device == "TPS2000")
+				print("IgTek, mA: " + IgSc);
+			else if (clsl_measuring_device == "DMM6000")
+				print("IgDMM, mA: " + IgSc);
 
 			// Relative error
 			var IgSetErr = ((IgSc - IgSet) / IgSet * 100).toFixed(2);
@@ -666,16 +790,21 @@ function CLSL_CollectUg(VoltageValues, IterationsCount)
 	clsl_CntDone = 1;
 
 	var AvgNum;
-	if (clsl_UseAvg)
+	if(clsl_measuring_device == "TPS2000")
 	{
-		AvgNum = 4;
-		TEK_AcquireAvg(AvgNum);
+		if (clsl_UseAvg)
+		{
+			AvgNum = 4;
+			TEK_AcquireAvg(AvgNum);
+		}
+		else
+		{
+			AvgNum = 1;
+			TEK_AcquireSample();
+		}
 	}
-	else
-	{
+	else if (clsl_measuring_device == "DMM6000")
 		AvgNum = 1;
-		TEK_AcquireSample();
-	}
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
@@ -683,16 +812,33 @@ function CLSL_CollectUg(VoltageValues, IterationsCount)
 		{
 			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
 			//
-			CLSL_TekScale(clsl_chMeasureU, VoltageValues[j] / 1000);
+			if(clsl_measuring_device == "TPS2000")
+				CLSL_TekScale(clsl_chMeasureU, VoltageValues[j] / 1000);
+			else if (clsl_measuring_device == "DMM6000")
+			{
+				KEI_SetVoltageRange(VoltageValues[j] / 1000);
+				KEI_ActivateTrigger();
+			}
+
 			GateVoltage = VoltageValues[j];
-			TEK_Send("trigger:main:edge:slope rise");
-			TEK_Send("horizontal:position " + 0.0002);
+
+			if(clsl_measuring_device == "TPS2000")
+			{
+				TEK_Send("trigger:main:edge:slope rise");
+				TEK_Send("horizontal:position " + 0.0002);
+			}
+
+			var PrintTemp = LSLH_Print;
+			LSLH_Print = 0;
+
 			for (var k = 0; k < AvgNum; k++)
 			{
 				if (!LSLH_StartMeasure(100))
 				sleep(500);
 			}
-			
+
+			LSLH_Print = PrintTemp;
+
 			// Unit data
 			var UgSet = VoltageValues[j];
 			clsl_UgSet.push(UgSet);
@@ -703,9 +849,17 @@ function CLSL_CollectUg(VoltageValues, IterationsCount)
 			print("Ug, mV: " + Ug);
 
 			// Scope data
-			var UgSc = (CLSL_Measure(clsl_chMeasureU) * 1000).toFixed(2);
+			if(clsl_measuring_device == "TPS2000")
+				var UgSc = (CLSL_Measure(clsl_chMeasureU) * 1000).toFixed(2);
+			else if (clsl_measuring_device == "DMM6000")
+				var UgSc = (KEI_ReadArrayMaximum() * 1000).toFixed(3);
+
 			clsl_UgSc.push(UgSc);
-			print("UgTek,  mV: " + UgSc);
+
+			if(clsl_measuring_device == "TPS2000")
+				print("UgTek,  mV: " + UgSc);
+			else if (clsl_measuring_device == "DMM6000")
+				print("UgDMM,  mV: " + UgSc);
 
 			// Relative error
 			var UgSetErr = ((UgSc - UgSet) / UgSet * 100).toFixed(2);
