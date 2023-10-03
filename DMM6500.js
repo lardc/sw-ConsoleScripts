@@ -1,6 +1,4 @@
-BufferLength = 0;
-sic_gd_filter_points = 20;
-sic_gd_filter_factor = 1;
+CoefEmaFilter = 0.07
 KEI_SampleRate = 1000000;
 
 function KEI_Reset()
@@ -92,73 +90,76 @@ function KEI_ReadMaximum()
 }
 //--------------------
 
-function KEI_ReadArray()
-{
-	source_array = [];
-	string_array = [];
-	float_array = [];
-	startIndex = 1;
-	endIndex = 50;
-	stepIndex = 50;
-	i = 0;
-
-	while((endIndex + i * stepIndex) <= BufferLength)
-	{
-		source_array[i] = tmc.q('TRAC:DATA? ' + (startIndex + i * stepIndex) +
-			', ' + (endIndex + i * stepIndex) + ', "TestBuffer", READ');
-		i++;
-	}
-
-	source_array = String(source_array);
-	string_array = source_array.split(",");
-	float_array = string_array.map(Number);
-
-	return float_array;
-}
-
-function KEI_EMA_Filter(float_array)
-{
-	var k = 0.07
-	var filtered_ema = [];
-
-	// ema filtering
-	filtered_ema[0] = float_array[0];
-
-	for (var i = 1; i < float_array.length; ++i)
-	{
-		filtered_ema[i] = filtered_ema[i-1] + (float_array[i-1] - filtered_ema[i-1]) * k ;
-	}
-	
-	// Для вывода данных до и после фильтра
-	//
-	plot2(filtered_ema,float_array,1,1);
-	return filtered_ema;
-}
-
 function KEI_ReadArrayMaximum()
 {
-	sorted_ema_float = [];
 	AverageValue = 0;
-	k = 0;
+	SortedArrayEmaFloat = [];
+	CoefBufferLengthForCalcAvg = 0;
 
-	sorted_ema_float = KEI_EMA_Filter(KEI_ReadArray());
+	SortedArrayEmaFloat = KEI_EMA_Filter(KEI_ReadArray());
 
-	sorted_ema_float.sort(function (a, b)
+	SortedArrayEmaFloat.sort(function (a, b)
 	{
 		return a - b;
 	});
 
+	CoefBufferLengthForCalcAvg = SortedArrayEmaFloat.length / 1000;
+	SamplingAvgNum = parseInt(15 * CoefBufferLengthForCalcAvg);
+	MaxSamplesCutoffNum = parseInt(10 * CoefBufferLengthForCalcAvg);
 
-	k = sorted_ema_float.length / 1000;
-	SAMPLING_AVG_NUM = parseInt(15 * k);
-	MAX_SAMPLES_CUTOFF_NUM = parseInt(10 * k);
+	// Для вывода графика отсортированных данных
+	// plot(SortedArrayEmaFloat, 1, 1);
 
-	// Для вывода отсортированных данных на график
-	//
-	plot(sorted_ema_float,1,1);
+	for (var i = SortedArrayEmaFloat.length - SamplingAvgNum - MaxSamplesCutoffNum;
+			i < SortedArrayEmaFloat.length - MaxSamplesCutoffNum; ++i)
+		AverageValue += SortedArrayEmaFloat[i];
 
-	for (var i = sorted_ema_float.length - SAMPLING_AVG_NUM - MAX_SAMPLES_CUTOFF_NUM; i < sorted_ema_float.length - MAX_SAMPLES_CUTOFF_NUM; ++i)
-		AverageValue += sorted_ema_float[i];
-
-	return (AverageValue / SAMPLING_AVG_NUM);
+	return (AverageValue / SamplingAvgNum);
 }
+//--------------------
+
+function KEI_EMA_Filter(FloatArray)
+{
+	FilteredArrayEma = [];
+
+	// ema filtering
+	FilteredArrayEma[0] = FloatArray[0];
+
+	for (var i = 1; i < FloatArray.length; ++i)
+	{
+		FilteredArrayEma[i] = FilteredArrayEma[i-1] +
+			(FloatArray[i-1] - FilteredArrayEma[i-1]) * CoefEmaFilter;
+	}
+	
+	// Для вывода графика данных до и после фильтра
+	// plot2(FilteredArrayEma, FloatArray, 1, 1);
+
+	return FilteredArrayEma;
+}
+//--------------------
+
+function KEI_ReadArray()
+{
+	SourceArray = [];
+	StringArray = [];
+	FloatArray = [];
+
+	StepIndex = 50;
+	StartIndex = 1;
+	EndIndex = StepIndex;
+	i = 0;
+
+	while((EndIndex + i * StepIndex) <= BufferLength)
+	{
+		SourceArray[i] = tmc.q('TRAC:DATA? ' + (StartIndex + i * StepIndex) +
+			', ' + (EndIndex + i * StepIndex) + ', "TestBuffer", READ');
+		i++;
+	}
+
+	SourceArray = String(SourceArray);
+	StringArray = SourceArray.split(",");
+	FloatArray = StringArray.map(Number);
+
+	return FloatArray;
+}
+
