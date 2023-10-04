@@ -26,6 +26,10 @@ include("TestLSLH.js");
 // Формирование сигнала и измерение
 LSLH_StartMeasure(200);
 
+// Ресурсный тест
+include("TestLSLH.js");
+dev.co(6)
+LSLH_ResourceTest(6000, 4)
 
 ////Калибровка с помощью Tektronix\\\\
 
@@ -187,7 +191,7 @@ clsl_ItmMin = 50;
 clsl_ItmMax = 6000;
 clsl_Points = 10;
 clsl_Rshunt = 250; // мкОм
-clsl_Iterations = 1;
+clsl_Iterations = 3;
 clsl_UseAvg = 0;
 clsl_V_PulsePlate = 4000
 clsl_V_TriggerDelay = 3000e-6
@@ -206,7 +210,6 @@ clsl_UtmMin = 500;
 clsl_UtmMax = 5000;
 clsl_Points = 10;
 clsl_Rload = 0.22 / 63 * 1000000; // в мкОм
-clsl_CurrentRange = 0;
 clsl_Iterations = 3;
 clsl_UseAvg = 0;
 clsl_V_PulsePlate = 4000

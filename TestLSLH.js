@@ -83,7 +83,7 @@ function LSLH_ResourceTest(Current, HoursTest)
 	var hours = start.getHours() + HoursTest;
 	end.setHours(hours);
 
-	csv_array.push("N ; Utm, mV; Itm, A; Ugt, V; Igt, mA; Hours ; Minutes; Seconds");
+	csv_array.push("N ; Utm, mV; Itm, A; Ugt, mV; Igt, mA; Hours ; Minutes; Seconds");
 
 	while((new Date()).getTime() < end.getTime())
 	{
@@ -96,7 +96,7 @@ function LSLH_ResourceTest(Current, HoursTest)
 		var elapsed_time = new Date((new Date()).getTime() - start.getTime());
 		if (elapsed_time.getTime() > 10 * MinutesInMs * count_plot)
 		{
-			plot(dev.rafs(1));
+			pl(dev.rafs(1));
 			p("Вывод графика #" + (count_plot + 1) + " спустя " +
 				(elapsed_time.getHours() - 3) + " ч и " + elapsed_time.getMinutes() + " мин");
 
@@ -106,7 +106,7 @@ function LSLH_ResourceTest(Current, HoursTest)
 		if (anykey()) break;
 
 		csv_array.push( i + ";" + dev.r(198) + ";" + (dev.r(206) + dev.r(205) / 10) + ";" +
-			(dev.r(202) / 1000) + ";" + dev.r(203) + ";" + now_time.getHours() +  ";" +
+			dev.r(202) + ";" + dev.r(203) + ";" + now_time.getHours() +  ";" +
 			now_time.getMinutes() + ";" + now_time.getSeconds());
 
 		save("data/LSL_TestUTM" + end.getTime() + ".csv", csv_array);
