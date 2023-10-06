@@ -133,6 +133,30 @@
 }
 //------------------------
 
+function FWU_DumpCommon(Name, Num, FinishReg)
+{
+	if (typeof Num === 'undefined')
+		print("Необходимо указать номер блока в аргументе функции")
+	else
+	{
+		var NumStr = "00" + Num
+		NumStr = NumStr.substr(NumStr.length - 3)
+		dev.Dump("../../sw-ConsoleScripts/regdump/" + Name + "_" + NumStr + ".regdump", 0, FinishReg)
+	}
+}
+
+function FWU_RestoreCommon(Name, Num)
+{
+	if (typeof Num === 'undefined')
+		print("Необходимо указать номер блока в аргументе функции")
+	else
+	{
+		var NumStr = "00" + Num
+		NumStr = NumStr.substr(NumStr.length - 3)
+		dev.Restore("../../sw-ConsoleScripts/regdump/" + Name + "_" + NumStr + ".regdump")
+	}
+}
+
 // ATU HP
 function FWU_ATUHP()
 {
@@ -206,14 +230,14 @@ function FWU_LSLH()
 	FWUpdateSTM("../../hw-LSLHControlBoard/Firmware/Release/LSLHControlBoard.binary");
 }
 
-function FWU_DumpLSLH()
+function FWU_DumpLSLH(Num)
 {
-	dev.Dump("../../hw-LSLHControlBoard/Firmware/LSLHControlBoard.regdump", 0, 126);
+	FWU_DumpCommon("LSLH", Num, 126)
 }
 
-function FWU_RestoreLSLH()
+function FWU_RestoreLSLH(Num)
 {
-	dev.Restore("../../hw-LSLHControlBoard/Firmware/LSLHControlBoard.regdump");
+	FWU_RestoreCommon("LSLH", Num)
 }
 //------------------------
 
