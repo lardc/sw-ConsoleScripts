@@ -495,3 +495,20 @@ function FWU_RestorePMXU()
 	dev.Restore("../../hw-PMXUControlBoard/Firmware/PMXUControlBoard.regdump");
 }
 //------------------------
+
+// SVTU
+function FWU_SVTU()
+{
+	FWUpdateSTM("../../hw-SVTUControlBoard/Firmware/Release/SVTUControlBoard.binary");
+}
+
+function FWU_DumpSVTU()
+{
+	dev.Dump("../../hw-SVTUControlBoard/Firmware/SVTUControlBoard.regdump", 0, 126);
+}
+
+function FWU_RestoreSVTU()
+{
+	dev.Restore("../../hw-SVTUControlBoard/Firmware/SVTUControlBoard.regdump");
+}
+//------------------------
