@@ -174,65 +174,7 @@ function CAL_VerifyUcesat()
 	}
 }
 
-// function CAL_CalibrateIce()
-// {		
-// 	CAL_ResetA();
-// 	CAL_ResetIceCal();
-
-// 	// Tektronix init
-// 	if(CAL_measuring_device == "TPS2000")
-// 		CAL_TekInit(CAL_chMeasureI);
-// 	else if (CAL_measuring_device == "DMM6000")
-// 	{
-// 		KEI_ConfigVoltage(CAL_V_PulsePlate);
-// 		KEI_ConfigExtTrigger(CAL_V_TriggerDelay);
-// 	}
-
-// 	// Reload values
-// 	var CAL_IceStp = Math.round((CAL_IceMax[CAL_CurrentRange] - CAL_IceMin[CAL_CurrentRange]) / (CAL_Points - 1));
-// 	var CurrentArray = CGEN_GetRange(CAL_IceMin[CAL_CurrentRange], CAL_IceMax[CAL_CurrentRange], CAL_IceStp);
-
-// 	if (CAL_CollectIce(CurrentArray, CAL_Iterations))
-// 	{
-// 		CAL_SaveIce("SVTU_Ice");
-
-// 		// Plot relative error distribution
-// 		scattern(CAL_IceSc, CAL_IceErr, "Current (in A)", "Error (in %)", "Ice relative error " + CAL_IceMin + " ... " + CAL_IceMax + " A");
-
-// 		// Calculate correction
-// 		CAL_IceCorr = CGEN_GetCorrection2("SVTU_Ice");
-// 		CAL_CalIce(CAL_IceCorr[0], CAL_IceCorr[1], CAL_IceCorr[2]);
-// 		CAL_PrintCoefIce();
-// 	}
-// }
-
-// function CAL_VerifyIce()
-// {		
-// 	CAL_ResetA();
-	
-// 	// Tektronix init
-// 	if(CAL_measuring_device == "TPS2000")
-// 		CAL_TekInit(CAL_chMeasureI);
-// 	else if (CAL_measuring_device == "DMM6000")
-// 	{
-// 		KEI_ConfigVoltage(CAL_V_PulsePlate);
-// 		KEI_ConfigExtTrigger(CAL_V_TriggerDelay);
-// 	}
-
-// 	// Reload values
-// 	var CAL_IceStp = Math.round((CAL_IceMax[CAL_CurrentRange] - CAL_IceMin[CAL_CurrentRange]) / (CAL_Points - 1));
-// 	var CurrentArray = CGEN_GetRange(CAL_IceMin[CAL_CurrentRange], CAL_IceMax[CAL_CurrentRange], CAL_IceStp);
-
-// 	if (CAL_CollectIce(CurrentArray, CAL_Iterations))
-// 	{
-// 		CAL_SaveIce("SVTU_Ice_fixed");
-
-// 		// Plot relative error distribution
-// 		scattern(CAL_IceSc, CAL_IceErr, "Current (in A)", "Error (in %)", "Ice relative error " + CAL_IceMin + " ... " + CAL_IceMax + " A");
-// 	}
-// }
-
-function CAL_CalibrateIset()
+function CAL_CalibrateIce()
 {		
 	CAL_ResetA();
 	CAL_ResetIsetCal();
@@ -249,7 +191,7 @@ function CAL_CalibrateIset()
 	var CAL_IceStp = Math.round((CAL_IceMax[CAL_CurrentRange] - CAL_IceMin[CAL_CurrentRange]) / (CAL_Points - 1));
 	var CurrentArray = CGEN_GetRange(CAL_IceMin[CAL_CurrentRange], CAL_IceMax[CAL_CurrentRange], CAL_IceStp);
 
-	if (CAL_CollectIset(CurrentArray, CAL_Iterations))
+	if (CAL_CollectIce(CurrentArray, CAL_Iterations))
 	{
 		CAL_SaveIset("SVTU_Iset");
 		CAL_SaveIce("SVTU_Ice");
@@ -269,7 +211,7 @@ function CAL_CalibrateIset()
 	}
 }
 
-function CAL_VerifyIset()
+function CAL_VerifyIce()
 {		
 	CAL_ResetA();
 	
@@ -286,7 +228,7 @@ function CAL_VerifyIset()
 	var CAL_IceStp = Math.round((CAL_IceMax[CAL_CurrentRange] - CAL_IceMin[CAL_CurrentRange]) / (CAL_Points - 1));
 	var CurrentArray = CGEN_GetRange(CAL_IceMin[CAL_CurrentRange], CAL_IceMax[CAL_CurrentRange], CAL_IceStp);
 
-	if (CAL_CollectIset(CurrentArray, CAL_Iterations))
+	if (CAL_CollectIce(CurrentArray, CAL_Iterations))
 	{
 		CAL_SaveIset("SVTU_Iset_fixed");
 		CAL_SaveIce("SVTU_Ice_fixed");
@@ -445,7 +387,7 @@ function CAL_CollectUcesat(VoltageValues, IterationsCount)
 	return 1;
 }
 
-function CAL_CollectIset(CurrentValues, IterationsCount)
+function CAL_CollectIce(CurrentValues, IterationsCount)
 {
 	CAL_CntTotal = IterationsCount * CurrentValues.length;
 	CAL_CntDone = 1;
