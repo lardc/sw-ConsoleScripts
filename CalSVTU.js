@@ -5,76 +5,72 @@ include("DMM6500.js")
 // include("Numeric.js")
 
 // Calibration setup parameters
-clsl_Rshunt = 750;					// in uOhms
-clsl_Rload = 3527;		     			// in uOhms
-clsl_GateRshunt = 10000;			// in mOhms
+CAL_Rshunt = 750;					// in uOhms
+CAL_Rload = 3527;		     		// in uOhms
+CAL_GateRshunt = 10000;				// in mOhms
 
 // Setup parameters for DMM6000
-clsl_V_PulsePlate 	= 1000 			// in us
-clsl_V_TriggerDelay	= 0				// in s
-clsl_measuring_device = "DMM6000";	// "DMM6000" or "TPS2000"
+CAL_V_PulsePlate 	= 1000 			// in us
+CAL_V_TriggerDelay	= 0				// in s
+CAL_measuring_device = "DMM6000";	// "DMM6000" or "TPS2000"
 
 // Current range number
-clsl_CurrentRange = 0;				// 0 = Range [ < 300 A]; 1 = Range [ < 1700 A] for measure
+CAL_CurrentRange = 1;				// 0 = Range [ < 300 A]; 1 = Range [ < 1700 A] for measure
 //
-clsl_Points = 10;
+CAL_Points = 10;
 //
-clsl_UtmMin = 400;					// in mV
-clsl_UtmMax = 5200;					// in mV
+CAL_UcesatMin = 400;					// in mV
+CAL_UcesatMax = 5200;					// in mV
 //
-clsl_ItmMin = 301					// in A
-clsl_ItmMax = 1700					// in A
+CAL_IceMin = [50, 301]				// in A
+CAL_IceMax = [300, 1700]			// in A
 
-//ItmSetArray = [50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300];
-ItmSetArray = [301, 450, 600, 750, 900, 1050, 1200, 1350, 1500, 1700];
-//ItmSetArray = [301, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410,420,430,440,450,460,470,480,490,500,510,520,530,540,550,560,580,590,600,610,620,630,640,650];
-//ItmSetArray = [50, 60,70,80,90,100,110,120,130,140,150,160,170,180,190,200,210,220,230,240,250,260,270,280,290,300];
+
+
 //
-clsl_UgMin = 10;						// in V
-clsl_UgMax = 20;					// in V
+CAL_UgeMin = 10;					// in V
+CAL_UgeMax = 20;					// in V
 //
-clsl_Iterations = 1;
-clsl_UseAvg = 0;
+CAL_Iterations = 3;
+CAL_UseAvg = 0;
 
 // Counters
-clsl_CntTotal = 0;
-clsl_CntDone = 0;
+CAL_CntTotal = 0;
+CAL_CntDone = 0;
 
 // Channels
-clsl_chMeasureI = 1;
-clsl_chMeasureU = 2;
-clsl_chSync = 3;
+CAL_chMeasureI = 1;
+CAL_chMeasureU = 2;
+CAL_chSync = 3;
 
 // Results storage
-clsl_Utm = [];
-clsl_Itm = [];
-clsl_Iset = [];
-clsl_Ug = [];
-clsl_UgSet = [];
+CAL_Ucesat = [];
+CAL_Ice = [];
+CAL_Iset = [];
+CAL_Uge = [];
+CAL_UgeSet = [];
 
 // Tektronix data
-clsl_UtmSc = [];
-clsl_ItmSc = [];
-clsl_IsetSc = [];
-clsl_UgSc = [];
+CAL_UcesatSc = [];
+CAL_IceSc = [];
+CAL_IsetSc = [];
+CAL_UgeSc = [];
 
 // Relative error
-clsl_UtmErr = [];
-clsl_ItmErr = [];
-clsl_IsetErr = [];
-clsl_UgErr = [];
-clsl_UgSetErr = [];
-
-clsl_DAC = [];
+CAL_UcesatErr = [];
+CAL_IceErr = [];
+CAL_IsetErr = [];
+CAL_UgeErr = [];
+CAL_UgeSetErr = [];
 
 // Correction
-clsl_UtmCorr = [];
-clsl_ItmCorr = [];
-clsl_IsetCorr = [];
-clsl_UgCorr = [];
-clsl_UgSetCorr = [];
+CAL_UcesatCorr = [];
+CAL_IceCorr = [];
+CAL_IsetCorr = [];
+CAL_UgeCorr = [];
+CAL_UgeSetCorr = [];
 
-function CLSL_Init_Tek(portDevice, portTek, channelMeasureI, channelMeasureU, channelSync)
+function SVTU_Init_Tek(portDevice, portTek, channelMeasureI, channelMeasureU, channelSync)
 {
 	// Init device port
 	dev.Disconnect();
@@ -87,9 +83,9 @@ function CLSL_Init_Tek(portDevice, portTek, channelMeasureI, channelMeasureU, ch
 	}
 
 	// Copy channel information
-	clsl_chMeasureU = channelMeasureU;
-	clsl_chMeasureI = channelMeasureI;
-	clsl_chSync = channelSync;
+	CAL_chMeasureU = channelMeasureU;
+	CAL_chMeasureI = channelMeasureI;
+	CAL_chSync = channelSync;
 
 	// Init Tektronix port
 	TEK_PortInit(portTek);
@@ -97,17 +93,17 @@ function CLSL_Init_Tek(portDevice, portTek, channelMeasureI, channelMeasureU, ch
 	// Tektronix init
 	for (var i = 1; i <= 4; i++)
 	{
-		if ((i == clsl_chMeasureU) || (i == channelMeasureI) || (i == clsl_chSync))
+		if ((i == CAL_chMeasureU) || (i == channelMeasureI) || (i == CAL_chSync))
 			TEK_ChannelOn(i);
 		else
 			TEK_ChannelOff(i);
 	}
 	
-	TEK_ChannelInit(clsl_chSync, "1", "1");
-	CLSL_TriggerInit(clsl_chSync);
+	TEK_ChannelInit(CAL_chSync, "1", "1");
+	SVTU_TriggerInit(CAL_chSync);
 }
 
-function CLSL_Init_DMM(portDevice)
+function SVTU_Init_DMM(portDevice)
 {
 	// Init device port
 	dev.Disconnect();
@@ -117,261 +113,263 @@ function CLSL_Init_DMM(portDevice)
 	KEI_Reset();
 }
 
-function CLSL_CalibrateUtm()
+function SVTU_CalibrateUcesat()
 {
-	CLSL_ResetA();
-	CLSL_ResetUtmCal();
+	SVTU_ResetA();
+	SVTU_ResetUcesatCal();
 	
 	
 	// Tektronix init
-	if(clsl_measuring_device == "TPS2000")
-		CLSL_TekInit(clsl_chMeasureU);
-	else if (clsl_measuring_device == "DMM6000")
+	if(CAL_measuring_device == "TPS2000")
+		SVTU_TekInit(CAL_chMeasureU);
+	else if (CAL_measuring_device == "DMM6000")
 	{
-		KEI_ConfigVoltage(clsl_V_PulsePlate);
-		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+		KEI_ConfigVoltage(CAL_V_PulsePlate);
+		KEI_ConfigExtTrigger(CAL_V_TriggerDelay);
 	}
 
 	// Reload values
-	var clsl_UtmStp = Math.round((clsl_UtmMax - clsl_UtmMin) / (clsl_Points - 1));
-	var VoltageArray = CGEN_GetRange(clsl_UtmMin, clsl_UtmMax, clsl_UtmStp);
+	var CAL_UcesatStp = Math.round((CAL_UcesatMax - CAL_UcesatMin) / (CAL_Points - 1));
+	var VoltageArray = CGEN_GetRange(CAL_UcesatMin, CAL_UcesatMax, CAL_UcesatStp);
 	
-	if (CLSL_CollectUtm(VoltageArray, clsl_Iterations))
+	if (SVTU_CollectUcesat(VoltageArray, CAL_Iterations))
 	{
-		CLSL_SaveUtm("LSL_Utm");
+		SVTU_SaveUcesat("SVTU_Ucesat");
 
 		// Plot relative error distribution
-		scattern(clsl_UtmSc, clsl_UtmErr, "Voltage (in mV)", "Error (in %)", "Utm relative error " + clsl_UtmMin + " ... " + clsl_UtmMax + " mV");
+		scattern(CAL_UcesatSc, CAL_UcesatErr, "Voltage (in mV)", "Error (in %)", "Ucesat relative error " + CAL_UcesatMin + " ... " + CAL_UcesatMax + " mV");
 
 		// Calculate correction
-		clsl_UtmCorr = CGEN_GetCorrection2("LSL_Utm");
-		CLSL_CalUtm(clsl_UtmCorr[0], clsl_UtmCorr[1], clsl_UtmCorr[2]);
-		CLSL_PrintCoefUtm();
+		CAL_UcesatCorr = CGEN_GetCorrection2("SVTU_Ucesat");
+		SVTU_CalUcesat(SVTU_UcesatCorr[0], SVTU_UcesatCorr[1], SVTU_UcesatCorr[2]);
+		SVTU_PrintCoefUcesat();
 	}
 }
 
-function CLSL_VerifyUtm()
+function SVTU_VerifyUcesat()
 {
-	CLSL_ResetA();
+	SVTU_ResetA();
 
 	// Tektronix init
-	if(clsl_measuring_device == "TPS2000")
-		CLSL_TekInit(clsl_chMeasureU);
-	else if (clsl_measuring_device == "DMM6000")
+	if(CAL_measuring_device == "TPS2000")
+		SVTU_TekInit(CAL_chMeasureU);
+	else if (CAL_measuring_device == "DMM6000")
 	{
-		KEI_ConfigVoltage(clsl_V_PulsePlate);
-		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+		KEI_ConfigVoltage(CAL_V_PulsePlate);
+		KEI_ConfigExtTrigger(CAL_V_TriggerDelay);
 	}
 
 	// Reload values
-	var clsl_UtmStp = Math.round((clsl_UtmMax - clsl_UtmMin) / (clsl_Points - 1));
-	var VoltageArray = CGEN_GetRange(clsl_UtmMin, clsl_UtmMax, clsl_UtmStp);
+	var CAL_UcesatStp = Math.round((CAL_UcesatMax - CAL_UcesatMin) / (CAL_Points - 1));
+	var VoltageArray = CGEN_GetRange(CAL_UcesatMin, CAL_UcesatMax, CAL_UcesatStp);
 
-	if (CLSL_CollectUtm(VoltageArray, clsl_Iterations))
+	if (SVTU_CollectUcesat(VoltageArray, CAL_Iterations))
 	{
-		CLSL_SaveUtm("LSL_Utm_fixed");
+		SVTU_SaveUcesat("SVTU_Ucesat_fixed");
 
 		// Plot relative error distribution
-		scattern(clsl_UtmSc, clsl_UtmErr, "Voltage (in mV)", "Error (in %)", "Utm relative error " + clsl_UtmMin + " ... " + clsl_UtmMax + " mV");
+		scattern(CAL_UcesatSc, CAL_UcesatErr, "Voltage (in mV)", "Error (in %)", "Ucesat relative error " + CAL_UcesatMin + " ... " + CAL_UcesatMax + " mV");
 	}
 }
 
-function CLSL_CalibrateItm()
+function SVTU_CalibrateIce()
 {		
-	CLSL_ResetA();
-	CLSL_ResetItmCal();
-	
+	SVTU_ResetA();
+	SVTU_ResetIceCal();
 
 	// Tektronix init
-	if(clsl_measuring_device == "TPS2000")
-		CLSL_TekInit(clsl_chMeasureI);
-	else if (clsl_measuring_device == "DMM6000")
+	if(CAL_measuring_device == "TPS2000")
+		SVTU_TekInit(CAL_chMeasureI);
+	else if (CAL_measuring_device == "DMM6000")
 	{
-		KEI_ConfigVoltage(clsl_V_PulsePlate);
-		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+		KEI_ConfigVoltage(CAL_V_PulsePlate);
+		KEI_ConfigExtTrigger(CAL_V_TriggerDelay);
 	}
 
 	// Reload values
-//	var clsl_ItmStp = Math.round((clsl_ItmMax - clsl_ItmMin) / (clsl_Points - 1));
-//	var CurrentArray = CGEN_GetRange(clsl_ItmMin, clsl_ItmMax, clsl_ItmStp);
+	var CAL_IceStp = Math.round((CAL_IceMax[CAL_CurrentRange] - CAL_IceMin[CAL_CurrentRange]) / (CAL_Points - 1));
+	var CurrentArray = CGEN_GetRange(CAL_IceMin[CAL_CurrentRange], CAL_IceMax[CAL_CurrentRange], CAL_IceStp);
 
-	if (CLSL_CollectItm(ItmSetArray, clsl_Iterations))
+	if (SVTU_CollectIce(CurrentArray, CAL_Iterations))
 	{
-		CLSL_SaveItm("LSL_Itm");
+		SVTU_SaveIce("SVTU_Ice");
 
 		// Plot relative error distribution
-		scattern(clsl_ItmSc, clsl_ItmErr, "Current (in A)", "Error (in %)", "Itm relative error " + clsl_ItmMin + " ... " + clsl_ItmMax + " A");
+		scattern(CAL_IceSc, CAL_IceErr, "Current (in A)", "Error (in %)", "Ice relative error " + CAL_IceMin + " ... " + CAL_IceMax + " A");
 
 		// Calculate correction
-		clsl_ItmCorr = CGEN_GetCorrection2("LSL_Itm");
-		CLSL_CalItm(clsl_ItmCorr[0], clsl_ItmCorr[1], clsl_ItmCorr[2]);
+		CAL_IceCorr = CGEN_GetCorrection2("SVTU_Ice");
+		SVTU_CalIce(SVTU_IceCorr[0], SVTU_IceCorr[1], SVTU_IceCorr[2]);
 
-		CLSL_PrintCoefItm();
+		SVTU_PrintCoefIce();
 	}
 }
 
-function CLSL_VerifyItm()
+function SVTU_VerifyIce()
 {		
-	CLSL_ResetA();
-	
+	SVTU_ResetA();
 	
 	// Tektronix init
-	if(clsl_measuring_device == "TPS2000")
-		CLSL_TekInit(clsl_chMeasureI);
-	else if (clsl_measuring_device == "DMM6000")
+	if(CAL_measuring_device == "TPS2000")
+		SVTU_TekInit(CAL_chMeasureI);
+	else if (CAL_measuring_device == "DMM6000")
 	{
-		KEI_ConfigVoltage(clsl_V_PulsePlate);
-		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+		KEI_ConfigVoltage(CAL_V_PulsePlate);
+		KEI_ConfigExtTrigger(CAL_V_TriggerDelay);
 	}
 
 	// Reload values
-	//var clsl_ItmStp = Math.round((clsl_ItmMax - clsl_ItmMin) / (clsl_Points - 1));
-	//var CurrentArray = CGEN_GetRange(clsl_ItmMin, clsl_ItmMax, clsl_ItmStp);
+	var CAL_IceStp = Math.round((CAL_IceMax[CAL_CurrentRange] - CAL_IceMin[CAL_CurrentRange]) / (CAL_Points - 1));
+	var CurrentArray = CGEN_GetRange(CAL_IceMin[CAL_CurrentRange], CAL_IceMax[CAL_CurrentRange], CAL_IceStp);
 
-	if (CLSL_CollectItm(ItmSetArray, clsl_Iterations))
+	if (SVTU_CollectIce(CurrentArray, CAL_Iterations))
 	{
-		CLSL_SaveItm("LSL_Itm_fixed");
+		SVTU_SaveIce("SVTU_Ice_fixed");
 
 		// Plot relative error distribution
-		scattern(clsl_ItmSc, clsl_ItmErr, "Current (in A)", "Error (in %)", "Itm relative error " + clsl_ItmMin + " ... " + clsl_ItmMax + " A");
+		scattern(CAL_IceSc, CAL_IceErr, "Current (in A)", "Error (in %)", "Ice relative error " + CAL_IceMin + " ... " + CAL_IceMax + " A");
 	}
 }
 
-function CLSL_CalibrateIset()
+function SVTU_CalibrateIset()
 {		
-	CLSL_ResetA();
-	CLSL_ResetIsetCal();
+	SVTU_ResetA();
+	SVTU_ResetIsetCal();
 	
+	if (CAL_CurrentRange)
+		var IceSetArray = IceSetArray_R1;
+	else
+		var IceSetArray = IceSetArray_R0;
 	
 	// Tektronix init
-	if(clsl_measuring_device == "TPS2000")
-		CLSL_TekInit(clsl_chMeasureI);
-	else if (clsl_measuring_device == "DMM6000")
+	if(CAL_measuring_device == "TPS2000")
+		SVTU_TekInit(CAL_chMeasureI);
+	else if (CAL_measuring_device == "DMM6000")
 	{
-		KEI_ConfigVoltage(clsl_V_PulsePlate);
-		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+		KEI_ConfigVoltage(CAL_V_PulsePlate);
+		KEI_ConfigExtTrigger(CAL_V_TriggerDelay);
 	}
 
-	//var clsl_ItmStp = Math.round((clsl_ItmMax - clsl_ItmMin) / (clsl_Points - 1));
-	//var CurrentArray = CGEN_GetRange(clsl_ItmMin, clsl_ItmMax, clsl_ItmStp);
+	var CAL_IceStp = Math.round((CAL_IceMax[CAL_CurrentRange] - CAL_IceMin[CAL_CurrentRange]) / (CAL_Points - 1));
+	var CurrentArray = CGEN_GetRange(CAL_IceMin[CAL_CurrentRange], CAL_IceMax[CAL_CurrentRange], CAL_IceStp);
 
-	if (CLSL_CollectIset(ItmSetArray, clsl_Iterations))
+	if (SVTU_CollectIset(CurrentArray, CAL_Iterations))
 	{
-		CLSL_SaveIset("LSL_Iset");
+		SVTU_SaveIset("SVTU_Iset");
 
 		// Plot relative error distribution
-		scattern(clsl_IsetSc, clsl_IsetErr, "Current (in A)", "Error (in %)", "Itm set relative error " + clsl_ItmMin + " ... " + clsl_ItmMax + " A");
+		scattern(CAL_IsetSc, CAL_IsetErr, "Current (in A)", "Error (in %)", "Ice set relative error " + CAL_IceMin + " ... " + CAL_IceMax + " A");
 
 		// Calculate correction
-		clsl_IsetCorr = CGEN_GetCorrection2("LSL_Iset");
-		CLSL_CalIset(clsl_IsetCorr[0], clsl_IsetCorr[1], clsl_IsetCorr[2]);
-		CLSL_PrintCoefIset();
+		CAL_IsetCorr = CGEN_GetCorrection2("SVTU_Iset");
+		SVTU_CalIset(SVTU_IsetCorr[0], SVTU_IsetCorr[1], SVTU_IsetCorr[2]);
+		SVTU_PrintCoefIset();
 	}
 }
 
-function CLSL_VerifyIset()
+function SVTU_VerifyIset()
 {		
-	CLSL_ResetA();
+	SVTU_ResetA();
 	
 	
 	// Tektronix init
-	if(clsl_measuring_device == "TPS2000")
-		CLSL_TekInit(clsl_chMeasureI);
-	else if (clsl_measuring_device == "DMM6000")
+	if(CAL_measuring_device == "TPS2000")
+		SVTU_TekInit(CAL_chMeasureI);
+	else if (CAL_measuring_device == "DMM6000")
 	{
-		KEI_ConfigVoltage(clsl_V_PulsePlate);
-		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+		KEI_ConfigVoltage(CAL_V_PulsePlate);
+		KEI_ConfigExtTrigger(CAL_V_TriggerDelay);
 	}
 
-	//var clsl_ItmStp = Math.round((clsl_ItmMax - clsl_ItmMin) / (clsl_Points - 1));
-	//var CurrentArray = CGEN_GetRange(clsl_ItmMin, clsl_ItmMax, clsl_ItmStp);
+	var CAL_IceStp = Math.round((CAL_IceMax[CAL_CurrentRange] - CAL_IceMin[CAL_CurrentRange]) / (CAL_Points - 1));
+	var CurrentArray = CGEN_GetRange(CAL_IceMin[CAL_CurrentRange], CAL_IceMax[CAL_CurrentRange], CAL_IceStp);
 
-	if (CLSL_CollectIset(ItmSetArray, clsl_Iterations))
+	if (SVTU_CollectIset(CurrentArray, CAL_Iterations))
 	{
-		CLSL_SaveIset("LSL_Iset_fixed");
+		SVTU_SaveIset("SVTU_Iset_fixed");
 
 		// Plot relative error distribution
-		scattern(clsl_IsetSc, clsl_IsetErr, "Current (in A)", "Error (in %)", "Itm set relative error " + clsl_ItmMin + " ... " + clsl_ItmMax + " A");
+		scattern(CAL_IsetSc, CAL_IsetErr, "Current (in A)", "Error (in %)", "Ice set relative error " + CAL_IceMin + " ... " + CAL_IceMax + " A");
 	}
 }
 
-function CLSL_CalibrateUg()
+function SVTU_CalibrateUge()
 {
-	CLSL_ResetA();
-	CLSL_ResetUgCal();
+	SVTU_ResetA();
+	SVTU_ResetUgeCal();
 	
 	// Tektronix init
-	if(clsl_measuring_device == "TPS2000")
-		CLSL_GateTekInit(clsl_chMeasureU);
-	else if (clsl_measuring_device == "DMM6000")
+	if(CAL_measuring_device == "TPS2000")
+		SVTU_GateTekInit(CAL_chMeasureU);
+	else if (CAL_measuring_device == "DMM6000")
 	{
-		KEI_ConfigVoltage(clsl_V_PulsePlate);
-		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+		KEI_ConfigVoltage(CAL_V_PulsePlate);
+		KEI_ConfigExtTrigger(CAL_V_TriggerDelay);
 	}
 	
 	// Reload values
-	var clsl_UgStp = Math.round((clsl_UgMax - clsl_UgMin) / (clsl_Points - 1));
-	var VoltageArray = CGEN_GetRange(clsl_UgMin, clsl_UgMax, clsl_UgStp);
+	var CAL_UgeStp = Math.round((CAL_UgeMax - CAL_UgeMin) / (CAL_Points - 1));
+	var VoltageArray = CGEN_GetRange(CAL_UgeMin, CAL_UgeMax, CAL_UgeStp);
 	
-	if (CLSL_CollectUg(VoltageArray, clsl_Iterations))
+	if (SVTU_CollectUge(VoltageArray, CAL_Iterations))
 	{
-		CLSL_SaveUg("LSL_Ug", "LSL_UgSet");
+		SVTU_SaveUge("SVTU_Uge", "SVTU_UgeSet");
 
 		// Plot relative error distribution
-		scattern(clsl_UgSc, clsl_UgErr, "Voltage (in mV)", "Error (in %)", "Ug relative error " + clsl_UgMin + " ... " + clsl_UgMax + " mV");
-		scattern(clsl_UgSc, clsl_UgSetErr, "Voltage (in mV)", "Error (in %)", "Ug set relative error " + clsl_UgMin + " ... " + clsl_UgMax + " mV");
+		scattern(CAL_UgeSc, CAL_UgeErr, "Voltage (in mV)", "Error (in %)", "Uge relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " mV");
+		scattern(CAL_UgeSc, CAL_UgeSetErr, "Voltage (in mV)", "Error (in %)", "Uge set relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " mV");
 
 		// Calculate correction
-		clsl_UgCorr = CGEN_GetCorrection2("LSL_Ug");
-		CLSL_CalUg(clsl_UgCorr[0], clsl_UgCorr[1], clsl_UgCorr[2]);
+		CAL_UgeCorr = CGEN_GetCorrection2("SVTU_Uge");
+		SVTU_CalUge(SVTU_UgeCorr[0], SVTU_UgeCorr[1], SVTU_UgeCorr[2]);
 		
-		// Print correction Ug
-		CLSL_PrintCoefUg();
+		// Print correction Uge
+		SVTU_PrintCoefUge();
 		
 		// Calculate correction
-		clsl_UgSetCorr = CGEN_GetCorrection2("LSL_UgSet");
-		CLSL_CalUgSet(clsl_UgSetCorr[0], clsl_UgSetCorr[1], clsl_UgSetCorr[2]);
+		CAL_UgeSetCorr = CGEN_GetCorrection2("SVTU_UgeSet");
+		SVTU_CalUgeSet(SVTU_UgeSetCorr[0], SVTU_UgeSetCorr[1], SVTU_UgeSetCorr[2]);
 
-		// Print correction UgSet
-		CLSL_PrintCoefUgSet();
+		// Print correction UgeSet
+		SVTU_PrintCoefUgeSet();
 	}
 }
 
-function CLSL_VerifyUg()
+function SVTU_VerifyUge()
 {
-	CLSL_ResetA();
+	SVTU_ResetA();
 	// Tektronix init
-	if(clsl_measuring_device == "TPS2000")
-		CLSL_GateTekInit(clsl_chMeasureU);
-	else if (clsl_measuring_device == "DMM6000")
+	if(CAL_measuring_device == "TPS2000")
+		SVTU_GateTekInit(CAL_chMeasureU);
+	else if (CAL_measuring_device == "DMM6000")
 	{
-		KEI_ConfigVoltage(clsl_V_PulsePlate);
-		KEI_ConfigExtTrigger(clsl_V_TriggerDelay);
+		KEI_ConfigVoltage(CAL_V_PulsePlate);
+		KEI_ConfigExtTrigger(CAL_V_TriggerDelay);
 	}
 
 	// Reload values
-	var clsl_UgStp = Math.round((clsl_UgMax - clsl_UgMin) / (clsl_Points - 1));
-	var VoltageArray = CGEN_GetRange(clsl_UgMin, clsl_UgMax, clsl_UgStp);
+	var CAL_UgeStp = Math.round((CAL_UgeMax - CAL_UgeMin) / (CAL_Points - 1));
+	var VoltageArray = CGEN_GetRange(CAL_UgeMin, CAL_UgeMax, CAL_UgeStp);
 
-	if (CLSL_CollectUg(VoltageArray, clsl_Iterations))
+	if (SVTU_CollectUge(VoltageArray, CAL_Iterations))
 	{
-		CLSL_SaveUg("LSL_Ug_fixed", "LSL_UgSet_fixed");
+		SVTU_SaveUge("SVTU_Uge_fixed", "SVTU_UgeSet_fixed");
 
 		// Plot relative error distribution
-		scattern(clsl_UgSc, clsl_UgErr, "Voltage (in mV)", "Error (in %)", "Ug relative error " + clsl_UgMin + " ... " + clsl_UgMax + " mV");
-		scattern(clsl_UgSc, clsl_UgSetErr, "Voltage (in mV)", "Error (in %)", "Ug set relative error " + clsl_UgMin + " ... " + clsl_UgMax + " mV");
+		scattern(CAL_UgeSc, CAL_UgeErr, "Voltage (in mV)", "Error (in %)", "Uge relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " mV");
+		scattern(CAL_UgeSc, CAL_UgeSetErr, "Voltage (in mV)", "Error (in %)", "Uge set relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " mV");
 	}
 }
 
-function CLSL_CollectUtm(VoltageValues, IterationsCount)
+function SVTU_CollectUcesat(VoltageValues, IterationsCount)
 {
-	clsl_CntTotal = IterationsCount * VoltageValues.length;
-	clsl_CntDone = 1;
+	CAL_CntTotal = IterationsCount * VoltageValues.length;
+	CAL_CntDone = 1;
 
 	var AvgNum;
-	if(clsl_measuring_device == "TPS2000")
+	if(CAL_measuring_device == "TPS2000")
 	{
-		if (clsl_UseAvg)
+		if (CAL_UseAvg)
 		{
 			AvgNum = 4;
 			TEK_AcquireAvg(AvgNum);
@@ -382,56 +380,56 @@ function CLSL_CollectUtm(VoltageValues, IterationsCount)
 			TEK_AcquireSample();
 		}
 	}
-	else if (clsl_measuring_device == "DMM6000")
+	else if (CAL_measuring_device == "DMM6000")
 		AvgNum = 1;
 
 	for (var i = 0; i < IterationsCount; i++)
 	{
 		for (var j = 0; j < VoltageValues.length; j++)
 		{
-			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
+			print("-- result " + CAL_CntDone++ + " of " + CAL_CntTotal + " --");
 			
-			if(clsl_measuring_device == "TPS2000")
-				CLSL_TekScale(clsl_chMeasureU, VoltageValues[j] / 1000);
-			else if (clsl_measuring_device == "DMM6000")
+			if(CAL_measuring_device == "TPS2000")
+				SVTU_TekScale(CAL_chMeasureU, VoltageValues[j] / 1000);
+			else if (CAL_measuring_device == "DMM6000")
 			{
 				KEI_SetVoltageRange(VoltageValues[j] / 1000);
 				KEI_ActivateTrigger();
 			}
 
-			var PrintTemp = LSLH_Print;
-			LSLH_Print = 0;
+			var PrintTemp = SVTU_Print;
+			SVTU_Print = 0;
 			
 			for (var k = 0; k < AvgNum; k++)
 			{
-				if (!LSLH_StartMeasure(VoltageValues[j] / clsl_Rload * 1000))
+				if (!SVTU_StartMeasure(VoltageValues[j] / CAL_Rload * 1000))
 					return 0;
 			}
 			
-			LSLH_Print = PrintTemp;
+			SVTU_Print = PrintTemp;
 			
 			// Unit data
-			var UtmRead = dev.r(200);
-			clsl_Utm.push(UtmRead);
-			print("Utmread, mV: " + UtmRead);
+			var UcesatRead = dev.r(200);
+			SVTU_Ucesat.push(UcesatRead);
+			print("Ucesatread, mV: " + UcesatRead);
 
 			// Scope data
-			if(clsl_measuring_device == "TPS2000")
-				var UtmSc = (CLSL_Measure(clsl_chMeasureU) * 1000).toFixed(2);
-			else if (clsl_measuring_device == "DMM6000")
-				var UtmSc = (KEI_ReadAverage() * 1000).toFixed(3);
+			if(CAL_measuring_device == "TPS2000")
+				var UcesatSc = (SVTU_Measure(CAL_chMeasureU) * 1000).toFixed(2);
+			else if (CAL_measuring_device == "DMM6000")
+				var UcesatSc = (KEI_ReadAverage() * 1000).toFixed(3);
 
-			clsl_UtmSc.push(UtmSc);
+			SVTU_UcesatSc.push(UcesatSc);
 
-			if(clsl_measuring_device == "TPS2000")
-				print("Utmtek,  mV: " + UtmSc);
-			else if (clsl_measuring_device == "DMM6000")
-				print("UtmDMM,  mV: " + UtmSc);
+			if(CAL_measuring_device == "TPS2000")
+				print("Ucesattek,  mV: " + UcesatSc);
+			else if (CAL_measuring_device == "DMM6000")
+				print("UcesatDMM,  mV: " + UcesatSc);
 
 			// Relative error
-			var UtmErr = ((UtmSc - UtmRead) / UtmRead * 100).toFixed(2);
-			clsl_UtmErr.push(UtmErr);
-			print("Utmerr,  %: " + UtmErr);
+			var UcesatErr = ((UcesatRead - UcesatSc) / UcesatSc * 100).toFixed(2);
+			SVTU_UcesatErr.push(UcesatErr);
+			print("Ucesaterr,  %: " + UcesatErr);
 			print("--------------------");
 			
 			if (anykey()) return 0;
@@ -443,15 +441,15 @@ function CLSL_CollectUtm(VoltageValues, IterationsCount)
 	return 1;
 }
 
-function CLSL_CollectItm(CurrentValues, IterationsCount)
+function SVTU_CollectIce(CurrentValues, IterationsCount)
 {
-	clsl_CntTotal = IterationsCount * CurrentValues.length;
-	clsl_CntDone = 1;
+	CAL_CntTotal = IterationsCount * CurrentValues.length;
+	CAL_CntDone = 1;
 
 	var AvgNum;
-	if(clsl_measuring_device == "TPS2000")
+	if(CAL_measuring_device == "TPS2000")
 	{
-		if (clsl_UseAvg)
+		if (CAL_UseAvg)
 		{
 			AvgNum = 4;
 			TEK_AcquireAvg(AvgNum);
@@ -462,56 +460,56 @@ function CLSL_CollectItm(CurrentValues, IterationsCount)
 			TEK_AcquireSample();
 		}
 	}
-	else if (clsl_measuring_device == "DMM6000")
+	else if (CAL_measuring_device == "DMM6000")
 		AvgNum = 1;
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
 		for (var j = 0; j < CurrentValues.length; j++)
 		{					
-			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
+			print("-- result " + CAL_CntDone++ + " of " + CAL_CntTotal + " --");
 			//
-			if(clsl_measuring_device == "TPS2000")
-				CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_Rshunt / 1000000);
-			else if (clsl_measuring_device == "DMM6000")
+			if(CAL_measuring_device == "TPS2000")
+				SVTU_TekScale(CAL_chMeasureI, CurrentValues[j] * CAL_Rshunt / 1000000);
+			else if (CAL_measuring_device == "DMM6000")
 			{
-				KEI_SetVoltageRange((CurrentValues[j]) * clsl_Rshunt / 1000000);
+				KEI_SetVoltageRange((CurrentValues[j]) * CAL_Rshunt / 1000000);
 				KEI_ActivateTrigger();
 			}
 
-			var PrintTemp = LSLH_Print;
-			LSLH_Print = 0;
+			var PrintTemp = SVTU_Print;
+			SVTU_Print = 0;
 			
 			for (var k = 0; k < AvgNum; k++)
 			{
-				if (!LSLH_StartMeasure(CurrentValues[j]))
+				if (!SVTU_StartMeasure(CurrentValues[j]))
 					return 0;
 			}
 			
-			LSLH_Print = PrintTemp;
+			SVTU_Print = PrintTemp;
 			
 			// Unit data
-			var ItmRead = dev.rf(201);
-			clsl_Itm.push(ItmRead);
-			print("Itmread, A: " + ItmRead);
+			var IceRead = dev.rf(201);
+			SVTU_Ice.push(IceRead);
+			print("Iceread, A: " + IceRead);
 
 			// Scope data
-			if(clsl_measuring_device == "TPS2000")
-				var ItmSc = (CLSL_Measure(clsl_chMeasureI) / clsl_Rshunt * 1000000).toFixed(2);
-			else if (clsl_measuring_device == "DMM6000")
-				var ItmSc = (KEI_ReadAverage() / clsl_Rshunt * 1000000).toFixed(4);
+			if(CAL_measuring_device == "TPS2000")
+				var IceSc = (SVTU_Measure(CAL_chMeasureI) / CAL_Rshunt * 1000000).toFixed(2);
+			else if (CAL_measuring_device == "DMM6000")
+				var IceSc = (KEI_ReadAverage() / CAL_Rshunt * 1000000).toFixed(4);
 
-			clsl_ItmSc.push(ItmSc);
+			SVTU_IceSc.push(IceSc);
 
-			if(clsl_measuring_device == "TPS2000")
-				print("Itmtek, A: " + ItmSc);
-			else if (clsl_measuring_device == "DMM6000")
-				print("ItmDMM, A: " + ItmSc);
+			if(CAL_measuring_device == "TPS2000")
+				print("Icetek, A: " + IceSc);
+			else if (CAL_measuring_device == "DMM6000")
+				print("IceDMM, A: " + IceSc);
 
 			// Relative error
-			var ItmErr = ((ItmSc - ItmRead) / ItmRead * 100).toFixed(2);
-			clsl_ItmErr.push(ItmErr);
-			print("Itmerr, %: " + ItmErr);
+			var IceErr = ((IceSc - IceRead) / IceRead * 100).toFixed(2);
+			SVTU_IceErr.push(IceErr);
+			print("Iceerr, %: " + IceErr);
 			print("--------------------");
 			
 			if (anykey()) return 0;
@@ -521,15 +519,15 @@ function CLSL_CollectItm(CurrentValues, IterationsCount)
 	return 1;
 }
 
-function CLSL_CollectIset(CurrentValues, IterationsCount)
+function SVTU_CollectIset(CurrentValues, IterationsCount)
 {
-	clsl_CntTotal = IterationsCount * CurrentValues.length;
-	clsl_CntDone = 1;
+	CAL_CntTotal = IterationsCount * CurrentValues.length;
+	CAL_CntDone = 1;
 
 	var AvgNum;
-	if(clsl_measuring_device == "TPS2000")
+	if(CAL_measuring_device == "TPS2000")
 	{
-		if (clsl_UseAvg)
+		if (CAL_UseAvg)
 		{
 			AvgNum = 4;
 			TEK_AcquireAvg(AvgNum);
@@ -540,55 +538,55 @@ function CLSL_CollectIset(CurrentValues, IterationsCount)
 			TEK_AcquireSample();
 		}
 	}
-	else if (clsl_measuring_device == "DMM6000")
+	else if (CAL_measuring_device == "DMM6000")
 		AvgNum = 1;
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
 		for (var j = 0; j < CurrentValues.length; j++)
 		{
-			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
+			print("-- result " + CAL_CntDone++ + " of " + CAL_CntTotal + " --");
 			//
-			if(clsl_measuring_device == "TPS2000")
-				CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_Rshunt / 1000000);
-			else if (clsl_measuring_device == "DMM6000")
+			if(CAL_measuring_device == "TPS2000")
+				SVTU_TekScale(CAL_chMeasureI, CurrentValues[j] * CAL_Rshunt / 1000000);
+			else if (CAL_measuring_device == "DMM6000")
 			{
-				KEI_SetVoltageRange(CurrentValues[j] * clsl_Rshunt / 1000000);
+				KEI_SetVoltageRange(CurrentValues[j] * CAL_Rshunt / 1000000);
 				KEI_ActivateTrigger();
 			}
 			
-			var PrintTemp = LSLH_Print;
-			LSLH_Print = 0;
+			var PrintTemp = SVTU_Print;
+			SVTU_Print = 0;
 			
 			for (var k = 0; k < AvgNum; k++)
 			{
-				if (!LSLH_StartMeasure(CurrentValues[j]))
+				if (!SVTU_StartMeasure(CurrentValues[j]))
 					return 0;
 			}
 			
-			LSLH_Print = PrintTemp;
+			SVTU_Print = PrintTemp;
 			
 			// Unit data
 			var Iset = CurrentValues[j];
-			clsl_Iset.push(Iset);
+			SVTU_Iset.push(Iset);
 			print("Iset, A: " + Iset);
 
 			// Scope data
-			if(clsl_measuring_device == "TPS2000")
-				var IsetSc = (CLSL_Measure(clsl_chMeasureI) / clsl_Rshunt * 1000000).toFixed(2);
-			else if (clsl_measuring_device == "DMM6000")
-				var IsetSc = (KEI_ReadAverage() / clsl_Rshunt * 1000000).toFixed(4);
+			if(CAL_measuring_device == "TPS2000")
+				var IsetSc = (SVTU_Measure(CAL_chMeasureI) / CAL_Rshunt * 1000000).toFixed(2);
+			else if (CAL_measuring_device == "DMM6000")
+				var IsetSc = (KEI_ReadAverage() / CAL_Rshunt * 1000000).toFixed(4);
 
-			clsl_IsetSc.push(IsetSc);
+			SVTU_IsetSc.push(IsetSc);
 
-			if(clsl_measuring_device == "TPS2000")
-				print("ItmSettek, A: " + IsetSc);
-			else if (clsl_measuring_device == "DMM6000")
-				print("ItmSetDMM, A: " + IsetSc);
+			if(CAL_measuring_device == "TPS2000")
+				print("IceSettek, A: " + IsetSc);
+			else if (CAL_measuring_device == "DMM6000")
+				print("IceSetDMM, A: " + IsetSc);
 
 			// Relative error
 			var IsetErr = ((IsetSc - Iset) / Iset * 100).toFixed(2);
-			clsl_IsetErr.push(IsetErr);
+			SVTU_IsetErr.push(IsetErr);
 			print("Iseterr, %: " + IsetErr);
 			print("--------------------");
 			
@@ -599,15 +597,15 @@ function CLSL_CollectIset(CurrentValues, IterationsCount)
 	return 1;
 }
 
-function CLSL_CollectUg(VoltageValues, IterationsCount)
+function SVTU_CollectUge(VoltageValues, IterationsCount)
 {
-	clsl_CntTotal = IterationsCount * VoltageValues.length;
-	clsl_CntDone = 1;
+	CAL_CntTotal = IterationsCount * VoltageValues.length;
+	CAL_CntDone = 1;
 
 	var AvgNum;
-	if(clsl_measuring_device == "TPS2000")
+	if(CAL_measuring_device == "TPS2000")
 	{
-		if (clsl_UseAvg)
+		if (CAL_UseAvg)
 		{
 			AvgNum = 4;
 			TEK_AcquireAvg(AvgNum);
@@ -618,18 +616,18 @@ function CLSL_CollectUg(VoltageValues, IterationsCount)
 			TEK_AcquireSample();
 		}
 	}
-	else if (clsl_measuring_device == "DMM6000")
+	else if (CAL_measuring_device == "DMM6000")
 		AvgNum = 1;
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
 		for (var j = 0; j < VoltageValues.length; j++)
 		{
-			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
+			print("-- result " + CAL_CntDone++ + " of " + CAL_CntTotal + " --");
 			//
-			if(clsl_measuring_device == "TPS2000")
-				CLSL_TekScale(clsl_chMeasureU, VoltageValues[j] / 1000);
-			else if (clsl_measuring_device == "DMM6000")
+			if(CAL_measuring_device == "TPS2000")
+				SVTU_TekScale(CAL_chMeasureU, VoltageValues[j] / 1000);
+			else if (CAL_measuring_device == "DMM6000")
 			{
 				KEI_SetVoltageRange(VoltageValues[j]+3);
 				KEI_ActivateTrigger();
@@ -638,53 +636,53 @@ function CLSL_CollectUg(VoltageValues, IterationsCount)
 			GateVoltage = VoltageValues[j];
 			dev.wf(129, GateVoltage);
 
-			if(clsl_measuring_device == "TPS2000")
+			if(CAL_measuring_device == "TPS2000")
 			{
 				TEK_Send("trigger:main:edge:slope rise");
 				TEK_Send("horizontal:position " + 0.0002);
 			}
 
-			var PrintTemp = LSLH_Print;
-			LSLH_Print = 0;
+			var PrintTemp = SVTU_Print;
+			SVTU_Print = 0;
 
 			for (var k = 0; k < AvgNum; k++)
 			{
-				if (!LSLH_StartMeasure(100))
+				if (!SVTU_StartMeasure(100))
 				sleep(500);
 			}
 
-			LSLH_Print = PrintTemp;
+			SVTU_Print = PrintTemp;
 
 			// Unit data
-			var UgSet = VoltageValues[j];
-			clsl_UgSet.push(UgSet);
-			print("UgSet, mV: " + UgSet);
+			var UgeSet = VoltageValues[j];
+			SVTU_UgeSet.push(UgeSet);
+			print("UgeSet, mV: " + UgeSet);
 			//
-			var Ug = dev.rf(202);
-			clsl_Ug.push(Ug);
-			print("Ug, mV: " + Ug);
+			var Uge = dev.rf(202);
+			SVTU_Uge.push(Uge);
+			print("Uge, mV: " + Uge);
 
 			// Scope data
-			if(clsl_measuring_device == "TPS2000")
-				var UgSc = (CLSL_Measure(clsl_chMeasureU) * 1000).toFixed(2);
-			else if (clsl_measuring_device == "DMM6000")
-				var UgSc = (KEI_ReadAverage() * 1).toFixed(4);
+			if(CAL_measuring_device == "TPS2000")
+				var UgeSc = (SVTU_Measure(CAL_chMeasureU) * 1000).toFixed(2);
+			else if (CAL_measuring_device == "DMM6000")
+				var UgeSc = (KEI_ReadAverage() * 1).toFixed(4);
 
-			clsl_UgSc.push(UgSc);
+			SVTU_UgeSc.push(UgeSc);
 
-			if(clsl_measuring_device == "TPS2000")
-				print("UgTek,  mV: " + UgSc);
-			else if (clsl_measuring_device == "DMM6000")
-				print("UgDMM,  mV: " + UgSc);
+			if(CAL_measuring_device == "TPS2000")
+				print("UgeTek,  mV: " + UgeSc);
+			else if (CAL_measuring_device == "DMM6000")
+				print("UgeDMM,  mV: " + UgeSc);
 
 			// Relative error
-			var UgSetErr = ((UgSc - UgSet) / UgSet * 100).toFixed(2);
-			clsl_UgSetErr.push(UgSetErr);
-			print("UgSetErr,  %: " + UgSetErr);
+			var UgeSetErr = ((UgeSc - UgeSet) / UgeSet * 100).toFixed(2);
+			SVTU_UgeSetErr.push(UgeSetErr);
+			print("UgeSetErr,  %: " + UgeSetErr);
 			//
-			var UgErr = ((UgSc - Ug) / Ug * 100).toFixed(2);
-			clsl_UgErr.push(UgErr);
-			print("UgErr,  %: " + UgErr);
+			var UgeErr = ((UgeSc - Uge) / Uge * 100).toFixed(2);
+			SVTU_UgeErr.push(UgeErr);
+			print("UgeErr,  %: " + UgeErr);
 			print("--------------------");
 			
 			if (anykey()) return 0;
@@ -694,14 +692,14 @@ function CLSL_CollectUg(VoltageValues, IterationsCount)
 	return 1;
 }
 
-function CLSL_TriggerInit(Channel)
+function SVTU_TriggerInit(Channel)
 {
-	TEK_TriggerInit(clsl_chSync, 2.5);
+	TEK_TriggerInit(CAL_chSync, 2.5);
 	TEK_Send("trigger:main:edge:slope fall");
 	sleep(1000);
 }
 
-function CLSL_TekScale(Channel, Value)
+function SVTU_TekScale(Channel, Value)
 {
 	// 0.9 - use 90% of full range
 	// 8 - number of scope grids in full scale
@@ -709,21 +707,21 @@ function CLSL_TekScale(Channel, Value)
 	TEK_Send("ch" + Channel + ":scale " + scale);
 }
 
-function CLSL_TekInit(Channel)
+function SVTU_TekInit(Channel)
 {
 	TEK_Horizontal("1e-3", "0");
 	TEK_ChannelInit(Channel, "1", "2");
-	CLSL_TekMeasurement(Channel);
+	SVTU_TekMeasurement(Channel);
 }
 
-function CLSL_GateTekInit(Channel)
+function SVTU_GateTekInit(Channel)
 {
 	TEK_Horizontal("25e-6", "5e-6");
 	TEK_ChannelInit(Channel, "1", "2");
-	CLSL_TekMeasurement(Channel);
+	SVTU_TekMeasurement(Channel);
 }
 
-function CLSL_TekCursor(Channel)
+function SVTU_TekCursor(Channel)
 {
 	TEK_Send("cursor:select:source ch" + Channel);
 	TEK_Send("cursor:function vbars");
@@ -731,89 +729,89 @@ function CLSL_TekCursor(Channel)
 	TEK_Send("cursor:vbars:position2 0");
 }
 
-function CLSL_Measure(Channel)
+function SVTU_Measure(Channel)
 {
 	sleep(1000);
 	return TEK_Measure(Channel);
 }
 
-function CLSL_TekMeasurement(Channel)
+function SVTU_TekMeasurement(Channel)
 {
 	TEK_Send("measurement:meas" + Channel + ":source ch" + Channel);
 	TEK_Send("measurement:meas" + Channel + ":type maximum");
 }
 
 // Reset Arrays
-function CLSL_ResetA()
+function SVTU_ResetA()
 {	
 	// Results storage
-	clsl_Utm = [];
-	clsl_Itm = [];
-	clsl_Iset = [];
-	clsl_Ig = [];
-	clsl_IgSet = [];
-	clsl_Ug = [];
-	clsl_UgSet = [];
+	CAL_Ucesat = [];
+	CAL_Ice = [];
+	CAL_Iset = [];
+	CAL_Ig = [];
+	CAL_IgSet = [];
+	CAL_Uge = [];
+	CAL_UgeSet = [];
 
 	// Tektronix data
-	clsl_UtmSc = [];
-	clsl_ItmSc = [];
-	clsl_IsetSc = [];
-	clsl_IgSc = [];
-	clsl_UgSc = [];
+	CAL_UcesatSc = [];
+	CAL_IceSc = [];
+	CAL_IsetSc = [];
+	CAL_IgSc = [];
+	CAL_UgeSc = [];
 
 	// Relative error
-	clsl_UtmErr = [];
-	clsl_ItmErr = [];
-	clsl_IsetErr = [];
-	clsl_IgErr = [];
-	clsl_IgSetErr = [];
-	clsl_UgErr = [];
-	clsl_UgSetErr = [];
+	CAL_UcesatErr = [];
+	CAL_IceErr = [];
+	CAL_IsetErr = [];
+	CAL_IgErr = [];
+	CAL_IgSetErr = [];
+	CAL_UgeErr = [];
+	CAL_UgeSetErr = [];
 
 	// Correction
-	clsl_UtmCorr = [];
-	clsl_ItmCorr = [];
-	clsl_IsetCorr = [];
-	clsl_IgCorr = [];
-	clsl_IgSetCorr = [];
-	clsl_UgCorr = [];
-	clsl_UgSetCorr = [];
+	CAL_UcesatCorr = [];
+	CAL_IceCorr = [];
+	CAL_IsetCorr = [];
+	CAL_IgCorr = [];
+	CAL_IgSetCorr = [];
+	CAL_UgeCorr = [];
+	CAL_UgeSetCorr = [];
 }
 
 // Save
-function CLSL_SaveUtm(NameUtm)
+function SVTU_SaveUcesat(NameUcesat)
 {
-	CGEN_SaveArrays(NameUtm, clsl_Utm, clsl_UtmSc, clsl_UtmErr);
+	CGEN_SaveArrays(NameUcesat, CAL_Ucesat, CAL_UcesatSc, CAL_UcesatErr);
 }
 
-function CLSL_SaveItm(NameItm)
+function SVTU_SaveIce(NameIce)
 {
-	CGEN_SaveArrays(NameItm, clsl_Itm, clsl_ItmSc, clsl_ItmErr);
+	CGEN_SaveArrays(NameIce, CAL_Ice, CAL_IceSc, CAL_IceErr);
 }
 
-function CLSL_SaveIset(NameIset)
+function SVTU_SaveIset(NameIset)
 {
-	CGEN_SaveArrays(NameIset, clsl_IsetSc, clsl_Iset, clsl_IsetErr);
+	CGEN_SaveArrays(NameIset, CAL_IsetSc, CAL_Iset, CAL_IsetErr);
 }
 
-function CLSL_SaveUg(NameUg, NameUgSet)
+function SVTU_SaveUge(NameUge, NameUgeSet)
 {
-	CGEN_SaveArrays(NameUg, clsl_Ug, clsl_UgSc, clsl_UgErr);
-	CGEN_SaveArrays(NameUgSet, clsl_UgSc, clsl_UgSet, clsl_UgErr);
+	CGEN_SaveArrays(NameUge, CAL_Uge, CAL_UgeSc, CAL_UgeErr);
+	CGEN_SaveArrays(NameUgeSet, CAL_UgeSc, CAL_UgeSet, CAL_UgeErr);
 }
 
 // Cal
-function CLSL_CalUtm(P2, P1, P0)
+function SVTU_CalUcesat(P2, P1, P0)
 {
 	dev.wf(10, P2);
 	dev.wf(11, P1);
 	dev.wf(12, P0);
 }
 
-function CLSL_CalItm(P2, P1, P0)
+function SVTU_CalIce(P2, P1, P0)
 {
-	switch (clsl_CurrentRange)
+	switch (CAL_CurrentRange)
 	{
 		case 0:
 			dev.wf(0, P2);
@@ -831,10 +829,10 @@ function CLSL_CalItm(P2, P1, P0)
 	}
 }
 
-function CLSL_CalIset(P2, P1, P0)
+function SVTU_CalIset(P2, P1, P0)
 {
 
-	switch (clsl_CurrentRange)
+	switch (CAL_CurrentRange)
 	{
 		case 0:
 			dev.wf(30, P2);
@@ -853,14 +851,14 @@ function CLSL_CalIset(P2, P1, P0)
 
 }
 
-function CLSL_CalUg(P2, P1, P0)
+function SVTU_CalUge(P2, P1, P0)
 {
 	dev.wf(15, P2);
 	dev.wf(16, P1);
 	dev.wf(17, P0);
 }
 
-function CLSL_CalUgSet(P2, P1, P0)
+function SVTU_CalUgeSet(P2, P1, P0)
 {
 	dev.wf(20, P2);
 	dev.wf(21, P1);
@@ -868,26 +866,26 @@ function CLSL_CalUgSet(P2, P1, P0)
 }
 
 // Print
-function CLSL_PrintCoefUtm()
+function SVTU_PrintCoefUcesat()
 {
-	print("Utm P2 : " + dev.rf(10));
-	print("Utm P1 : " + dev.rf(11));
-	print("Utm P0 : " + dev.rf(12));
+	print("Ucesat P2 : " + dev.rf(10));
+	print("Ucesat P1 : " + dev.rf(11));
+	print("Ucesat P0 : " + dev.rf(12));
 }
 
-function CLSL_PrintCoefItm()
+function SVTU_PrintCoefIce()
 {
-	switch (clsl_CurrentRange)
+	switch (CAL_CurrentRange)
 	{
 		case 0:
-			print("Itm 0 P2 : " + dev.rf(0));
-			print("Itm 0 P1	: " + dev.rf(1));
-			print("Itm 0 P0	: " + dev.rf(2));
+			print("Ice 0 P2 : " + dev.rf(0));
+			print("Ice 0 P1	: " + dev.rf(1));
+			print("Ice 0 P0	: " + dev.rf(2));
 			break;
 		case 1:
-			print("Itm 1 P2 : " + dev.rf(5));
-			print("Itm 1 P1 : " + dev.rf(6));
-			print("Itm 1 P0 : " + dev.rf(7));
+			print("Ice 1 P2 : " + dev.rf(5));
+			print("Ice 1 P1 : " + dev.rf(6));
+			print("Ice 1 P0 : " + dev.rf(7));
 			break;
 		default:
 			print("Incorrect I range.");
@@ -895,19 +893,19 @@ function CLSL_PrintCoefItm()
 	}
 }
 
-function CLSL_PrintCoefIset()
+function SVTU_PrintCoefIset()
 {
-	switch (clsl_CurrentRange)
+	switch (CAL_CurrentRange)
 	{
 		case 0:
-			print("ItmSet P2 : " + dev.rf(30));
-			print("ItmSet P1 : " + dev.rf(31));
-			print("ItmSet P0 : " + dev.rf(32));
+			print("IceSet P2 : " + dev.rf(30));
+			print("IceSet P1 : " + dev.rf(31));
+			print("IceSet P0 : " + dev.rf(32));
 			break;
 		case 1:
-			print("Itm 1 P2 : " + dev.rf(50));
-			print("Itm 1 P1 : " + dev.rf(51));
-			print("Itm 1 P0 : " + dev.rf(52));
+			print("Ice 1 P2 : " + dev.rf(50));
+			print("Ice 1 P1 : " + dev.rf(51));
+			print("Ice 1 P0 : " + dev.rf(52));
 			break;
 		default:
 			print("Incorrect I range.");
@@ -915,38 +913,38 @@ function CLSL_PrintCoefIset()
 	}
 }
 
-function CLSL_PrintCoefUg()
+function SVTU_PrintCoefUge()
 {
-	print("Ug P2 : " + dev.rf(15));
-	print("Ug P1 : " + dev.rf(16));
-	print("Ug P0 : " + dev.rf(17));
+	print("Uge P2 : " + dev.rf(15));
+	print("Uge P1 : " + dev.rf(16));
+	print("Uge P0 : " + dev.rf(17));
 }
 
-function CLSL_PrintCoefUgSet()
+function SVTU_PrintCoefUgeSet()
 {
-	print("Ug Set P2 : " + dev.rf(20));
-	print("Ug Set P1 : " + dev.rf(21));
-	print("Ug Set P0 : " + dev.rf(22));
+	print("Uge Set P2 : " + dev.rf(20));
+	print("Uge Set P1 : " + dev.rf(21));
+	print("Uge Set P0 : " + dev.rf(22));
 }
 
 // Reset
-function CLSL_ResetUtmCal()
+function SVTU_ResetUcesatCal()
 {
-	CLSL_CalUtm(0, 1, 0);
+	SVTU_CalUcesat(0, 1, 0);
 }
 
-function CLSL_ResetItmCal()
+function SVTU_ResetIceCal()
 {
-	CLSL_CalItm(0, 1, 0);
+	SVTU_CalIce(0, 1, 0);
 }
 
-function CLSL_ResetIsetCal()
+function SVTU_ResetIsetCal()
 {
-	CLSL_CalIset(0, 1, 0);
+	SVTU_CalIset(0, 1, 0);
 }
 
-function CLSL_ResetUgCal()
+function SVTU_ResetUgeCal()
 {
-	CLSL_CalUg(0, 1, 0);
-	CLSL_CalUgSet(0, 1, 0);
+	SVTU_CalUge(0, 1, 0);
+	SVTU_CalUgeSet(0, 1, 0);
 }

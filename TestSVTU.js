@@ -63,10 +63,11 @@ function SVTU_StartMeasure(Current)
 }
 //--------------------------
 
-function LSLH_ResourceTest(Current, HoursTest)
+function SVTU_ResourceTest(Current_R0, Current_R1, HoursTest)
 {
 	csv_array = [];
 
+	var counter = 0;
 	var i = 1;
 	var count_plot = 0;
 	var MinutesInMs = 60 * 1000;
@@ -78,8 +79,28 @@ function LSLH_ResourceTest(Current, HoursTest)
 	csv_array.push("N ; Utm, mV; Itm, A; Ugt, mV; Igt, mA; Hours ; Minutes; Seconds");
 
 	while((new Date()).getTime() < end.getTime())
-	{
-		SVTU_StartMeasure(Current);
+	{	
+		if (!(counter%2))
+		{
+			SVTU_StartMeasure(Current_R0);
+		}
+		else
+		{
+			SVTU_StartMeasure(Current_R1);
+		}
+		counter++;
+
+		dev.co(10);
+		Problem = dev.rf(196);
+		if (Problem)
+		{
+			print("LCSU FOLLOWING ERROR!");
+			dev.co(12);
+			break;
+		}
+		else 
+			dev.co(12);
+
 
 		var left_time = new Date(end.getTime() - (new Date()).getTime());
 		var now_time = new Date();
@@ -88,7 +109,7 @@ function LSLH_ResourceTest(Current, HoursTest)
 		var elapsed_time = new Date((new Date()).getTime() - start.getTime());
 		if (elapsed_time.getTime() > 10 * MinutesInMs * count_plot)
 		{
-			pl(dev.rafs(1));
+			pl(dev.raff(1));
 			p("Вывод графика #" + (count_plot + 1) + " спустя " +
 				(elapsed_time.getHours() - 3) + " ч и " + elapsed_time.getMinutes() + " мин");
 
