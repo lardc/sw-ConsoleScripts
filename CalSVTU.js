@@ -31,7 +31,7 @@ CAL_IceMax = [300, 1700]			// in A
 CAL_UgeMin = 10;					// in V
 CAL_UgeMax = 20;					// in V
 //
-CAL_Iterations = 3;
+CAL_Iterations = 1;
 CAL_UseAvg = 0;
 
 // Counters
@@ -178,6 +178,7 @@ function CAL_CalibrateIce()
 {		
 	CAL_ResetA();
 	CAL_ResetIsetCal();
+	CAL_ResetIceCal();
 	
 	// Tektronix init
 	if(CAL_measuring_device == "TPS2000")
@@ -433,7 +434,6 @@ function CAL_CollectIce(CurrentValues, IterationsCount)
 			}
 			
 			SVTU_Print = PrintTemp;
-			
 			// Unit data
 			var Iset = CurrentValues[j];
 			CAL_Iset.push(Iset);
