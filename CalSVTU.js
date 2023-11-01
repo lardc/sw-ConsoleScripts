@@ -15,7 +15,7 @@ CAL_V_TriggerDelay	= 0				// in s
 CAL_measuring_device = "DMM6000";	// "DMM6000" or "TPS2000"
 
 // Current range number
-CAL_CurrentRange = 1;				// 0 = Range [ < 300 A]; 1 = Range [ < 1700 A] for measure
+CAL_CurrentRange = 0;				// 0 = Range [ < 300 A]; 1 = Range [ < 1700 A] for measure
 //
 CAL_Points = 10;
 //
@@ -70,47 +70,49 @@ CAL_IsetCorr = [];
 CAL_UgeCorr = [];
 CAL_UgeSetCorr = [];
 
-function SVTU_Init_Tek(portDevice, portTek, channelMeasureI, channelMeasureU, channelSync)
+function SVTU_Init_Mes_Device(portDevice, portTek, channelMeasureI, channelMeasureU, channelSync)
 {
-	// Init device port
-	dev.Disconnect();
-	dev.co(portDevice);
-
-	if (channelMeasureI < 1 || channelMeasureI > 4)
+	if (CAL_measuring_device == "TPS2000")
 	{
-		print("Wrong channel numbers");
-		return;
-	}
+		// Init device port
+		dev.Disconnect();
+		dev.co(portDevice);
 
-	// Copy channel information
-	CAL_chMeasureU = channelMeasureU;
-	CAL_chMeasureI = channelMeasureI;
-	CAL_chSync = channelSync;
+		if (channelMeasureI < 1 || channelMeasureI > 4)
+		{
+			print("Wrong channel numbers");
+			return;
+		}
 
-	// Init Tektronix port
-	TEK_PortInit(portTek);
+		// Copy channel information
+		CAL_chMeasureU = channelMeasureU;
+		CAL_chMeasureI = channelMeasureI;
+		CAL_chSync = channelSync;
+
+		// Init Tektronix port
+		TEK_PortInit(portTek);
 	
-	// Tektronix init
-	for (var i = 1; i <= 4; i++)
+		// Tektronix init
+		for (var i = 1; i <= 4; i++)
+		{
+			if ((i == CAL_chMeasureU) || (i == channelMeasureI) || (i == CAL_chSync))
+				TEK_ChannelOn(i);
+			else
+				TEK_ChannelOff(i);
+		}
+	
+		TEK_ChannelInit(CAL_chSync, "1", "1");
+		SVTU_TriggerInit(CAL_chSync);
+	}
+	else if (CAL_measuring_device == "DMM6000")
 	{
-		if ((i == CAL_chMeasureU) || (i == channelMeasureI) || (i == CAL_chSync))
-			TEK_ChannelOn(i);
-		else
-			TEK_ChannelOff(i);
+		// Init device port
+		dev.Disconnect();
+		dev.co(portDevice);
+
+		// DMM6500 init
+		KEI_Reset();
 	}
-	
-	TEK_ChannelInit(CAL_chSync, "1", "1");
-	SVTU_TriggerInit(CAL_chSync);
-}
-
-function SVTU_Init_DMM(portDevice)
-{
-	// Init device port
-	dev.Disconnect();
-	dev.co(portDevice);
-
-	// DMM6500 init
-	KEI_Reset();
 }
 
 function SVTU_CalibrateUcesat()
@@ -235,11 +237,6 @@ function SVTU_CalibrateIset()
 {		
 	SVTU_ResetA();
 	SVTU_ResetIsetCal();
-	
-	if (CAL_CurrentRange)
-		var IceSetArray = IceSetArray_R1;
-	else
-		var IceSetArray = IceSetArray_R0;
 	
 	// Tektronix init
 	if(CAL_measuring_device == "TPS2000")
