@@ -468,14 +468,14 @@ function FWU_LCSU()
 	FWUpdateSTM("../../hw-LCSUControlBoard/Firmware/Release/LCSUControlBoard.binary");
 }
 
-function FWU_DumpLCSU()
+function FWU_DumpLCSU(Num)
 {
-	dev.Dump("../../hw-LCSUControlBoard/Firmware/LCSUControlBoard.regdump", 0, 126);
+	FWU_DumpCommon("LCSU", Num, 126);
 }
 
-function FWU_RestoreLCSU()
+function FWU_RestoreLCSU(Num)
 {
-	dev.Restore("../../hw-LCSUControlBoard/Firmware/LCSUControlBoard.regdump");
+	FWU_RestoreCommon("LCSU", Num);
 }
 //------------------------
 
@@ -502,13 +502,13 @@ function FWU_SVTU()
 	FWUpdateSTM("../../hw-SVTUControlBoard/Firmware/Release/SVTUControlBoard.binary");
 }
 
-function FWU_DumpSVTU()
+function FWU_DumpSVTU(Num)
 {
-	dev.Dump("../../hw-SVTUControlBoard/Firmware/SVTUControlBoard.regdump", 0, 126);
+	FWU_DumpCommon("SVTU", Num, 126);
 }
 
 function FWU_RestoreSVTU()
 {
-	dev.Restore("../../hw-SVTUControlBoard/Firmware/SVTUControlBoard.regdump");
+	FWU_RestoreCommon("SVTU", Num);
 }
 //------------------------
