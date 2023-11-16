@@ -50,16 +50,49 @@ function LCSU_Start(Current)
 	
 	sleep(20);
 	
-	while(dev.r(192) != DS_Ready)
-	{
-		sleep(50);
+	//while(dev.r(192) != DS_Ready)
+	//{
+	//	sleep(50);
 		
-		if(dev.r(192) == DS_Fault)
+	//	if(dev.r(192) == DS_Fault)
+	//	{
+	//		PrintStatus();
+	//		return false;
+	//	}
+	//}
+	print("Ток, А   " + dev.rf(200));
+	return true;
+}
+
+function LCSU_SyncTest(Current,sync_time)
+{	
+	dev.nid(110);
+	sleep(20);
+
+	if (dev.r(192)==DS_Ready)
+	{	
+		
+		dev.w(128, Current);
+		dev.c(100);
+		sleep(20);
+
+		if (dev.r(192)==DS_ConfigReady)
+		{
+			dev.nid(9);
+			dev.w(160, sync_time);
+			dev.c(11);
+		}
+		else
 		{
 			PrintStatus();
 			return false;
 		}
 	}
-	
+	else
+	{
+		PrintStatus();
+		return false;
+	}
+
 	return true;
 }
