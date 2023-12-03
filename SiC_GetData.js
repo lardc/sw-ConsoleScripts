@@ -41,6 +41,8 @@ function SiC_GD_GetChannelCurve(Channel)
 	for (var i = 6; i < 2506; ++i)
 		res[i - 6] = (data_input[i].charCodeAt(0) - 128 - p_position * 25) * p_scale / 25;
 	
+	//plot(res, 1, 1);
+
 	return res;
 }
 
@@ -81,6 +83,8 @@ function SiC_GD_Filter(Data, ScaleI)
 		filtered_spl[i] *= scale;
 	}
 	
+	//plot(filtered_spl, 1, 1);
+
 	return filtered_spl;
 }
 
@@ -167,4 +171,66 @@ function SiC_GD_GetCurvesEmuX(KeyName, SwitchMode, VgeMul, VceMul, IceMul, HScal
 	var DataIce = SiC_GD_Filter(ice, IceMul);
 	
 	return {Vge : DataVge, Vce : DataVce, Ice : DataIce, TimeStep : TimeStep};
+}
+
+function SiC_GD_dVdt(Data, LowLevel10, HighLevel90)
+{
+	var res = []
+	var dVdt = 0
+	var DataLimit = []
+	var TimeStep = SiC_GD_GetTimeScale() / 250
+	var MaxLevel = Data[0]
+	var LowPercent = 0
+	var HighPercent = 0
+
+	var sumx = 0;
+	var sumy = 0;
+	var sumx2 = 0;
+	var sumxy = 0;
+	var k = 0;
+	var b = 0;
+
+	// поиск максимального значения для выбора границ
+	for (var i = 0; i < Data.length; ++i)
+		if (Data[i] > MaxLevel)
+			MaxLevel = Data[i]
+
+	var LowValue = MaxLevel * LowLevel10 / 100
+	var HighValue = MaxLevel * HighLevel90 / 100
+
+	// исключаем точки которые менее или более указанных границ
+	for (var i = 0; i < Data.length - 1; ++i)
+		if(Data[i] > LowValue && Data[i] < HighValue)
+			DataLimit.push(Data[i])
+	//plot(DataLimit, 1, 1)
+
+	// берем производную из массива
+	for (var i = 0; i < DataLimit.length - 1; ++i)
+		res.push(DataLimit[i+1]-DataLimit[i])
+	//plot(res, 1, 1)
+
+	// расчет медианного коэффициента наклона
+	res.sort(function(a, b){ return a - b; })
+	var isort = res.length / 2
+	maxk = (isort % 1 == 0 ? (res[isort - 1] + res[isort]) / 2 : res[Math.floor(isort)])
+
+	dVdt = maxk / TimeStep * 1e-6;
+	p("dVdt mediana("+ LowLevel10 +"-"+ HighLevel90 +") = " + (dVdt).toFixed(2) + " V/us")
+
+	// рассчет апроксимационной прямой
+	for (var i = 0; i < DataLimit.length; i++)
+	{
+		sumx += i;
+		sumy += DataLimit[i];
+		sumx2 += i * i;
+		sumxy += i * DataLimit[i];
+	}
+
+	k = (DataLimit.length * sumxy - (sumx * sumy)) / (DataLimit.length * sumx2 - sumx * sumx);
+	b = (sumy - k * sumx) / DataLimit.length;
+
+	dVdt = k / TimeStep * 1e-6;
+	p("dVdt approx("+ LowLevel10 +"-"+ HighLevel90 +") = " + (dVdt).toFixed(2) + " V/us");
+
+	return dVdt
 }
