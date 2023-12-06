@@ -252,13 +252,13 @@ function FWU_CU()
 
 function FWU_DumpCU(Num)
 {
-	FWU_DumpCommon("CUHV", Num, 126)
+	FWU_DumpCommon("CU", Num, 62)
 }
 //------------------------
 
 function FWU_RestoreCU(Num)
 {
-	FWU_RestoreCommon("CUHV", Num)
+	FWU_RestoreCommon("CU", Num)
 }
 //------------------------
 
