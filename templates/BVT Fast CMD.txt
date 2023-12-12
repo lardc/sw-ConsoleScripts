@@ -32,7 +32,7 @@ a = BVT_Plot();
 plot2(a.Voltage, a.Current, 1, 0);
 save('volt.csv', a.Voltage)
 save('curr.csv', a.Current)
-dev.w(82,0)
+dev.w(82,1)
 
 WIN + R: shutdown -r -t 0
 
@@ -101,14 +101,14 @@ CBVT_VerifyV();
 
 CBVT_CalibrateV();
 
-// Диапазон 0.1 - 5 мА (AC)
+// Диапазон 0.5 - 5 мА (AC)
 / (Offset: -) (K: 37/38)
 / [P0: 118] [P1: 113] [P2: 112]
 i("CalBVT.js");
 cbvt_Iterations = 3;
 cbvt_RangeI = 0;
-cbvt_VmaxAC = 5370; 
-cbvt_VminAC = 130;
+cbvt_IminAC = 5;
+cbvt_ImaxAC = 50;
 cbvt_Points = 10;
 cbvt_StartVLow = 100;
 cbvt_R = 1005600;
@@ -124,18 +124,18 @@ CBVT_CalibrateI();
 // Диапазон 5 - 30мА (AC)
 / (Offset: -) (K: 24/25)
 / [P0: 116] [P1: 97] [P2: 96]
-i("CalBVT.js");
-cbvt_Iterations = 3;
+include("CalBVT.js");
+cbvt_Iterations = 1;
 cbvt_RangeI = 1;
-cbvt_VmaxAC = 6700; 
-cbvt_VminAC = 1170;
+cbvt_IminAC = 50;
+cbvt_ImaxAC = 300;
 cbvt_Points = 10;
 cbvt_StartVLow = 100;
 cbvt_R = 220100;
 cbvt_Shunt = 100;
 bvt_test_time = 1000;
-CBVT_Init(11,5,1,2);
-//dev.nid(4);
+CBVT_Init(4,6,1,2);
+dev.nid(4);
 
 CBVT_VerifyI();
 
@@ -145,17 +145,17 @@ CBVT_CalibrateI();
 / (Offset: -) (K: 24/25)
 / [P0: 116] [P1: 97] [P2: 96]
 i("CalBVT.js");
-cbvt_Iterations = 3;
+cbvt_Iterations = 1;
 cbvt_RangeI = 1;
-cbvt_VmaxAC = 6700; 
-cbvt_VminAC = 115;
+cbvt_IminAC = 5;
+cbvt_ImaxAC = 300;
 cbvt_Points = 10;
 cbvt_StartVLow = 100;
 cbvt_R = 220100;
 cbvt_Shunt = 100;
 bvt_test_time = 1000;
-CBVT_Init(11,5,1,2);
-//dev.nid(4);
+CBVT_Init(4,6,1,2);
+dev.nid(4);
 
 CBVT_VerifyI();
 
@@ -165,17 +165,18 @@ CBVT_CalibrateI();
 / (Offset: -) (K: 26/27)
 / [P0: 117] [P1: 99] [P2: 98]
 i("CalBVT.js");
-cbvt_Iterations = 3;
+cbvt_Ilimit2 = 300;
+cbvt_Iterations = 1;
 cbvt_RangeI = 2;
-cbvt_VmaxAC = 6800; 
-cbvt_VminAC = 710;
+cbvt_IminAC = 300;
+cbvt_ImaxAC = 3000;
 cbvt_Points = 10;
-cbvt_StartVLow = 300;
-cbvt_R = 22010;
+cbvt_StartVLow = 100;
+cbvt_R = 12010;
 cbvt_Shunt = 10;
 bvt_test_time = 3000;
-CBVT_Init(11,5,1,2);
-//dev.nid(4);
+CBVT_Init(4,6,1,2);
+dev.nid(4);
 
 CBVT_VerifyI();
 
