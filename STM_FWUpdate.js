@@ -37,7 +37,7 @@ function Dump(CAN_ID)
 	if(DeviceNameList[DeviceId])
 	{
 		dev.Dump("../../hw-" + DeviceNameList[DeviceId][1] + "/Firmware/" + DeviceNameList[DeviceId][1] + ".regdump", 0, 126);
-		p("The path to the regdump file is " + "../../hw-" + DeviceNameList[DeviceId][1] + "/Firmware/" + DeviceNameList[DeviceId][1] + ".regdump");
+		p("The path to the regdump file is: " + "../../hw-" + DeviceNameList[DeviceId][1] + "/Firmware/" + DeviceNameList[DeviceId][1] + ".regdump");
 	}
 	else
 		p('Unknown device (ID = ' + DeviceId + ')');
@@ -64,7 +64,7 @@ function FWU_Print(DeviceId)
 {
 	PrintFWInfo()
 	p("")
-	print("The device was recognized as " + DeviceNameList[DeviceId][0] + ". Confirm execution pressing 'y' or exit pressing 'n'.");
+	print("Confirm execution pressing 'y' to update the firmware in the " + DeviceNameList[DeviceId][0] + ", or exit by pressing 'n'");
 	var key = 0;
 	do
 	{
