@@ -1,17 +1,98 @@
-﻿function FWUpdateSTM(FileName)
+﻿include("PrintStatus.js")
+
+const DeviceNameList = 
 {
-	print("Current node id equal " + dev.GetNodeID() + ". Confirm execution pressing 'y' or exit pressing 'n'.");
+	100: ['PMXU', 'PMXUControlBoard'],
+	101: ['MXU', 'MXUControlBoard'],
+}
+//------------------------
+
+function FWU(CAN_ID)
+{
+	(CAN_ID) ? dev.nid(CAN_ID) : dev.nid(0);
+	
+	DeviceId = dev.r(258);
+	
+	if(DeviceNameList[DeviceId])
+	{
+		if(FWU_Print(DeviceId))
+		{
+			FWUpdateSTM("../../hw-" + DeviceNameList[DeviceId][1] + "/Firmware/Release/" + DeviceNameList[DeviceId][1] + ".binary")
+			sleep(1000)
+			p("")
+			PrintFWInfo()
+		}
+	}
+	else
+		p('Unknown device (ID = ' + DeviceId + ')');
+}
+//------------------------
+
+function Dump(CAN_ID)
+{
+	(CAN_ID) ? dev.nid(CAN_ID) : dev.nid(0);
+	
+	DeviceId = dev.r(258);
+	
+	if(DeviceNameList[DeviceId])
+	{
+		dev.Dump("../../hw-" + DeviceNameList[DeviceId][1] + "/Firmware/" + DeviceNameList[DeviceId][1] + ".regdump", 0, 126);
+		p("The path to the regdump file is: " + "../../hw-" + DeviceNameList[DeviceId][1] + "/Firmware/" + DeviceNameList[DeviceId][1] + ".regdump");
+	}
+	else
+		p('Unknown device (ID = ' + DeviceId + ')');
+}
+//------------------------
+
+function Restore(CAN_ID)
+{
+	(CAN_ID) ? dev.nid(CAN_ID) : dev.nid(0);
+	
+	DeviceId = dev.r(258);
+	
+	if(DeviceNameList[DeviceId])
+	{
+		dev.Restore("../../hw-" + DeviceNameList[DeviceId][1] + "/Firmware/" + DeviceNameList[DeviceId][1] + ".regdump");
+		p("Done")
+	}
+	else
+		p('Unknown device (ID = ' + DeviceId + ')');
+}
+//------------------------
+
+function FWU_Print(DeviceId)
+{
+	PrintFWInfo()
+	p("")
+	print("Confirm execution pressing 'y' to update the firmware in the " + DeviceNameList[DeviceId][0] + ", or exit by pressing 'n'");
 	var key = 0;
 	do
 	{
 		key = readkey();
 	}
 	while (key != "y" && key != "n")
-	
-	if (key == "n")
+		
+	return (key == "y") ? true : false;
+}
+//------------------------
+
+function FWUpdateSTM(FileName, Print)
+{
+	if(Print)
 	{
-		print("Exit.");
-		return;
+		print("Current node id equal " + dev.GetNodeID() + ". Confirm execution pressing 'y' or exit pressing 'n'.");
+		var key = 0;
+		do
+		{
+			key = readkey();
+		}
+		while (key != "y" && key != "n")
+		
+		if (key == "n")
+		{
+			print("Exit.");
+			return;
+		}
 	}
 	
 	// Команды
@@ -133,6 +214,30 @@
 }
 //------------------------
 
+function FWU_DumpCommon(Name, Num, FinishReg)
+{
+	if (typeof Num === 'undefined')
+		print("Необходимо указать номер блока в аргументе функции")
+	else
+	{
+		var NumStr = "00" + Num
+		NumStr = NumStr.substr(NumStr.length - 3)
+		dev.Dump("../../sw-ConsoleScripts/regdump/" + Name + "_" + NumStr + ".regdump", 0, FinishReg)
+	}
+}
+
+function FWU_RestoreCommon(Name, Num)
+{
+	if (typeof Num === 'undefined')
+		print("Необходимо указать номер блока в аргументе функции")
+	else
+	{
+		var NumStr = "00" + Num
+		NumStr = NumStr.substr(NumStr.length - 3)
+		dev.Restore("../../sw-ConsoleScripts/regdump/" + Name + "_" + NumStr + ".regdump")
+	}
+}
+
 // ATU HP
 function FWU_ATUHP()
 {
@@ -206,14 +311,14 @@ function FWU_LSLH()
 	FWUpdateSTM("../../hw-LSLHControlBoard/Firmware/Release/LSLHControlBoard.binary");
 }
 
-function FWU_DumpLSLH()
+function FWU_DumpLSLH(Num)
 {
-	dev.Dump("../../hw-LSLHControlBoard/Firmware/LSLHControlBoard.regdump", 0, 126);
+	FWU_DumpCommon("LSLH", Num, 126)
 }
 
-function FWU_RestoreLSLH()
+function FWU_RestoreLSLH(Num)
 {
-	dev.Restore("../../hw-LSLHControlBoard/Firmware/LSLHControlBoard.regdump");
+	FWU_RestoreCommon("LSLH", Num)
 }
 //------------------------
 
@@ -444,13 +549,47 @@ function FWU_LCSU()
 	FWUpdateSTM("../../hw-LCSUControlBoard/Firmware/Release/LCSUControlBoard.binary");
 }
 
-function FWU_DumpLCSU()
+function FWU_DumpLCSU(Num)
 {
-	dev.Dump("../../hw-LCSUControlBoard/Firmware/LCSUControlBoard.regdump", 0, 126);
+	FWU_DumpCommon("LCSU", Num, 126);
 }
 
-function FWU_RestoreLCSU()
+function FWU_RestoreLCSU(Num)
 {
-	dev.Restore("../../hw-LCSUControlBoard/Firmware/LCSUControlBoard.regdump");
+	FWU_RestoreCommon("LCSU", Num);
+}
+//------------------------
+
+// PMXU
+function FWU_PMXU()
+{
+	FWUpdateSTM("../../hw-PMXUControlBoard/Firmware/Release/PMXUControlBoard.binary");
+}
+
+function FWU_DumpPMXU()
+{
+	dev.Dump("../../hw-PMXUControlBoard/Firmware/PMXUControlBoard.regdump", 0, 126);
+}
+
+function FWU_RestorePMXU()
+{
+	dev.Restore("../../hw-PMXUControlBoard/Firmware/PMXUControlBoard.regdump");
+}
+//------------------------
+
+// SVTU
+function FWU_SVTU()
+{
+	FWUpdateSTM("../../hw-SVTUControlBoard/Firmware/Release/SVTUControlBoard.binary");
+}
+
+function FWU_DumpSVTU(Num)
+{
+	FWU_DumpCommon("SVTU", Num, 126);
+}
+
+function FWU_RestoreSVTU()
+{
+	FWU_RestoreCommon("SVTU", Num);
 }
 //------------------------

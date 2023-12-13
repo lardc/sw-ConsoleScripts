@@ -41,6 +41,8 @@ function SiC_GD_GetChannelCurve(Channel)
 	for (var i = 6; i < 2506; ++i)
 		res[i - 6] = (data_input[i].charCodeAt(0) - 128 - p_position * 25) * p_scale / 25;
 	
+	//plot(res, 1, 1);
+
 	return res;
 }
 
@@ -81,6 +83,8 @@ function SiC_GD_Filter(Data, ScaleI)
 		filtered_spl[i] *= scale;
 	}
 	
+	//plot(filtered_spl, 1, 1);
+
 	return filtered_spl;
 }
 

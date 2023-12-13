@@ -150,20 +150,44 @@ function FWUpdate(FileName)
 }
 //------------------------
 
+function FWU_DumpCommon(Name, Num, FinishReg)
+{
+	if (typeof Num === 'undefined')
+		print("Необходимо указать номер блока в аргументе функции")
+	else
+	{
+		var NumStr = "00" + Num
+		NumStr = NumStr.substr(NumStr.length - 3)
+		dev.Dump("../../sw-ConsoleScripts/regdump/" + Name + "_" + NumStr + ".regdump", 0, FinishReg)
+	}
+}
+
+function FWU_RestoreCommon(Name, Num)
+{
+	if (typeof Num === 'undefined')
+		print("Необходимо указать номер блока в аргументе функции")
+	else
+	{
+		var NumStr = "00" + Num
+		NumStr = NumStr.substr(NumStr.length - 3)
+		dev.Restore("../../sw-ConsoleScripts/regdump/" + Name + "_" + NumStr + ".regdump")
+	}
+}
+
 // GTU
 function FWU_GTU()
 {
 	FWUpdate("../../hw-GTUControlBoard/Firmware/Release/GTUControlBoard.hex");
 }
 
-function FWU_DumpGTU()
+function FWU_DumpGTU(Num)
 {
-	dev.Dump("../../hw-GTUControlBoard/Firmware/GTUControlBoard.regdump", 0, 126);
+	FWU_DumpCommon("GTU", Num, 126)
 }
 
-function FWU_RestoreGTU()
+function FWU_RestoreGTU(Num)
 {
-	dev.Restore("../../hw-GTUControlBoard/Firmware/GTUControlBoard.regdump");
+	FWU_RestoreCommon("GTU", Num)
 }
 //------------------------
 
@@ -173,14 +197,14 @@ function FWU_BVT()
 	FWUpdate('../../hw-BVTControlBoard/Firmware/Release/BVTControlBoard.hex');
 }
 
-function FWU_DumpBVT()
+function FWU_DumpBVT(Num)
 {
-	dev.Dump('../../hw-BVTControlBoard/Firmware/BVTControlBoard.regdump', 0, 126);
+	FWU_DumpCommon("BVT", Num, 126)
 }
 
-function FWU_RestoreBVT()
+function FWU_RestoreBVT(Num)
 {
-	dev.Restore('../../hw-BVTControlBoard/Firmware/BVTControlBoard.regdump');
+	FWU_RestoreCommon("BVT", Num)
 }
 //------------------------
 
@@ -226,15 +250,15 @@ function FWU_CU()
 }
 //------------------------
 
-function FWU_DumpCU()
+function FWU_DumpCU(Num)
 {
-	dev.Dump('../../hw-CUControlBoard/Firmware/CUControlBoard.regdump', 0, 126);
+	FWU_DumpCommon("CU", Num, 62)
 }
 //------------------------
 
-function FWU_RestoreCU()
+function FWU_RestoreCU(Num)
 {
-	dev.Restore('../../hw-CUControlBoard/Firmware/CUControlBoard.regdump');
+	FWU_RestoreCommon("CU", Num)
 }
 //------------------------
 

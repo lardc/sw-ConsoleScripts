@@ -21,6 +21,11 @@ function _dVdt_Active()
 		return 1;
 	else if (dev.r(192) == 3)
 		return 0;
+	else if (dev.r(192) == 1)
+	{
+		PrintStatus();
+		return;
+	}
 }
 
 function dVdt_Start()
@@ -172,7 +177,7 @@ function dVdt_CellPulse(CellID, Voltage, Gate, Range, NoShutdown)
 {
 	dVdt_CellCall(CellID, 1);
 
-	if(cdvdt_SelectedRange != 3)
+	if(Range != 3)
 		dVdt_SelectRange(CellID, Range);	
 	dVdt_CellSetV(CellID, Voltage);
 	
@@ -180,7 +185,7 @@ function dVdt_CellPulse(CellID, Voltage, Gate, Range, NoShutdown)
 	{
 		if (anykey()) return 0;
 		sleep(100);
-	}		
+	}
 	
 	dVdt_CellSetGate(CellID, Gate);
 	sleep(500);

@@ -1,4 +1,11 @@
-﻿include("PrintStatus.js")
+include("PrintStatus.js")
+
+DS_None				= 0
+DS_Fault			= 1
+DS_Disabled			= 2
+DS_BatteryCharge	= 3
+DS_Ready			= 4
+DS_InProcess		= 5
 
 GatePulseTime 	= 1000;		// us
 GateVoltage 	= 10000;	// mV
@@ -15,10 +22,34 @@ function LSLH_StartMeasure(Current)
 	dev.w(153, GatePulseDelay);
 	dev.w(140, Current);
 	
-	if(dev.r(192) == 4)
+	var start = new Date();
+	if(dev.r(192) != DS_Ready)
+	{
+		if (dev.r(192) == DS_Fault)
+		{
+			PrintStatus();
+			dev.c(3);
+			p("Сброшен Fault");
+		}
+
+		if (dev.r(192) == DS_None || dev.r(192) == DS_Disabled)
+			dev.c(1);
+
+		while (dev.r(192) != DS_Ready)
+		{
+			var end = new Date();
+			pinline('\rВремя заряда, с: ' + (end - start) / 1000);
+			sleep(100);
+		}
+		p("");
+	}
+
+	if(anykey()) return 0;
+
+	if(dev.r(192) == DS_Ready)
 	{
 		dev.c(100);
-		while(dev.r(192) != 4){sleep(500);}
+		while(dev.r(192) != DS_Ready){sleep(500);}
 		
 		if(LSLH_Print)
 		{			
@@ -40,29 +71,47 @@ function LSLH_StartMeasure(Current)
 }
 //--------------------------
 
-function LSLH_ResourceTest(Current, N)
+function LSLH_ResourceTest(Current, HoursTest)
 {
 	csv_array = [];
 
-	var today = new Date();
-	var now = new Date();
-	var i = 0;
+	var i = 1;
+	var count_plot = 0;
+	var MinutesInMs = 60 * 1000;
+	var end = new Date();
+	var start = new Date();
+	var hours = start.getHours() + HoursTest;
+	end.setHours(hours);
 
-	csv_array.push("N ; UTM, V; ITM, A; Hours ; Minutes; Seconds");
+	csv_array.push("N ; Utm, mV; Itm, A; Ugt, mV; Igt, mA; Hours ; Minutes; Seconds");
 
-	for(i = 0; i < N; i++)
+	while((new Date()).getTime() < end.getTime())
 	{
-		now = new Date();
-		print("#" + i);
 		LSLH_StartMeasure(Current);
 
-		//sleep(3500);
-		
-		if(anykey())
-			break;
+		var left_time = new Date(end.getTime() - (new Date()).getTime());
+		var now_time = new Date();
+		print("#" + i + " Осталось " + (left_time.getHours() - 3) + " ч и " + left_time.getMinutes() + " мин");
 
-		csv_array.push( i + ";" + (dev.r(198) / 1000) + ";" + (dev.r(206) + dev.r(205) / 10) + ";" + now.getHours() +  ";" + now.getMinutes() + ";" + now.getSeconds());
-		save("data/LSL_TestUTM" + today.getTime() + ".csv", csv_array);
+		var elapsed_time = new Date((new Date()).getTime() - start.getTime());
+		if (elapsed_time.getTime() > 10 * MinutesInMs * count_plot)
+		{
+			pl(dev.rafs(1));
+			p("Вывод графика #" + (count_plot + 1) + " спустя " +
+				(elapsed_time.getHours() - 3) + " ч и " + elapsed_time.getMinutes() + " мин");
+
+			count_plot++;
+		}
+
+		if (anykey()) break;
+
+		csv_array.push( i + ";" + dev.r(198) + ";" + (dev.r(206) + dev.r(205) / 10) + ";" +
+			dev.r(202) + ";" + dev.r(203) + ";" + now_time.getHours() +  ";" +
+			now_time.getMinutes() + ";" + now_time.getSeconds());
+
+		save("data/LSL_TestUTM" + end.getTime() + ".csv", csv_array);
+
+		i++;
 	}
 }
 //--------------------------
@@ -70,15 +119,9 @@ function LSLH_ResourceTest(Current, N)
 function LSLH_GD_Pulse(Current, Voltage, Tpulse)
 {
 	dev.w(150, Tpulse);
-	
 	dev.w(151, Voltage);
-	//dev.c(14);
-	
 	dev.w(152, Current);
-	//dev.c(15);
-	//dev.w(140, 200);
-	dev.c(100);
-	//dev.c(12);
+	dev.c(12);
 }
 //--------------------------
 

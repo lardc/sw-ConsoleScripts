@@ -28,7 +28,7 @@ function IGTU_Iges(Voltage, CurrentRange)
 		if(dev.r(196) != 0)
 			PrintStatus();
 		
-		p("Iges, nA:" + (dev.rf(204)*1e6).toFixed(2));
+		p("Iges, nA:" + dev.rf(204).toFixed(2));
 	}
 	else
 		PrintStatus();
