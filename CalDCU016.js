@@ -65,7 +65,7 @@ Cdcu_scatter = [];
 
 //Function first setting
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция инициализации портов блока и осциллографа
 
 function CAL_Init(portDevice, portTek, ChannelMeasureId)
@@ -102,7 +102,7 @@ if (ChannelMeasureId < 1 || ChannelMeasureId > 4)
 
 //Verification Function 
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция верификации тока для указаной скорости
 
 function CAL_VerifyId(CurrentRateNTest)
@@ -122,12 +122,12 @@ function CAL_VerifyId(CurrentRateNTest)
 		CAL_SaveId("DCU_Idset_fixed");
 
 		// Plot relative error distribution
-		scattern(Cal_IdSc, Cal_IdErr, "Current (in A)", "Error (in %)", "Current relative error");
-		scattern(Cal_IdSc, Cal_IdsetErr, "Current (in A)", "Error (in %)", "Current set relative error");
+		scattern(Cal_IdSc, Cal_IdErr, "Current (in A)", "Error (in %)", "Current relative error " + CurrentRate[CurrentRateNTest] + " A/us");
+		scattern(Cal_IdSc, Cal_IdsetErr, "Current (in A)", "Error (in %)", "Current set relative error " + CurrentRate[CurrentRateNTest] + " A/us");
 		}
 	}	
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция верификации скорости спада для указаной скорости
 
 function CAL_VerifyIrate(CurrentRateNTest)
@@ -143,7 +143,7 @@ function CAL_VerifyIrate(CurrentRateNTest)
 }
 
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция верификации всех скоростей и тока
 
 function CAL_VerifyALL()
@@ -164,8 +164,8 @@ function CAL_VerifyALL()
 
 //Calibration Function
 
-//--------------------
-// Функция калибровки тока 
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Функция калибровки тока для указанной скорости  
 
 function CAL_CalibrateId(CurrentRateNTest)
 {		
@@ -199,7 +199,7 @@ function CAL_CalibrateId(CurrentRateNTest)
 	}
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция калибровки скорости спада для указаной скорости
 
 function CAL_CalibrateIrate(CurrentRateNTest)
@@ -212,24 +212,120 @@ function CAL_CalibrateIrate(CurrentRateNTest)
 	// Reload values
 	var CurrentArray = CGEN_GetRange(Cal_IdMin, Cal_IdMax, Cal_IdStp);
 
-	if (CAL_CompensationIrate(CurrentArray, CurrentRateNTest))
+	if (CAL_CompensationIrate(CurrentArray, CurrentRateNTest, "DCU_IintPS","DCU_VintPS"))
 	{
 		// Additional correction
 		CAL_CompensationIratecorr("DCU_IintPS","DCU_VintPS","DCU_VintPScorr");
 		// Calculate correction
 		Cal_IrateCorr = CGEN_GetCorrection2("DCU_VintPScorr");
+
+		Add_Correct_P4(CurrentRateNTest, Cal_IrateCorr[0]);
 		CAL_SetCoefIrateCompens(Cal_IrateCorr[0], Cal_IrateCorr[1], Cal_IrateCorr[2], CurrentRateNTest);
 		CAL_PrintCoefIrateCompens(CurrentRateNTest);
 	}	
 }
 
-//--------------------
-// Функция ручного пересчета скорости спада (для изменения P4)
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Функция  пересчета скорости спада (для изменения P4)
 
-function Hand_Cal_CompensationIrete(CurrentRateNTest)
+function Add_Correct_P4(CurrentRateNTest, P2)
 {
-	CAL_CompensationIratecorr("RCU_IintPS","RCU_VintPS","RCU_VintPScorr", CurrentRateNTest);
-	Cal_IrateCorr = CGEN_GetCorrection2("RCU_VintPScorr");
+	P2_err = parseFloat(P2);
+	P2_err = (P2_err * 1e6).toFixed(0);
+	while (P2_err != 0 )
+	{
+		P2_err = parseFloat(P2);
+		P2_err = (P2_err * 1e6).toFixed(0);
+		p(P2_err);
+		p(P4_corr);
+		if (P2_err > 100)
+		{
+			P4_corr = (P4_corr - (- 1000));
+		}	
+		else if (P2_err < -1000) 
+		{
+			P4_corr = P4_corr - 100 ;
+		}
+			
+		if (P2_err > 10)
+		{
+			P4_corr = (P4_corr - (-100));
+		}	
+		else if (P2_err < -100)
+		{
+			P4_corr = P4_corr - 10 ;	
+		}
+					
+		if (P2_err > 0)
+		{
+			P4_corr = (P4_corr - (-10));
+		}	
+		else if (P2_err < 0)
+		{
+			P4_corr = P4_corr - 11 ;	
+		}
+
+	Coef_P4_Set(CurrentRateNTest,P4_corr);	
+	CAL_CompensationIratecorr("DCU_IintPS","DCU_VintPS","DCU_VintPScorr", CurrentRateNTest);
+	Cal_IrateCorr = CGEN_GetCorrection2("DCU_VintPScorr");
+	P2 = Cal_IrateCorr[0];
+	CAL_SetCoefIrateCompens(Cal_IrateCorr[0], Cal_IrateCorr[1], Cal_IrateCorr[2], CurrentRateNTest);
+	if (anykey()) return 0;		
+	}
+	
+								
+}
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Функция записи коэффицента P4 для выбранной скорости спада
+
+function Coef_P4_Set(CurrentRateNTest,K4)
+{
+
+	switch(CurrentRateNTest)
+	{
+	case 0:
+		dev.w(43,K4);
+		break;
+	case 1:
+		dev.w(47,K4);
+		break;
+	case 2:
+		dev.w(51,K4);
+		break;
+	case 3:
+		dev.w(55,K4);
+		break;
+	case 4:
+		dev.w(59,K4);
+		break;
+	case 5:
+		dev.w(63,K4);
+		break;
+	case 6:
+		dev.w(67,K4);
+		break;
+	case 7:
+		dev.w(71,K4);
+		break;
+	case 8:
+		dev.w(75,K4);
+		break;
+	case 9:
+		dev.w(79,K4);
+		break;
+	case 10:
+		dev.w(83,K4);
+		break;	
+	}
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+//Ручной подсчет коэффицентов для скорости спада и заданного P4
+
+function Hand_Cal_CompensationIrate(CurrentRateNTest)
+{
+	CAL_CompensationIratecorr("DCU_IintPS","DCU_VintPS","DCU_VintPScorr", CurrentRateNTest);
+	Cal_IrateCorr = CGEN_GetCorrection2("DCU_VintPScorr");
 	CAL_SetCoefIrateCompens(Cal_IrateCorr[0], Cal_IrateCorr[1], Cal_IrateCorr[2], CurrentRateNTest);
 	CAL_PrintCoefIrateCompens(CurrentRateNTest);
 }
@@ -243,7 +339,7 @@ function Hand_Cal_CompensationIrete(CurrentRateNTest)
 
 //Аdditional Functions
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция сброса переменных
 
 	function CAL_ResetA()
@@ -276,7 +372,7 @@ function Hand_Cal_CompensationIrete(CurrentRateNTest)
 	Cal_Volt = [];
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция выбора вертикальной развертки и тригера для осцилограффа для тока ?
 
 function CAL_TekInitId()
@@ -289,7 +385,7 @@ function CAL_TekInitId()
 	TEK_Send("measurement:meas" + Cal_chMeasureId + ":type maximum");
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция сбора данных для калибровки тока
 
 function CAL_CollectId(CurrentValues, IterationsCount,CurrentRateNTest)
@@ -356,7 +452,7 @@ function CAL_CollectId(CurrentValues, IterationsCount,CurrentRateNTest)
 	return 1;
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция сохранения данных измерения тока 
 
 function CAL_SaveId(NameId)
@@ -364,7 +460,7 @@ function CAL_SaveId(NameId)
 	CGEN_SaveArrays(NameId, Cal_Id, Cal_IdSc, Cal_IdErr);
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция выбора вертикальной развертки и тригера для осцилограффа для тока
 
 function DCU_TekScaleId(Channel, Value)
@@ -375,8 +471,8 @@ function DCU_TekScaleId(Channel, Value)
 	TEK_Send("trigger:main:edge:slope fall");
 }
 
-//--------------------
-// Функция возвращения значения тока от осцилограффа
+//-------------------------------------------------------------------------------------------------------------------------------------------
+/// Функция возвращения значения тока от осцилограффа
 
 function CAL_MeasureId(Channel)
 {
@@ -384,7 +480,7 @@ function CAL_MeasureId(Channel)
 }
 
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция выбора вертикальной развертки и тригера для осцилограффа для скорости спада
 
 function CAL_TekInitIrate()
@@ -403,7 +499,7 @@ function CAL_TekInitIrate()
 	CAL_TekSetHorizontalScale();
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция выбора горизонтальной развертки для осцилограффа
 
 function CAL_TekSetHorizontalScale()
@@ -447,7 +543,7 @@ function CAL_TekSetHorizontalScale()
 	}
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция сбора данных для калибровки скорости спада
 
 function CAL_CollectIrate(CurrentValues, IterationsCount, CurrentRateNTest)
@@ -509,7 +605,7 @@ function CAL_CollectIrate(CurrentValues, IterationsCount, CurrentRateNTest)
 	return 1;
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция перевода полученных значений при сборе и сохранения
 
 function CAL_MeasureIrate(RateSet, CurrentSet)
@@ -542,7 +638,7 @@ function CAL_MeasureIrate(RateSet, CurrentSet)
 	return RateScope;	
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция сброса данных измерения тока 
 
 function CAL_ResetIdCal()
@@ -550,7 +646,7 @@ function CAL_ResetIdCal()
 	CAL_SetCoefId(0, 1, 0);
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция сброса данных задания тока 
 
 function CAL_ResetIdsetCal()
@@ -558,7 +654,7 @@ function CAL_ResetIdsetCal()
 	CAL_SetCoefIdset(0, 1, 0);
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция сохранения данных задания тока
 
 function CAL_SaveIdset(NameIdset)
@@ -566,7 +662,7 @@ function CAL_SaveIdset(NameIdset)
 	CGEN_SaveArrays(NameIdset, Cal_IdSc, Cal_Idset, Cal_IdsetErr);
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция вызова значений регистров для измерения тока
 
 function CAL_PrintCoefId()
@@ -576,7 +672,7 @@ function CAL_PrintCoefId()
 	print("Id P0 			: " + dev.rs(6));
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция вызова значений регистров для компенсации
 
 function CAL_PrintCoefIdset()
@@ -586,7 +682,7 @@ function CAL_PrintCoefIdset()
 	print("Idset P0 		: " + dev.rs(122));
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция записи регистров измерения тока
 
 function CAL_SetCoefId(P2, P1, P0)
@@ -596,7 +692,7 @@ function CAL_SetCoefId(P2, P1, P0)
 	dev.ws(6, Math.round(P0));	
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция записи регистров для компенсации
 
 function CAL_SetCoefIdset(P2, P1, P0)
@@ -606,10 +702,10 @@ function CAL_SetCoefIdset(P2, P1, P0)
 	dev.ws(122, Math.round(P0));	
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция подбора напряжения относительно тока для указанной скорости
 
-function CAL_CompensationIrate(CurrentValues, CurrentRateNTest)
+function CAL_CompensationIrate(CurrentValues, CurrentRateNTest, NameIintPS, NameVintPS)
 {	
 	Cal_CntTotal = CurrentValues.length;
 	Cal_CntDone = 1;
@@ -627,10 +723,10 @@ function CAL_CompensationIrate(CurrentValues, CurrentRateNTest)
 		
 		print("-- result " + Cal_CntDone++ + " of " + Cal_CntTotal + " --");
 		
-		VoltageMin = cal_IntPsVmin;
-		VoltageMax = cal_IntPsVmax;
+		VoltageMin = Cal_IntPsVmin;
+		VoltageMax = Cal_IntPsVmax;
 
-		DCU_TekScaleId(Cal_chMeasureId, CurrentValues[j] * cal_Rshunt * 1e-6);
+		DCU_TekScaleId(Cal_chMeasureId, CurrentValues[j] * Cal_Rshunt * 1e-6);
 		TEK_Send("horizontal:scale "  + ((CurrentValues[j] / CurrentRate[CurrentRateNTest]) * 1e-6) * 0.25);
 		TEK_Send("horizontal:main:position "+ ((CurrentValues[j] / CurrentRate[CurrentRateNTest]) * 1e-6) * 0.4);
 
@@ -692,13 +788,13 @@ function CAL_CompensationIrate(CurrentValues, CurrentRateNTest)
 }
 
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 //Функция пересчета полученых значений для указанной скорости
 
 function CAL_CompensationIratecorr(NameIintPS, NameVintPS, NameVintPScorr, CurrentRateNTest)
 {
 	CAL_ResetA();
-	P4_corr = (dev.r(43 + 4 * CurrentRateNTest));
+	//P4_corr = (dev.r(43 + 4 * CurrentRateNTest));
 	var LoadI = [];
 	var LoadV = [];
 	var csv_array = [];
@@ -717,7 +813,7 @@ function CAL_CompensationIratecorr(NameIintPS, NameVintPS, NameVintPScorr, Curre
 	save(cgen_correctionDir + "/" + NameVintPScorr + ".csv", csv_array);
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 //Функция записи регистров для указаной скорости 
 
 function CAL_SetCoefIrateCompens(K2, K, Offset, CurrentRateNTest)
@@ -786,7 +882,7 @@ function CAL_SetCoefIrateCompens(K2, K, Offset, CurrentRateNTest)
 	}
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция вызова значений регистров скорости спада для указанной скорости
 
 function CAL_PrintCoefIrateCompens(CurrentRateNTest)

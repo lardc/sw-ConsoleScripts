@@ -5,11 +5,13 @@ include("TestDRCU.js")
 include("Tektronix.js")
 include("CalGeneral.js")
 include("TestQRR.js")
+include("TEK_GetData.js")
 
 // Calibration setup parameters
 Cal_Rshunt = 1000;	// uOhm
 Cal_Points = 10;
 Cal_Iterations = 1;
+Cal_IterationsPack = 0;
 Cal_UseAvg = 1;
 
 // CurrentArray
@@ -49,7 +51,7 @@ Cal_Irate = [];
 // Relative error
 Cal_IdErr = [];
 Cal_IdsetErr = [];
-Cal_Irate = [];
+Cal_IrateErr = [];
 
 // Correction
 P4_corr = 0;
@@ -59,6 +61,7 @@ Cal_IrateCorr = [];
 
 // Data arrays
 Cdcu_scatter = [];
+Cal_Volt = [];
 
 //--------------------
 //--------------------
@@ -140,6 +143,21 @@ function CAL_VerifyIrate(CurrentRateNTest)
 	CAL_CollectIrate(CurrentArray, Cal_Iterations, CurrentRateNTest);		
 }
 
+//--------------------
+// Функция верификации скорости спада для указаной скорости 50/90
+
+function CAL_VerifyIrate50_90(CurrentRateNTest)
+{		
+	CAL_ResetA();
+	
+	// Tektronix init
+	CAL_TekInitIrate();
+	
+	// Reload values
+	var CurrentArray = CGEN_GetRange(Cal_IdMin, Cal_IdMax, Cal_IdStp);
+	CAL_CollectIrate50_90(CurrentArray, Cal_Iterations, CurrentRateNTest);		
+}
+
 
 //--------------------
 // Функция верификации всех скоростей и тока
@@ -163,7 +181,7 @@ function CAL_VerifyALL()
 //Calibration Function
 
 //--------------------
-// Функция калибровки скорости спада для указаной скорости
+// Функция калибровки скорости спада для указаной скорости 10/90
 
 function CAL_CalibrateIrate(CurrentRateNTest)
 {
@@ -187,6 +205,29 @@ function CAL_CalibrateIrate(CurrentRateNTest)
 }
 
 //--------------------
+// Функция калибровки скорости спада для указаной скорости 50/90
+
+function CAL_CalibrateIrate50_90(CurrentRateNTest)
+{
+	CAL_ResetA();
+	
+	// Tektronix init
+	CAL_TekInitIrate();
+	
+	// Reload values
+	var CurrentArray = CGEN_GetRange(Cal_IdMin, Cal_IdMax, Cal_IdStp);
+
+	if (CAL_CompensationIrate50_90(CurrentArray, CurrentRateNTest, "RCU_IintPS","RCU_VintPS"))
+	{
+		// Calculate correction
+		CAL_SaveVintPS("RCU_IintPS","RCU_VintPS","RCU_VintPScorr");
+		Cal_IrateCorr = CGEN_GetCorrection("RCU_VintPScorr");
+		CAL_SetCoefIrateCompens(0, Cal_IrateCorr[0], Cal_IrateCorr[1], CurrentRateNTest);
+		CAL_PrintCoefIrateCompens(CurrentRateNTest);
+	}	
+}
+
+//--------------------
 // Функция ручного пересчета скорости спада (для изменения P4)
 
 function Hand_Cal_CompensationIrate(CurrentRateNTest)
@@ -197,6 +238,25 @@ function Hand_Cal_CompensationIrate(CurrentRateNTest)
 	CAL_PrintCoefIrateCompens(CurrentRateNTest);
 }
 
+function CAL_CalirateId(CurrentRateNTest) 
+{
+	//Reset values
+	CAL_ResetA();
+
+	// Tektronix init
+	CAL_TekInitId();
+
+	// Reload values
+	var CurrentArray = CGEN_GetRange(Cal_IdMin, Cal_IdMax, Cal_IdStp);
+ 
+	if (CAL_CollectId(CurrentArray, Cal_Iterations, CurrentRateNTest))
+		{
+		CAL_SaveIdset("RCU_Idset");
+		Cal_IdCorr = CGEN_GetCorrection("RCU_Idset");
+		CAL_SetCoefIdCompens(Cal_IdCorr[0], Cal_IdCorr[1], CurrentRateNTest);
+		CAL_PrintCoefIdCompens(CurrentRateNTest);
+		}	
+}
 
 //--------------------
 
@@ -271,7 +331,9 @@ function CAL_CollectId(CurrentValues, IterationsCount, CurrentRateNTest)
 		AvgNum = 1;
 		TEK_AcquireSample();
 	}
-	
+	if (Cal_IterationsPack)
+		AvgNum = 3;
+
 	for (var i = 0; i < IterationsCount; i++)
 	{
 		for (var j = 0; j < CurrentValues.length; j++)
@@ -286,7 +348,10 @@ function CAL_CollectId(CurrentValues, IterationsCount, CurrentRateNTest)
 				}
 			
 			for (var k = 0; k < AvgNum; k++)
+			{
+				sleep(100);
 				DRCU_Pulse(CurrentValues[j], CurrentRateNTest);
+			
 			
 			// Unit data
 			
@@ -306,6 +371,8 @@ function CAL_CollectId(CurrentValues, IterationsCount, CurrentRateNTest)
 			print("--------------------");
 			
 			if (anykey()) return 0;
+			}
+			
 		}
 	}
 
@@ -404,7 +471,7 @@ function CAL_TekSetHorizontalScale()
 }
 
 //--------------------
-// Функция сбора данных для калибровки скорости спада
+// Функция сбора данных для калибровки скорости спада 10/90
 
 function CAL_CollectIrate(CurrentValues, IterationsCount, CurrentRateNTest)
 {
@@ -464,9 +531,71 @@ function CAL_CollectIrate(CurrentValues, IterationsCount, CurrentRateNTest)
 		save("data/dcu_404.csv", Cdcu_scatter);
 	return 1;
 }
+//--------------------
+// Функция сбора данных для калибровки скорости спада 50/90
+
+function CAL_CollectIrate50_90(CurrentValues, IterationsCount, CurrentRateNTest)
+{
+	Cal_CntTotal = IterationsCount * CurrentValues.length;
+	Cal_CntDone = 1;
+
+	var AvgNum;
+	if (Cal_UseAvg)
+	{
+		AvgNum = 4;
+		TEK_AcquireAvg(AvgNum);
+	}
+	else
+	{
+		AvgNum = 1;
+		TEK_AcquireSample();
+	}
+	
+	Cal_IdSc = [];
+	Cal_IdsetErr = [];
+	Cal_IrateErr = [];
+	Cal_Volt = [];
+	
+
+	for (var i = 0; i < IterationsCount; i++)
+	{
+		
+			for (var j = 0; j < CurrentValues.length; j++)
+			{
+//___________________________________________________________				
+			//	print("Enter Temp unit");
+			//	Temp = readline();
+			//	dev.w(131,Temp);
+//___________________________________________________________
+				print("-- result " + Cal_CntDone++ + " of " + Cal_CntTotal + " --");
+
+				DCU_TekScaleId(Cal_chMeasureId, CurrentValues[j] * Cal_Rshunt * 1e-6);
+				TEK_Send("horizontal:scale "  + ((CurrentValues[j] / CurrentRate[CurrentRateNTest]) * 1e-6) * 0.25);
+				TEK_Send("horizontal:main:position "+ ((CurrentValues[j] / CurrentRate[CurrentRateNTest]) * 1e-6) * -0.5);
+				sleep(100);
+				while (dev.r(197) !=0)
+				{
+					sleep(500);
+				}
+				for (var m = 0; m < AvgNum; m++)
+				{
+					if(!DRCU_Pulse(CurrentValues[j], CurrentRateN[CurrentRateNTest]))
+						return 0;
+				}
+				sleep(1000);
+				
+				CAL_MeasureIrate50_90(CurrentRate[CurrentRateNTest], CurrentValues[j]);
+				if (anykey()) return 0;
+
+			}	
+	}
+		scattern(Cal_IdSc, Cal_IrateErr, "Current (in A)", "Error (in %)", "DCU Current rate relative error " + CurrentRate[CurrentRateNTest] + " A/us");
+		save("data/dcu_404.csv", Cdcu_scatter);
+	return 1;
+}
 
 //--------------------
-// Функция перевода полученных значений при сборе и сохранения
+// Функция перевода полученных значений при сборе и сохранения 10/90
 
 function CAL_MeasureIrate(RateSet, CurrentSet)
 {
@@ -497,6 +626,47 @@ function CAL_MeasureIrate(RateSet, CurrentSet)
 
 	return RateScope;	
 }
+//--------------------
+// Функция перевода полученных значений при сборе и сохранения 50/90
+
+function CAL_MeasureIrate50_90(RateSet, CurrentSet)
+{
+	var CurrentScope = (TEK_Measure(Cal_chMeasureId) / (Cal_Rshunt * 1e-6)).toFixed(2);
+	var CurrentErr = ((CurrentScope - CurrentSet) / CurrentSet * 100).toFixed(2);
+
+	var RateScope = CAL_MAS_RATE(CurrentSet);
+	var RateErr = ((RateScope - RateSet) / RateSet * 100).toFixed(2);
+	
+	
+	
+	Cdcu_scatter.push(RateSet + ";" + RateScope + ";" + RateErr + ";" + CurrentSet + ";" + CurrentScope + ";" + CurrentErr);
+	
+	Cal_IdSc.push(CurrentScope);
+	Cal_IdsetErr.push(CurrentErr);
+	Cal_IrateErr.push(RateErr);
+
+	print("Current Set, A = " + CurrentSet);	
+	print("Current Osc, A = " + CurrentScope);	
+	print("Current Err, % = " + CurrentErr);
+
+	print("di/dt Set, A/us = " + RateSet);	
+	print("di/dt Osc, A/us = " + RateScope);	
+	print("di/dt Err, % = " + RateErr);
+
+	return RateScope;	
+}
+
+//--------------------
+// Вычисление скорости спада с помощью массива из осциллографа
+function CAL_MAS_RATE(Measure) 
+{
+	ChannelData("Mas_rate", 1);
+	InvertData("Mas_rate", "Inv_rate");
+	Use_Data("Inv_rate", "Use_rate");
+	var RateScope = Use_Time("Use_rate");
+	if (anykey()) return 0;
+	return RateScope;
+}
 
 //--------------------
 // Функция сохранения данных задания тока
@@ -507,7 +677,7 @@ function CAL_SaveIdset(NameIdset)
 }
 
 //--------------------
-// Функция подбора напряжения относительно тока для указанной скорости
+// Функция подбора напряжения относительно тока для указанной скорости 10/90
 
 function CAL_CompensationIrate(CurrentValues, CurrentRateNTest, NameIintPS, NameVintPS)
 {	
@@ -591,6 +761,90 @@ function CAL_CompensationIrate(CurrentValues, CurrentRateNTest, NameIintPS, Name
 	return 1;
 }
 
+//--------------------
+// Функция подбора напряжения относительно тока для указанной скорости 50/90
+
+function CAL_CompensationIrate50_90(CurrentValues, CurrentRateNTest, NameIintPS, NameVintPS)
+{	
+	Cal_CntTotal = CurrentValues.length;
+	Cal_CntDone = 1;
+		
+
+	var AvgNum, VoltageMin, VoltageMax, Voltage;
+	
+	if (Cal_UseAvg)
+		AvgNum = 4;
+	else
+		AvgNum = 1;
+
+	for (var j = 0; j < CurrentValues.length; j++)
+	{
+		
+		print("-- result " + Cal_CntDone++ + " of " + Cal_CntTotal + " --");
+		
+		VoltageMin = Cal_IntPsVmin;
+		VoltageMax = Cal_IntPsVmax;
+
+		DCU_TekScaleId(Cal_chMeasureId, CurrentValues[j] * Cal_Rshunt * 1e-6);
+		TEK_Send("horizontal:scale "  + ((CurrentValues[j] / CurrentRate[CurrentRateNTest]) * 1e-6) * 0.25);
+		TEK_Send("horizontal:main:position "+ ((CurrentValues[j] / CurrentRate[CurrentRateNTest]) * 1e-6) * -0.5);
+
+		for (var i = 0; i < Cal_Points; i++)
+		{
+			TEK_AcquireSample();
+			TEK_AcquireAvg(AvgNum);
+		
+			Voltage = Math.round((VoltageMin + (VoltageMax - VoltageMin) / 2) * 10) / 10;
+			
+			p("-------------------------");
+			p("-------------------------");
+			dev.w(130, Voltage * 10);
+
+			p("Voltage RCU : " + Voltage);
+
+			p("Current, A : " + CurrentValues[j]);
+			p("VintPS max : " + VoltageMax);
+			p("VintPS,  V : " + Voltage);
+			p("VintPS min : " + VoltageMin);
+			p("-------------");
+			
+			for (var n = 0; n < AvgNum; n++)
+				if(!DRCU_Pulse(CurrentValues[j], CurrentRateN[CurrentRateNTest]))
+					return 0;				
+
+			
+			var IrateSc = CAL_MeasureIrate50_90(CurrentRate[CurrentRateNTest],CurrentValues[j]);
+			
+			if(IrateSc < CurrentRate[CurrentRateNTest])
+
+				VoltageMin = Voltage;
+
+			else
+			{
+				if(IrateSc > CurrentRate[CurrentRateNTest])
+
+					VoltageMax = Voltage;
+				else
+					break;
+			
+			if((VoltageMin + 0.2) >= VoltageMax)
+				break;
+			
+			if (anykey()) return 0;
+
+			}
+		}
+		Cal_Idset.push(CurrentValues[j]);
+		Cal_VintPS.push (Voltage * 10);
+
+	}	
+	dev.w(130, 0);	
+
+	save(cgen_correctionDir + "/" + NameIintPS + ".csv", Cal_Idset);
+	save(cgen_correctionDir + "/" + NameVintPS + ".csv", Cal_VintPS);
+	
+	return 1;
+}
 
 //--------------------
 //Функция пересчета полученых значений для указанной скорости
@@ -618,7 +872,7 @@ function CAL_CompensationIratecorr(NameIintPS, NameVintPS, NameVintPScorr, Curre
 }
 
 //--------------------
-//Функция записи регистров для указаной скорости 
+//Функция записи регистров скорости спада для указаной скорости 
 
 function CAL_SetCoefIrateCompens(K2, K, Offset, CurrentRateNTest)
 {
@@ -684,6 +938,67 @@ function CAL_SetCoefIrateCompens(K2, K, Offset, CurrentRateNTest)
 			dev.ws(82, K2 * 1e6);
 			break;
 	}
+}
+
+//--------------------
+//Функция записи регистров амплитуды для указаной скорости
+function CAL_SetCoefIdCompens(K, Offset, CurrentRateNTest)
+{
+	K = parseFloat(K);
+	Offset = parseFloat(Offset);
+	
+	switch(CurrentRateNTest)
+	{
+		case 0:
+			Offset = dev.rs(84) + Offset;  
+			dev.ws(84, Offset);
+			K = dev.rs(85) * K;
+			dev.ws(85, K);
+			break;
+		case 1:
+			dev.ws(86, Offset);
+			dev.ws(87, K * 1000);
+			break;
+		case 2:
+			dev.ws(88, Offset);
+			dev.ws(89, K * 1000);
+			break;
+		case 3:
+			dev.ws(90, Offset);
+			dev.ws(91, K * 1000);
+			break;
+		case 4:
+			dev.ws(92, Offset);
+			dev.ws(93, K * 1000);
+			break;
+		case 5:
+			dev.ws(94, Offset);
+			dev.ws(95, K * 1000);
+			break;
+		case 6:
+			dev.ws(96, Offset);
+			dev.ws(97, K * 1000);
+			break;
+		case 7:
+			dev.ws(98, Offset);
+			dev.ws(99, K * 1000);
+			break;
+		case 8:
+			dev.ws(100, Offset);
+			dev.ws(101, K * 1000);
+			break;
+		case 9:
+			dev.ws(102, Offset);
+			dev.ws(103, K * 1000);
+			break;
+		case 10:
+			Offset = dev.rs(104) + Offset;  
+			dev.ws(104, Offset);
+			K = dev.rs(105) * K;
+			dev.ws(105, K);
+			break;
+	}
+
 }
 
 //--------------------
@@ -762,4 +1077,72 @@ function CAL_PrintCoefIrateCompens(CurrentRateNTest)
 	}
 }
 
+//--------------------
+// Функция вызова значений регистров амплитуды для указанной скорости
+
+function CAL_PrintCoefIdCompens(CurrentRateNTest)
+{
+	Koef = [];
+	switch(CurrentRateNTest)
+	{
+		case 0:
+			print("Irate compensation Offset	: 84 : " + dev.rs(84));
+			print("Irate compensation K x1000	: 85 : " + dev.rs(85));
+			break;
+		case 1:
+			print("Irate compensation Offset	: 86 : " + dev.rs(86));
+			print("Irate compensation K x1000	: 87 : " + dev.rs(87));
+			break;
+		case 2:
+			print("Irate compensation Offset	: 88 : " + dev.rs(88));
+			print("Irate compensation K x1000	: 89 : " + dev.rs(89));
+			break;
+		case 3:
+			print("Irate compensation Offset	: 90 : " + dev.rs(90));
+			print("Irate compensation K x1000	: 91 : " + dev.rs(91));
+			break;
+		case 4:
+			print("Irate compensation Offset	: 92 : " + dev.rs(92));
+			print("Irate compensation K x1000	: 93 : " + dev.rs(93));	
+			break;
+		case 5:
+			print("Irate compensation Offset	: 94 : " + dev.rs(94));
+			print("Irate compensation K x1000	: 95 : " + dev.rs(95));	
+			break;
+		case 6:
+			print("Irate compensation Offset	: 96 : " + dev.rs(96));
+			print("Irate compensation K x1000	: 97 : " + dev.rs(97));
+			break;
+		case 7:
+			print("Irate compensation Offset	: 98 : " + dev.rs(98));
+			print("Irate compensation K x1000	: 99 : " + dev.rs(99));
+			break;
+		case 8:
+			print("Irate compensation Offset	: 100 : " + dev.rs(100));
+			print("Irate compensation K x1000	: 101 : " + dev.rs(101));
+			break;
+		case 9:
+			print("Irate compensation Offset	: 102 : " + dev.rs(102));
+			print("Irate compensation K x1000	: 103 : " + dev.rs(103));
+			break;
+		case 10:
+			print("Irate compensation Offset	: 104 : " + dev.rs(104));
+			print("Irate compensation K x1000	: 105 : " + dev.rs(105));
+			break; 
+	}
+}
+
+//--------------------
+//Функция соединения массивов в один файл  
+function CAL_SaveVintPS(NameIintPS, NameVintPS,NameVintPScorr)
+{	
+	cal_Idset = load(cgen_correctionDir + "/" + NameIintPS + ".csv");
+	cal_VintPS = load(cgen_correctionDir + "/" + NameVintPS + ".csv");
+	var csv_array = [];
+	
+	for (var i = 0; i < cal_Idset.length; i++)
+		csv_array.push(cal_Idset[i] + ";" + cal_VintPS[i]);
+	
+	save(cgen_correctionDir + "/" + NameVintPScorr + ".csv", csv_array);
+}
 //--------------------

@@ -93,10 +93,22 @@ function Use_Data(InNameFile, OutNameFile)
 	Use_Load =[];
 	Start = 0;
 	End = 0;
+	Min_i = 0;
 	Load = load(cgen_correctionDir + "/" + InNameFile + ".csv");
 	Measure = TEK_Measure(UsePort) * 1e4;
-	//p("Measure" + Measure);
-	for (var i = 0; i < Load.length; ++i)
+
+	for (var i = 0 ; i < Load.length ; ++i)
+	{
+		if (Load[i] == Measure.toFixed(0) || (Load[i]-1) == Measure.toFixed(0)|| (Load[i]+1) == Measure.toFixed(0))
+			{
+			Min_i = i;
+			p("Min_i " + Min_i);
+			p("Min_i_L " + Load[Min_i]);
+			break;
+			}
+	}
+	p("Measure " + Measure);
+	for (var i = Min_i; i < Load.length; ++i)
 	{
 		if (Load[i] <= Measure * Use_Max && Load[i+1] <= Measure * Use_Max && Load[i+2] <= Measure * Use_Max && Load[i+3] <= Measure * Use_Max && Load[i+4] <= Measure * Use_Max) 
 		//if (Load[i] <= 400)

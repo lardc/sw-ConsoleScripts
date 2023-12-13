@@ -1,16 +1,60 @@
+﻿//Подключение библиотеки
+include("CalDRCU016.js") 
 
+//Инциализация портов и выходов
+CAL_Init(1,2,1,2);
+CAL_Init(portDevice, portTek, channelMeasureI, channelMeasureU) 
+portDevice: Порт блока QSU (RS232)
+portTek: Порт осциллографа (RS232)
+channelMeasureI: Канал измерения тока на осциллографе
+channelMeasureU: Канад измерения напряжения на осциллографе
 
+//Включение на всех активных блоках режима для калибровки
+Cal_Reg_En()
+	
+//Считывание напряжения 
+ReadV()
 
-include("CalDRCU016.js") 	//библиотека
+//Одиночное формирование
+QRR_Start(0,100,4,100,10);
+QRR_Start(Mode, IDC, IDCFallRate, OSV, OSVRate)		
+Mode:
+	#define MODE_QRR_ONLY	0
+	#define MODE_QRR_TQ	1
+	#define MODE_DVDT_ONLY	2
+IDC: Задание значение тока, в A (для DCU & RCU)
+IDCFallRate: Задание значения номера скорости спада тока (для DCU & RCU)
+OSV: Задание значения напряжения, в V (для CROVU)
+OSVRate: Задание значения скорости напряжения  , в V/us (для CROVU)
 
-ALL_DCU_SW()			//Включение всех блоков DCU для калибровки
+//Одиночное формирование с подсчетом скорости спада
+M_QRR_Start(100,4)
+M_QRR_Start(CurrentSet,RateSet)
 
-CAL_Init(2,1)		//Настройка осциллографа и подключения
+//Верификация скорости спада и задания амплитуды    
+CAL_Verify(10);	
+CAL_Verify(N)					
 
-DRCU_Pulse(100,4)		//Одиночное формирование
+//Ресурсный тест
+DRCU_Test(1000);
+DRCU_Test(N)
 
-CAL_VerifyId(0)			//Верификация амплитуды  
+//Ресурсный тест для RCU
+RCU_Resource(1000);
+RCU_Resource(N)
 
-DRCU_Test(0)			//Ресурсный тест
+//Статус всех активных блоков
+QRR_Status()	
 
-CAL_PrintCoefIrateCompens(0) // Коэффиценты скорости спада
+//Результат замера 
+QRR_Result()	
+
+//Запись через блок QSU
+QSU_WriteReg(172, 86, 0)
+
+//Чтение через блок QSU
+p(QSU_ReadReg(172, 84))
+
+//Выполнение команды через блок QSU
+QSU_Call(170, 200);  QSU_Call(172, 200);
+QSU_Call(171, 200);
