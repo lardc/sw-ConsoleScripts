@@ -1,7 +1,7 @@
-include("TestCSM.js");
-include("TestIGTU.js");
-include("TestSVTU.js");
-include("TestLCTU.js");
+include("TestCSM.js")
+include("TestIGTU.js")
+include("TestSVTU.js")
+include("TestLCTU.js")
 
 //nid
 mme_Adap   = 2
@@ -50,6 +50,7 @@ Ices_PulseWidth		= 50
 //
 
 //
+//
 function Enabled()
 {
 	dev.co(mme_Adap);
@@ -90,6 +91,7 @@ function Disabled()
 	dev.c(2);
 	dev.nid(mme_TOCU_3);
 	dev.c(2);
+}
 
 function Clamp(DevType)
 {
@@ -110,7 +112,6 @@ function Сommutation(Type,Position,Measure)
 	dev.c(Measure);
 	sleep(Time);
 }
-
 function MeasureIGTU(DevType,Position)
 {
 	Сommutation(DevType, Position, Rterm);
@@ -131,14 +132,14 @@ function MeasureIGTU(DevType,Position)
 
 }
 
-function MeasureSVTU(DevType,Position);
+function MeasureSVTU(DevType,Position)
 {
 	Сommutation(DevType, Position, Ucesat);
 	dev.nid(mme_SVTU);
 	SVTU_StartMeasure(Ucesat_Current);
 }
 
-function MeasureLCTU(DevType,Position);
+function MeasureLCTU(DevType,Position)
 {
 	Сommutation(DevType, Position, Ices);
 	dev.nid(mme_LCTU);
@@ -157,5 +158,3 @@ function Start(DevType)
 	MeasureLCTU(DevType,2);
 	Unclamp();
 }
-
-
