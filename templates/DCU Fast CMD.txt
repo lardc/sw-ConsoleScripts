@@ -44,14 +44,16 @@ CAL_Init(1,2,1);
 
 dev.c(1);
 sleep(1000);
-CAL_VerifyIrate(1);
+CAL_VerifyIrate(0);
 
 i("CalDCU016.js");
 CAL_Init(1,2,1);
-CAL_VerifyIrate(0);
-
+CAL_VerifyIrate(8);
+Hand_Cal_CompensationIrete(6)
+CAL_PrintCoefIrateCompens(8)
+CAL_VerifyALL()
 dev.c(1);
-CAL_CalibrateIrate(0);
+CAL_CalibrateIrate(8);
 
 // Диапазон Id
 i("CalDCU.js");

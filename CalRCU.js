@@ -3,6 +3,7 @@ include("Tektronix.js")
 include("CalGeneral.js")
 include("TestQRR.js")
 
+
 // Calibration setup parameters
 cal_Rshunt = 1000;	// uOhm
 cal_Points = 10;
@@ -117,6 +118,28 @@ function CAL_CalibrateId()
 //--------------------
 
 function CAL_CalibrateIrate()
+{		
+	CAL_ResetA();
+	
+	// Tektronix init
+	CAL_TekInitIrate();
+	
+	// Reload values
+	var CurrentArray = CGEN_GetRange(cal_IdMin, cal_IdMax, cal_IdStp);
+
+	if (CAL_CompensationIrate(CurrentArray))
+	{
+		CAL_SaveVintPS("RCU_VintPS");
+
+		// Calculate correction
+		cal_IrateCorr = CGEN_GetCorrection("RCU_VintPS");
+		CAL_SetCoefIrateCompens(cal_IrateCorr[0], cal_IrateCorr[1]);
+		CAL_PrintCoefIrateCompens();
+	}
+}
+//--------------------
+
+function CAL_CalibrateIrate50_90()
 {		
 	CAL_ResetA();
 	
@@ -328,7 +351,42 @@ function CAL_MeasureIrate(RateSet, CurrentSet)
 	print("di/dt Osc, A/us = " + RateScope);	
 	print("di/dt Err, % = " + RateErr);	
 }
+
 //--------------------
+
+function CAL_MeasureIrate50_90(RateSet, CurrentSet)
+{
+	var RateScope = CAL_MAS_RATE();
+	var RateErr = ((RateScope - RateSet) / RateSet * 100).toFixed(2);
+	
+	var CurrentScope = (TEK_Measure(cal_chMeasureId) / (cal_Rshunt * 1e-6)).toFixed(2);
+	var CurrentErr = ((CurrentScope - CurrentSet) / CurrentSet * 100).toFixed(2);
+	
+	crcu_scatter.push(RateSet + ";" + RateScope + ";" + RateErr + ";" + CurrentSet + ";" + CurrentScope + ";" + CurrentErr);
+	
+	cal_IdSc.push(CurrentScope);
+	cal_IdsetErr.push(CurrentErr);
+	cal_IrateErr.push(RateErr);
+
+	print("Current Set, A = " + CurrentSet);	
+	print("Current Osc, A = " + CurrentScope);	
+	print("Current Err, % = " + CurrentErr);
+	
+	print("di/dt Set, A/us = " + RateSet);	
+	print("di/dt Osc, A/us = " + RateScope);	
+	print("di/dt Err, % = " + RateErr);	
+}
+
+//--------------------
+
+function CAL_MAS_RATE(Measure) 
+{
+	ChannelData(Mas_rate, 1);
+	Use_Data(Mas_rate, Use_rate, Measure);
+	var RateScope = Use_Time(Use_rate);
+
+	return RateScope;
+}
 
 function CAL_CompensationIrate(CurrentValues)
 {	
@@ -374,6 +432,76 @@ function CAL_CompensationIrate(CurrentValues)
 			}
 			
 			var IrateSc = CAL_MeasureIrate();
+			
+			if(IrateSc < CurrentRateTest)
+				VoltageMin = Voltage;
+			else
+			{
+				if(IrateSc > CurrentRateTest)
+					VoltageMax = Voltage;
+				else
+					break;
+			}
+			
+			if((VoltageMin + 0.2) >= VoltageMax)
+				break;
+			
+			if (anykey()) return 0;
+		}
+
+		cal_Idset.push(CurrentValues[j]);
+		cal_VintPS.push(Voltage * 10);
+	}
+	
+	dev.w(130, 0);
+	
+	return 1;
+}
+//--------------------
+function CAL_CompensationIrate50_90(CurrentValues)
+{	
+	var AvgNum, VoltageMin, VoltageMax, Voltage;
+	
+	if (cal_UseAvg)
+	{
+		AvgNum = 4;
+		TEK_AcquireAvg(AvgNum);
+	}		
+	else
+	{
+		AvgNum = 1;
+		TEK_AcquireSample();
+	}
+
+	
+	for (var j = 0; j < CurrentValues.length; j++)
+	{	
+		VoltageMin = cal_IntPsVmin;
+		VoltageMax = cal_IntPsVmax;
+	
+		RCU_TekScaleId(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1000000);
+		CAL_TekSetHorizontalScale(CurrentValues[j]);
+		sleep(1000);
+		
+		for (var i = 0; i < cal_Points; i++)
+		{		
+			Voltage = Math.round((VoltageMin + (VoltageMax - VoltageMin) / 2) * 10) / 10;
+			
+			dev.w(130, Voltage * 10);
+			
+			p("Current, A : " + CurrentValues[j]);
+			p("VintPS max : " + VoltageMax);
+			p("VintPS,  V : " + Voltage);
+			p("VintPS min : " + VoltageMin);
+			p("-------------");
+			
+			for (var k = 0; k < AvgNum; k++)
+			{
+				if(!DRCU_Pulse(CurrentValues[j], CurrentRateTest * 100))
+					return 0;
+			}
+			
+			var IrateSc = CAL_MeasureIrate50_90();
 			
 			if(IrateSc < CurrentRateTest)
 				VoltageMin = Voltage;
