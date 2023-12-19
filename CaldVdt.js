@@ -1,8 +1,10 @@
 include("Tektronix.js")
 include("CalGeneral.js")
 include("TestdVdt.js")
+include("SiC_Calc.js")
 
 cdvdt_chMeasure = 1;
+cdvdt_Powerex = 0;
 
 // DeviceState
 DS_None = 0;
@@ -22,9 +24,20 @@ cdvdt_def_VGateMax = 5000;
 
 // Definition range config
 cdvdt_def_NO_RANGE = 3; 		// for compibility old pcb
-cdvdt_def_RANGE_LOW = 0;
-cdvdt_def_RANGE_MID = 1;
-cdvdt_def_RANGE_HIGH = 2;
+
+if (cdvdt_Powerex)
+{
+	cdvdt_def_RANGE_LOW = 1;
+	cdvdt_def_RANGE_MID = 2;
+	cdvdt_def_RANGE_HIGH = 0;
+}
+else
+{
+	cdvdt_def_RANGE_LOW = 0;
+	cdvdt_def_RANGE_MID = 1;
+	cdvdt_def_RANGE_HIGH = 2;
+}
+
 cdvdt_def_SetpointStartAddr = {}
 cdvdt_def_SetpointStartAddr[cdvdt_def_RANGE_LOW]  = 320;
 cdvdt_def_SetpointStartAddr[cdvdt_def_RANGE_MID]  = 410;
@@ -194,7 +207,7 @@ function CdVdt_TekVScale(Channel, Voltage)
 
 function CdVdt_TekHScale(Channel, Voltage, Rate)
 {
-	var k = 3;
+	var k = 1;
 	var RiseTime = ((Voltage / Rate) / k) * 1e-6;
 	TEK_Horizontal(RiseTime.toExponential(), "0");
 	TEK_Busy();
@@ -211,7 +224,9 @@ function CdVdt_CellCalibrateRateA(CellArray)
 	dev.w(129,200);
 	
 	p("Disabling all flyback.");
-			
+	
+	CdVdt_ResetA();
+
 	for (var i = 1; i < 6; i++)
 	{
 		dVdt_CellCall(i, 2);
@@ -220,7 +235,7 @@ function CdVdt_CellCalibrateRateA(CellArray)
 	
 	for (var i = 0; i < CellArray.length; i++)
 	{
-		print("CELL       : " + CellArray[i]);
+		print("CELL       : " + CellArray[i] + " #RangeRate = " + cdvdt_SelectedRange);
 		if (CdVdt_CellCalibrateRate(CellArray[i]) == 1) 
 			return;
 		else
@@ -325,7 +340,7 @@ function CdVdt_CellCalibrateRate(CellNumber)
 		
 		if (anykey()) return 1;
 	}
-	scattern(GateSetpointV, cdvdt_ratesc, "Gate voltage (in mV)", "Rate voltage (in V/us)", "Проверка на линейную зависимость параметров");
+	scattern(GateSetpointV, cdvdt_ratesc, "Gate voltage (in mV)", "Rate voltage (in V/us)", "Ячейка #" + CellNumber + " диапазон: " + cdvdt_SelectedRange);
 	// Power disable cell
 	sleep(3000);
 	dVdt_CellCall(CellNumber, 2);
@@ -407,21 +422,31 @@ function CdVdt_CollectFixedRate(Repeat)
 	CdVdt_ResetA();
 
 	// Re-enable power
-	if(dev.r(192) == DS_None)
+	if (dev.r(192) == DS_Fault)
 	{
-		dev.c(1);
-		while (dev.r(192) != DS_Ready)
-		sleep(100);
-	}	
-	else	
-	{
-		dev.c(2);
-		while (dev.r(192) != DS_None)
-			sleep(100);
+		print("Fault Reason = " + dev.r(193));
+		dev.c(3);
+		if (dev.r(192) == DS_None)
+		{
+			print("Ошибка сброшена");
+			sleep(500);
+			dev.c(1);
+			while(_dVdt_Active())
+				sleep(100);
+			print("Питание в блок подано");
+		}		
+		else
+			print("Ошибка не сброшена");
+	}
 
+	if (dev.r(192) == DS_None)
+	{
+		print("Отсуствует питание в блоке");
 		dev.c(1);
-		while (dev.r(192) != DS_Ready)
+		while(_dVdt_Active())
 			sleep(100);
+		print("Питание в блок подано");
+		sleep(500);
 	}
 	
 	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, cdvdt_Vstp);
@@ -452,12 +477,17 @@ function CdVdt_CollectFixedRate(Repeat)
 				//sleep(1000);
 				
 				// Start pulse
-				for(var CounterAverages = 0; CounterAverages < cdvdt_def_UseAverage; CounterAverages++)
+				for (var CounterAverages = 0; CounterAverages < cdvdt_def_UseAverage; CounterAverages++)
 				{
+					while (_dVdt_Active())
+					{
+						if (anykey()){ print("Stopped from user!"); return};
+						sleep(300);
+					}
+
 					dev.c(100);
-					while(_dVdt_Active()) sleep(100);
+					//print("Impulse #" + (CounterAverages + 1))
 				}
-				//sleep(1500);
 				TEK_Busy();
 				var v = CdVdt_MeasureVfast();
 				TEK_Busy();
@@ -474,6 +504,9 @@ function CdVdt_CollectFixedRate(Repeat)
 				else
 					var rate = CdVdt_MeasureRate();
 				TEK_Busy();
+
+				SiC_CALC_dVdt(SiC_GD_Filter(SiC_GD_GetChannelCurve(1)),10,50);
+
 				dVdt_err = ((rate - cdvdt_RatePoint[i]) / cdvdt_RatePoint[i] * 100).toFixed(1);
 				V_err = ((v - VoltageArray[k]) / VoltageArray[k] * 100).toFixed(1)
 

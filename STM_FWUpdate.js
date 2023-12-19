@@ -1,17 +1,98 @@
-﻿function FWUpdateSTM(FileName)
+﻿include("PrintStatus.js")
+
+const DeviceNameList = 
 {
-	print("Current node id equal " + dev.GetNodeID() + ". Confirm execution pressing 'y' or exit pressing 'n'.");
+	100: ['PMXU', 'PMXUControlBoard'],
+	101: ['MXU', 'MXUControlBoard'],
+}
+//------------------------
+
+function FWU(CAN_ID)
+{
+	(CAN_ID) ? dev.nid(CAN_ID) : dev.nid(0);
+	
+	DeviceId = dev.r(258);
+	
+	if(DeviceNameList[DeviceId])
+	{
+		if(FWU_Print(DeviceId))
+		{
+			FWUpdateSTM("../../hw-" + DeviceNameList[DeviceId][1] + "/Firmware/Release/" + DeviceNameList[DeviceId][1] + ".binary")
+			sleep(1000)
+			p("")
+			PrintFWInfo()
+		}
+	}
+	else
+		p('Unknown device (ID = ' + DeviceId + ')');
+}
+//------------------------
+
+function Dump(CAN_ID)
+{
+	(CAN_ID) ? dev.nid(CAN_ID) : dev.nid(0);
+	
+	DeviceId = dev.r(258);
+	
+	if(DeviceNameList[DeviceId])
+	{
+		dev.Dump("../../hw-" + DeviceNameList[DeviceId][1] + "/Firmware/" + DeviceNameList[DeviceId][1] + ".regdump", 0, 126);
+		p("The path to the regdump file is: " + "../../hw-" + DeviceNameList[DeviceId][1] + "/Firmware/" + DeviceNameList[DeviceId][1] + ".regdump");
+	}
+	else
+		p('Unknown device (ID = ' + DeviceId + ')');
+}
+//------------------------
+
+function Restore(CAN_ID)
+{
+	(CAN_ID) ? dev.nid(CAN_ID) : dev.nid(0);
+	
+	DeviceId = dev.r(258);
+	
+	if(DeviceNameList[DeviceId])
+	{
+		dev.Restore("../../hw-" + DeviceNameList[DeviceId][1] + "/Firmware/" + DeviceNameList[DeviceId][1] + ".regdump");
+		p("Done")
+	}
+	else
+		p('Unknown device (ID = ' + DeviceId + ')');
+}
+//------------------------
+
+function FWU_Print(DeviceId)
+{
+	PrintFWInfo()
+	p("")
+	print("Confirm execution pressing 'y' to update the firmware in the " + DeviceNameList[DeviceId][0] + ", or exit by pressing 'n'");
 	var key = 0;
 	do
 	{
 		key = readkey();
 	}
 	while (key != "y" && key != "n")
-	
-	if (key == "n")
+		
+	return (key == "y") ? true : false;
+}
+//------------------------
+
+function FWUpdateSTM(FileName, Print)
+{
+	if(Print)
 	{
-		print("Exit.");
-		return;
+		print("Current node id equal " + dev.GetNodeID() + ". Confirm execution pressing 'y' or exit pressing 'n'.");
+		var key = 0;
+		do
+		{
+			key = readkey();
+		}
+		while (key != "y" && key != "n")
+		
+		if (key == "n")
+		{
+			print("Exit.");
+			return;
+		}
 	}
 	
 	// Команды

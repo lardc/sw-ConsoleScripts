@@ -250,15 +250,15 @@ function FWU_CU()
 }
 //------------------------
 
-function FWU_DumpCU()
+function FWU_DumpCU(Num)
 {
-	dev.Dump('../../hw-CUControlBoard/Firmware/CUControlBoard.regdump', 0, 126);
+	FWU_DumpCommon("CU", Num, 62)
 }
 //------------------------
 
-function FWU_RestoreCU()
+function FWU_RestoreCU(Num)
 {
-	dev.Restore('../../hw-CUControlBoard/Firmware/CUControlBoard.regdump');
+	FWU_RestoreCommon("CU", Num)
 }
 //------------------------
 
