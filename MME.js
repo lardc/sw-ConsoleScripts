@@ -8,11 +8,12 @@ include("TestQRRHP.js")
 include("TestTOU.js")
 
 // SL
-mme_sl_current_ih = 100;
+mme_sl_current = 500			// Прямой ток в А
+mme_sl_current_ih = 100;		// Прямой ток для измерения Ih по ГОСТ в А
 // CSCU
-mme_cs_def_force = 5; 			// Усилие зажатия минимальная в кН
-mme_cs_force = 25; 				// Усилие зажатия максимальная в кН
-mme_cs_height = 27; 			// Высота прибора в мм
+mme_cs_def_force = 5;			// Усилие зажатия минимальная в кН
+mme_cs_force = 25;				// Усилие зажатия максимальная в кН
+mme_cs_height = 27;				// Высота прибора в мм
 // BVT HP
 mme_bvt_current = 20; 			// Ток отсечки в мА
 mme_bvt_vdrm = 1500; 			// Задание амплитуды прямого напряжения в В
@@ -613,7 +614,7 @@ function MME_ResetA()
 	BVT_ResetA();
 }
 
-function MME_Test(UnitArray, Counter, Pause, SLCurrent)
+function MME_Test(UnitArray, Counter, Pause)
 {	
 	if (!MME_IsReady())
 	{
@@ -645,7 +646,7 @@ function MME_Test(UnitArray, Counter, Pause, SLCurrent)
 					print("#SL");
 					MME_CS(mme_cs_force);
 					MME_CU(112);
-					MME_SL(SLCurrent);
+					MME_SL(mme_sl_current);
 					MME_CU(110);
 					MME_Collect(mme_SL);
 					break;
