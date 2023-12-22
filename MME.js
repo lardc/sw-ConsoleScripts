@@ -8,11 +8,12 @@ include("TestQRRHP.js")
 include("TestTOU.js")
 
 // SL
-mme_sl_current_ih = 100;
+mme_sl_current = 500			// Прямой ток в А
+mme_sl_current_ih = 100;		// Прямой ток для измерения Ih по ГОСТ в А
 // CSCU
-mme_cs_def_force = 5; 			// Усилие зажатия минимальная в кН
-mme_cs_force = 25; 				// Усилие зажатия максимальная в кН
-mme_cs_height = 27; 			// Высота прибора в мм
+mme_cs_def_force = 5;			// Усилие зажатия минимальная в кН
+mme_cs_force = 25;				// Усилие зажатия максимальная в кН
+mme_cs_height = 27;				// Высота прибора в мм
 // BVT HP
 mme_bvt_current = 20; 			// Ток отсечки в мА
 mme_bvt_vdrm = 1500; 			// Задание амплитуды прямого напряжения в В
@@ -89,6 +90,8 @@ mme_SL_Result_Utm = 0;
 //
 mme_BVT_Result_Idrm = 0;
 mme_BVT_Result_Irrm = 0;
+//
+mme_CROVU_Result_dUdt = 0;
 //
 mme_QRR_Result_Qrr = 0;
 mme_QRR_Result_trr = 0;
@@ -552,17 +555,7 @@ function MME_CROVU()
 	if (mme_use_CROVU)
 	{
 		dev.nid(mme_Nid_CROVU);
-		dev.w(128, mme_crovu_voltage);
-		dev.w(129, mme_crovu_dvdt);
-		dev.c(10);
-		dev.c(100);
-		while (_dVdt_Active()) sleep(500);
-		if (mme_plot) if(dev.r(198) == 1)
-			print("Прибор остался закрытым");
-		else if(dev.r(198) == 0)
-			print("Прибор открылся");
-		dVdt_PrintInfo();
-		print("---------------------");
+		dVdt_StartPulse(mme_crovu_voltage, mme_crovu_dvdt);
 	}
 }
 
@@ -613,7 +606,7 @@ function MME_ResetA()
 	BVT_ResetA();
 }
 
-function MME_Test(UnitArray, Counter, Pause, SLCurrent)
+function MME_Test(UnitArray, Counter, Pause)
 {	
 	if (!MME_IsReady())
 	{
@@ -645,7 +638,7 @@ function MME_Test(UnitArray, Counter, Pause, SLCurrent)
 					print("#SL");
 					MME_CS(mme_cs_force);
 					MME_CU(112);
-					MME_SL(SLCurrent);
+					MME_SL(mme_sl_current);
 					MME_CU(110);
 					MME_Collect(mme_SL);
 					break;
@@ -824,7 +817,7 @@ function MME_Collect(Unit)
 			dev.nid(mme_Nid_SL);
 			mme_SL_Result_Utm = dev.r(198);
 			break;
-		
+			
 		case mme_BVTD:
 			dev.nid(mme_Nid_BVT);
 			mme_BVT_Result_Idrm = BVT_ReadCurrent(bvt_use_microamps);
@@ -840,7 +833,12 @@ function MME_Collect(Unit)
 			mme_GTU_Result_Vgnt = dev.r(205);
 			mme_GTU_Result_Ignt = dev.r(206);
 			break;
-		
+
+		case mme_CROVU:
+			dev.nid(mme_Nid_CROVU);
+			mme_CROVU_Result_dUdt = dev.r(197);
+			break;
+
 		case mme_QRR:
 			dev.nid(mme_Nid_QRR);
 			mme_QRR_Result_Qrr = dev.r(216) / 10;
@@ -907,6 +905,19 @@ function MME_PrintSummaryResult(UnitArray)
 				out_str += mme_GTU_Result_Vgnt + ";" + mme_GTU_Result_Ignt + ";";
 				break;
 				
+			case mme_CROVU:
+				if(mme_CROVU_Result_dUdt == 1)
+				{
+					print("dVdt	= OK");
+					out_str += "OK;";
+				}
+				if(mme_CROVU_Result_dUdt == 2)
+				{
+					print("dVdt	= Fail");
+					out_str += "FAIL;";
+				}
+				break;
+
 			case mme_QRR:
 				print("Tq	= " + mme_QRR_Result_tq);
 				print("Qrr	= " + mme_QRR_Result_Qrr);
