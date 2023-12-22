@@ -1,25 +1,24 @@
-//MME 416
-/ МТ3-540-18-А2-N
+//// MME 416
+/// МД3-660-16-А2-У2
 
-mme_sl_current = 1570
+include("MME.js");
+mme_sl_current = 1978
 
 mme_bvt_current = 5;
-mme_bvt_vdrm = 1800;
-mme_bvt_vrrm = 1800;
-
-mme_crovu_voltage = 1206;
-mme_crovu_dvdt = 500;
+mme_bvt_vrrm = 1600;
+bvt_test_time = 1000;
 
 // active blocks
 mme_use_GTU = 	1;
 mme_use_SL = 	1;
 mme_use_BVT =	1;
 mme_use_CS = 	0;
-mme_use_CROVU = 1;
+mme_use_CROVU = 0;
 mme_use_ATU = 	0;
 mme_use_QRR = 	0;
 mme_use_TOU = 	0;
 
+// Nid blocks
 mme_Nid_HMIU = 0;
 mme_Nid_CU = 1;
 mme_Nid_SL = 9;
@@ -27,4 +26,73 @@ mme_Nid_GTU = 3;
 mme_Nid_BVT = 4;
 mme_Nid_CROVU = 7;
 
-MME_Test([mme_GTU,mme_BVTD,mme_BVTR,mme_SL],1,1000);
+// definitions for MME_Test()
+mme_GTU   =	0;
+mme_SL    =	1;
+mme_BVTD  =	2;
+mme_BVTR  =	3;
+mme_CSDEF =	4;
+mme_CSMAX =	5;
+mme_CROVU = 6;
+mme_ATU   =	7;
+mme_QRR   =	8;
+mme_GTUSL = 9;
+mme_VGNT  = 10;
+mme_QRR_CROVU = 11;
+mme_TOU = 12;
+
+mme_plot = 1;
+
+MME_Test([mme_GTU, mme_SL, mme_BVTR],1,1000);
+
+
+/// МТБЗ-155-18-A2M3-C1-У2
+
+include("MME.js");
+mme_sl_current = 1005
+
+mme_bvt_current = 5;
+mme_bvt_vdrm = 1800;
+mme_bvt_vrrm = 1800;
+bvt_test_time = 1000;
+
+mme_crovu_voltage = 1206;
+mme_crovu_dvdt = 1000;
+
+// active blocks
+mme_use_GTU = 	0;
+mme_use_SL = 	0;
+mme_use_BVT =	0;
+mme_use_CS = 	0;
+mme_use_CROVU = 1;
+mme_use_ATU = 	0;
+mme_use_QRR = 	0;
+mme_use_TOU = 	0;
+
+// Nid blocks
+mme_Nid_HMIU = 0;
+mme_Nid_CU = 1;
+mme_Nid_SL = 9;
+mme_Nid_GTU = 3;
+mme_Nid_BVT = 4;
+mme_Nid_CROVU = 7;
+
+// definitions for MME_Test()
+mme_GTU   =	0;
+mme_SL    =	1;
+mme_BVTD  =	2;
+mme_BVTR  =	3;
+mme_CSDEF =	4;
+mme_CSMAX =	5;
+mme_CROVU = 6;
+mme_ATU   =	7;
+mme_QRR   =	8;
+mme_GTUSL = 9;
+mme_VGNT  = 10;
+mme_QRR_CROVU = 11;
+mme_TOU = 12;
+
+mme_plot = 1;
+
+MME_Test([mme_GTU, mme_SL, mme_BVTD, mme_BVTR, mme_CROVU],1,1000);
+
