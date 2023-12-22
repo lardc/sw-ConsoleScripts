@@ -91,6 +91,8 @@ mme_SL_Result_Utm = 0;
 mme_BVT_Result_Idrm = 0;
 mme_BVT_Result_Irrm = 0;
 //
+mme_CROVU_Result_dUdt = 0;
+//
 mme_QRR_Result_Qrr = 0;
 mme_QRR_Result_trr = 0;
 mme_QRR_Result_Irr = 0;
@@ -553,17 +555,7 @@ function MME_CROVU()
 	if (mme_use_CROVU)
 	{
 		dev.nid(mme_Nid_CROVU);
-		dev.w(128, mme_crovu_voltage);
-		dev.w(129, mme_crovu_dvdt);
-		dev.c(10);
-		dev.c(100);
-		while (_dVdt_Active()) sleep(500);
-		if (mme_plot) if(dev.r(198) == 1)
-			print("Прибор остался закрытым");
-		else if(dev.r(198) == 0)
-			print("Прибор открылся");
-		dVdt_PrintInfo();
-		print("---------------------");
+		dVdt_StartPulse(mme_crovu_voltage, mme_crovu_dvdt);
 	}
 }
 
@@ -825,7 +817,7 @@ function MME_Collect(Unit)
 			dev.nid(mme_Nid_SL);
 			mme_SL_Result_Utm = dev.r(198);
 			break;
-		
+			
 		case mme_BVTD:
 			dev.nid(mme_Nid_BVT);
 			mme_BVT_Result_Idrm = BVT_ReadCurrent(bvt_use_microamps);
@@ -841,7 +833,12 @@ function MME_Collect(Unit)
 			mme_GTU_Result_Vgnt = dev.r(205);
 			mme_GTU_Result_Ignt = dev.r(206);
 			break;
-		
+
+		case mme_CROVU:
+			dev.nid(mme_Nid_CROVU);
+			mme_CROVU_Result_dUdt = dev.r(197);
+			break;
+
 		case mme_QRR:
 			dev.nid(mme_Nid_QRR);
 			mme_QRR_Result_Qrr = dev.r(216) / 10;
@@ -908,6 +905,19 @@ function MME_PrintSummaryResult(UnitArray)
 				out_str += mme_GTU_Result_Vgnt + ";" + mme_GTU_Result_Ignt + ";";
 				break;
 				
+			case mme_CROVU:
+				if(mme_CROVU_Result_dUdt == 1)
+				{
+					print("dVdt	= OK");
+					out_str += "OK;";
+				}
+				if(mme_CROVU_Result_dUdt == 2)
+				{
+					print("dVdt	= Fail");
+					out_str += "FAIL;";
+				}
+				break;
+
 			case mme_QRR:
 				print("Tq	= " + mme_QRR_Result_tq);
 				print("Qrr	= " + mme_QRR_Result_Qrr);
