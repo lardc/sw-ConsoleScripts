@@ -215,3 +215,18 @@ function ITU_CalibrateRawOffset()
 	dev.w(0, voltage)
 	dev.w(1, current)
 }
+
+function ITU_Save(Result, Prefix)
+{
+	if (typeof Prefix === 'undefined')
+		Prefix = ''
+	else
+		Prefix = '_' + Prefix
+	
+	save(Prefix + '_v.txt', Result.v)
+	save(Prefix + '_i.txt', Result.i_)
+	save(Prefix + '_vrms.txt', Result.vrms)
+	save(Prefix + '_irms.txt', Result.irms)
+	save(Prefix + '_pwm.txt', Result.pwm)
+	save(Prefix + '_cosphi.txt', Result.cosphi)
+}
