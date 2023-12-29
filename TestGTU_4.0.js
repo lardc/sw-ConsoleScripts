@@ -328,24 +328,30 @@ function GTU_PulsePow(Time, Current)
 
 function GTU_ResourceTest(Sleep)
 {
-	csv_array = [];
-	gtu_igt   = [];
-	gtu_vgt   = [];
-	gtu_res   = [];
-	gtu_hold  = [];
-	gtu_latch = [];
+	csv_array	= [];
+	gtu_kelvin	= [];
+	gtu_igt		= [];
+	gtu_vgt		= [];
+	gtu_res		= [];
+	gtu_hold	= [];
+	gtu_latch	= [];
 
 	var i = 0;
 	var today = new Date();								// Узнаем и сохраняем текущее время
 	var hours = today.getHours() + gtu_resource_test;	// Узнаем кол-во часов в текущем времени и прибавляем к нему продолжительность ресурсного теста
 	today.setHours(hours);								// Задаем новое количество часов в дату
 
-	csv_array.push("Current Time; igt, in mA; vgt, in mV; res, in Ohm; hold, in mA; latch, in mA");
+	csv_array.push("Current Time; Kelvin test; Igt in mA; Vgt in mV; Res in Ohm; Hold in mA; Latch in mA");
 
 	while((new Date()).getTime() < today.getTime())		// Сравниваем текущее время на компьютере в мс, с конечным временем в мс
 	{
 		print("-----------------------------------");
 		GTU_Kelvin();
+		if ((dev.r(211) == 1) && (dev.r(212) == 0) && (dev.r(213) == 0) && (dev.r(214) == 1))
+			gtu_kelvin[i] = "OK";
+		else
+			gtu_kelvin[i] = "FAULT";
+
 		print("");
 		
 		GTU_Gate();
@@ -364,8 +370,8 @@ function GTU_ResourceTest(Sleep)
 		var left_time = new Date((today.getTime()) - ((new Date()).getTime()));
 		print("#" + i + " Осталось " + (left_time.getHours()-3) + " ч и " + left_time.getMinutes() + " мин");
 		
-		csv_array.push((new Date()) + ";" + gtu_igt[i] + ";" + gtu_vgt[i] +
-			";" + gtu_res[i] + ";" + gtu_hold[i] + ";" + gtu_latch[i]);
+		csv_array.push((new Date()) + ";" + gtu_kelvin[i] + ";" + gtu_igt[i] + ";"
+					+ gtu_vgt[i] + ";" + gtu_res[i] + ";" + gtu_hold[i] + ";" + gtu_latch[i]);
 
 		save("data/GTU_ResourceTest" + today.getTime() + ".csv", csv_array);
 		i++;
