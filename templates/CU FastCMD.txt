@@ -1,14 +1,14 @@
+// Посмотреть версию прошивки
+PrintFWInfo();
+
 // Обновление прошивки
-i("FWUpdate.js");
 FWU_CU();
 
 // Скачать дамп регистров
-i("FWUpdate.js");
-FWU_DumpCU();
+FWU_DumpCU(Num);
 
 // Загрузить дамп регистров
-i("FWUpdate.js");
-FWU_RestoreCU();
+FWU_RestoreCU(Num);
 
 // Сброс безопасности в ноль (но НЕ датчик давления PRESSURE_PIN)
 dev.w(80,0);
