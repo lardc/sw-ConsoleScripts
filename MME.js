@@ -8,11 +8,12 @@ include("TestQRRHP.js")
 include("TestTOU.js")
 
 // SL
-mme_sl_current_ih = 100;
+mme_sl_current = 500			// Прямой ток в А
+mme_sl_current_ih = 100;		// Прямой ток для измерения Ih по ГОСТ в А
 // CSCU
-mme_cs_def_force = 5; 			// Усилие зажатия минимальная в кН
-mme_cs_force = 25; 				// Усилие зажатия максимальная в кН
-mme_cs_height = 27; 			// Высота прибора в мм
+mme_cs_def_force = 5;			// Усилие зажатия минимальная в кН
+mme_cs_force = 25;				// Усилие зажатия максимальная в кН
+mme_cs_height = 27;				// Высота прибора в мм
 // BVT HP
 mme_bvt_current = 20; 			// Ток отсечки в мА
 mme_bvt_vdrm = 1500; 			// Задание амплитуды прямого напряжения в В
@@ -78,8 +79,10 @@ mme_Nid_QRR = 10;
 mme_Nid_TOU = 11;
 
 //
+mme_GTU_Result_Kelvin = 0;
 mme_GTU_Result_Igt = 0;
 mme_GTU_Result_Vgt = 0;
+mme_GTU_Result_Res = 0;
 mme_GTU_Result_Ih  = 0;
 mme_GTU_Result_Il  = 0;
 mme_GTU_Result_Vgnt = 0;
@@ -89,6 +92,8 @@ mme_SL_Result_Utm = 0;
 //
 mme_BVT_Result_Idrm = 0;
 mme_BVT_Result_Irrm = 0;
+//
+mme_CROVU_Result_dUdt = 0;
 //
 mme_QRR_Result_Qrr = 0;
 mme_QRR_Result_trr = 0;
@@ -448,10 +453,12 @@ function MME_CS(Force)
 			dev.c(104);
 			while (dev.r(96) != 3) sleep(500);
 		}
+
 		else if (Force == Math.ceil((dev.r(110) / 10)))
 		{
 			print("Already reached this force, kN: " + (dev.r(110) / 10));
 		}
+
 		else
 		{
 			dev.w(70, Force * 10);
@@ -502,8 +509,12 @@ function MME_GTUSL(Current)
 	
 	// read gtu
 	dev.nid(mme_Nid_GTU);
-	while(dev.r(192) == 5) sleep(500);
-	if (dev.r(197) == 2) print("problem: " + dev.r(196));
+	while (dev.r(192) == 5)
+		sleep(500);
+
+	if (dev.r(197) == 2)
+		print("problem: " + dev.r(196));
+
 	print("Ih,   mA: " + dev.r(201));
 	
 	// recommutate
@@ -523,6 +534,7 @@ function MME_SL(Current)
 	{
 		dev.nid(mme_Nid_SL);
 		LSLH_StartMeasure(Current);
+
 		if (mme_plot) pl(dev.rafs(1));
 	}
 }
@@ -533,6 +545,7 @@ function MME_BVT(Voltage)
 	{
 		dev.nid(mme_Nid_BVT);
 		BVT_StartPulse(1, Voltage, mme_bvt_current * 10);
+
 		if (mme_plot) BVT_PlotXY();
 	}
 }
@@ -543,6 +556,7 @@ function MME_ATU()
 	{
 		dev.nid(mme_Nid_ATU);
 		ATU_StartPower(mme_atu_precurrent, mme_atu_power);
+
 		if (mme_plot) ATU_Plot();
 	}
 }
@@ -552,17 +566,7 @@ function MME_CROVU()
 	if (mme_use_CROVU)
 	{
 		dev.nid(mme_Nid_CROVU);
-		dev.w(128, mme_crovu_voltage);
-		dev.w(129, mme_crovu_dvdt);
-		dev.c(10);
-		dev.c(100);
-		while (_dVdt_Active()) sleep(500);
-		if (mme_plot) if(dev.r(198) == 1)
-			print("Прибор остался закрытым");
-		else if(dev.r(198) == 0)
-			print("Прибор открылся");
-		dVdt_PrintInfo();
-		print("---------------------");
+		dVdt_StartPulse(mme_crovu_voltage, mme_crovu_dvdt);
 	}
 }
 
@@ -613,8 +617,11 @@ function MME_ResetA()
 	BVT_ResetA();
 }
 
-function MME_Test(UnitArray, Counter, Pause, SLCurrent)
-{	
+function MME_Test(UnitArray, Counter, Pause)
+{
+	csv_array	= [];
+	csv_headrow	= "Current Time; ";
+
 	if (!MME_IsReady())
 	{
 		print("System not ready, exit");
@@ -626,7 +633,53 @@ function MME_Test(UnitArray, Counter, Pause, SLCurrent)
 		print("System is ready");
 		print("-------------");
 	}
-	
+
+	for (var j = 0; j < UnitArray.length; j++)
+	{
+		switch (UnitArray[j])
+		{
+			case mme_GTU:
+				csv_headrow += "Kelvin test; Vgt in mV; Igt in mA; Res in Ohm; Hold in mA; Latch in mA; ";
+				break;
+			case mme_SL:
+				csv_headrow += "Utm/Ufm in mV; ";
+				break;
+			case mme_BVTD:
+				csv_headrow += "Idrm in mA; ";
+				break;
+			case mme_BVTR:
+				csv_headrow += "Irrm in mA; ";
+				break;
+			case mme_CSDEF:
+				break;
+			case mme_CSMAX:
+				break;
+			case mme_ATU:
+				// надо добавить
+				break;
+			case mme_CROVU:
+				csv_headrow += "dVdt test; ";
+				break;
+			case mme_QRR:
+				csv_headrow += "tq; Qrr; trr; Irrm; ";
+				break;
+			case mme_QRR_CROVU:
+				csv_headrow += "dVdt (qrr) test; ";
+				break;
+			case mme_GTUSL:
+				// надо добавить
+				break;
+			case mme_VGNT:
+				csv_headrow += "Vgnt in mV; Ignt in mA; ";
+				break;
+			case mme_TOU:
+				csv_headrow += "Idut in A; tgd in us; tgt in us;";
+				break;
+		}
+	}
+
+	csv_array.push(csv_headrow);
+
 	for (var i = 0; i < Counter; i++)
 	{
 		for (var j = 0; j < UnitArray.length; j++)
@@ -641,14 +694,16 @@ function MME_Test(UnitArray, Counter, Pause, SLCurrent)
 					MME_CU(110);
 					MME_Collect(mme_GTU);
 					break;
+					
 				case mme_SL:
 					print("#SL");
 					MME_CS(mme_cs_force);
 					MME_CU(112);
-					MME_SL(SLCurrent);
+					MME_SL(mme_sl_current);
 					MME_CU(110);
 					MME_Collect(mme_SL);
 					break;
+
 				case mme_BVTD:
 					print("#BVTD");
 					bvt_direct = 1;
@@ -658,6 +713,7 @@ function MME_Test(UnitArray, Counter, Pause, SLCurrent)
 					MME_CU(110);
 					MME_Collect(mme_BVTD);
 					break;
+
 				case mme_BVTR:
 					print("#BVTR");
 					bvt_direct = 0;
@@ -667,32 +723,39 @@ function MME_Test(UnitArray, Counter, Pause, SLCurrent)
 					MME_CU(110);
 					MME_Collect(mme_BVTR);
 					break;
+
 				case mme_CSDEF:
 					print("#CSDEF");
 					MME_CS(mme_cs_def_force);
 					sleep(2000);
 					print("-------------");
 					break;
+
 				case mme_CSMAX:
 					print("#CS");
 					MME_CS(mme_cs_force);
 					sleep(2000);
 					print("-------------");
 					break;
+
 				case mme_ATU:
 					print("#ATU");
 					MME_CS(mme_cs_force);
 					MME_CU(115);
 					MME_ATU();
 					MME_CU(110);
+					// MME_Collect добавить потом
 					break;
+
 				case mme_CROVU:
 					print("#CROVU");
 					MME_CS(mme_cs_force);
 					MME_CU(115);
 					MME_CROVU();
 					MME_CU(110);
+					MME_Collect(mme_CROVU);
 					break;
+
 				case mme_QRR:
 					print("#QRR");
 					MME_CS(mme_cs_force);
@@ -701,6 +764,7 @@ function MME_Test(UnitArray, Counter, Pause, SLCurrent)
 					MME_CU(110);
 					MME_Collect(mme_QRR);
 					break;
+
 				case mme_QRR_CROVU:
 					print("#QRR CROVU");
 					MME_CS(mme_cs_force);
@@ -709,21 +773,25 @@ function MME_Test(UnitArray, Counter, Pause, SLCurrent)
 					MME_CU(110);
 					MME_Collect(mme_QRR_CROVU);
 					break;
+
 				case mme_GTUSL:
 					print("#MME_GTUSL - IH GOST");
 					MME_CU(116);
 					MME_CS(mme_cs_force);
 					MME_GTUSL(mme_sl_current_ih);
 					MME_CU(110);
+					// MME_Collect добавить потом
 					break;
+
 				case mme_VGNT:
 					print("#VGNT");
 					MME_CU(117);
 					MME_CS(mme_cs_force);
 					GTU_Vgnt(mme_vgnt_voltage, mme_vgnt_current);
-					MME_Collect(mme_VGNT);
 					MME_CU(110);
+					MME_Collect(mme_VGNT);
 					break;
+
 				case mme_TOU:
 					print("#TOU");
 					MME_CS(mme_cs_force);
@@ -810,12 +878,14 @@ function MME_SafetyClamp(Num, Force)
 
 function MME_Collect(Unit)
 {
-	switch(Unit)
+	switch (Unit)
 	{
 		case mme_GTU:
 			dev.nid(mme_Nid_GTU);
+			mme_GTU_Result_Kelvin = gtu_kelvin[gtu_kelvin.length - 1];
 			mme_GTU_Result_Igt = gtu_igt[gtu_igt.length - 1];
 			mme_GTU_Result_Vgt = gtu_vgt[gtu_vgt.length - 1];
+			mme_GTU_Result_Res = gtu_res[gtu_res.length - 1];
 			mme_GTU_Result_Ih  = gtu_ih[gtu_ih.length - 1];
 			mme_GTU_Result_Il  = gtu_il[gtu_il.length - 1];
 			break;
@@ -824,7 +894,7 @@ function MME_Collect(Unit)
 			dev.nid(mme_Nid_SL);
 			mme_SL_Result_Utm = dev.r(198);
 			break;
-		
+			
 		case mme_BVTD:
 			dev.nid(mme_Nid_BVT);
 			mme_BVT_Result_Idrm = BVT_ReadCurrent(bvt_use_microamps);
@@ -840,7 +910,12 @@ function MME_Collect(Unit)
 			mme_GTU_Result_Vgnt = dev.r(205);
 			mme_GTU_Result_Ignt = dev.r(206);
 			break;
-		
+
+		case mme_CROVU:
+			dev.nid(mme_Nid_CROVU);
+			mme_CROVU_Result_dUdt = dev.r(197);
+			break;
+
 		case mme_QRR:
 			dev.nid(mme_Nid_QRR);
 			mme_QRR_Result_Qrr = dev.r(216) / 10;
@@ -865,25 +940,27 @@ function MME_Collect(Unit)
 
 function MME_PrintSummaryResult(UnitArray)
 {
-	var MeasurementTypes = [];
-	var MeasurementValues = [];
-	
+	out_str = "";
+	//csv_array	= [];
+
 	print("");
 	print("Summary result:");
-	
-	var out_str = "";
-	
-	for(i = 0; i < UnitArray.length; i++)
+
+	out_str += (new Date()) + ";";
+
+	for (i = 0; i < UnitArray.length; i++)
 	{
-		switch(UnitArray[i])
+		switch (UnitArray[i])
 		{
 			case mme_GTU:
+				print("Kelvin	= " + mme_GTU_Result_Kelvin);
 				print("Vgt	= " + mme_GTU_Result_Vgt);
 				print("Igt	= " + mme_GTU_Result_Igt);
+				print("Res	= " + mme_GTU_Result_Res);
 				print("Ih	= " + mme_GTU_Result_Ih);
 				print("IL	= " + mme_GTU_Result_Il);
-				out_str += mme_GTU_Result_Vgt + ";" + mme_GTU_Result_Igt + ";" +
-					mme_GTU_Result_Ih + ";" + mme_GTU_Result_Il + ";";
+				out_str += mme_GTU_Result_Kelvin + ";" + mme_GTU_Result_Vgt + ";" + mme_GTU_Result_Igt + ";" +
+					mme_GTU_Result_Res + ";" +mme_GTU_Result_Ih + ";" + mme_GTU_Result_Il + ";";
 				break;
 			
 			case mme_SL:
@@ -907,6 +984,19 @@ function MME_PrintSummaryResult(UnitArray)
 				out_str += mme_GTU_Result_Vgnt + ";" + mme_GTU_Result_Ignt + ";";
 				break;
 				
+			case mme_CROVU:
+				if (mme_CROVU_Result_dUdt == 1)
+				{
+					print("dVdt	= OK");
+					out_str += "OK;";
+				}
+				else if (mme_CROVU_Result_dUdt == 2)
+				{
+					print("dVdt	= Fail");
+					out_str += "FAIL;";
+				}
+				break;
+
 			case mme_QRR:
 				print("Tq	= " + mme_QRR_Result_tq);
 				print("Qrr	= " + mme_QRR_Result_Qrr);
@@ -917,12 +1007,12 @@ function MME_PrintSummaryResult(UnitArray)
 				break;
 				
 			case mme_QRR_CROVU:
-				if(mme_QRR_Result_dVdt == 1)
+				if (mme_QRR_Result_dVdt == 1)
 				{
 					print("dVdt	= OK");
 					out_str += "OK;";
 				}
-				if(mme_QRR_Result_dVdt == 2)
+				else if (mme_QRR_Result_dVdt == 2)
 				{
 					print("dVdt	= Fail");
 					out_str += "FAIL;";
@@ -932,8 +1022,13 @@ function MME_PrintSummaryResult(UnitArray)
 				print("Itm	= " + mme_TOU_Result_Itm);
 				print("tgd	= " + mme_TOU_Result_tgd);
 				print("tgt	= " + mme_TOU_Result_tgt);
+				out_str += mme_TOU_Result_Itm + ";" + mme_TOU_Result_tgd + ";" + mme_TOU_Result_tgt + ";";
 				break;
 		}
 	}
+	
+	csv_array.push(out_str);
+	save("data/MME_Test.csv", csv_array);
+
 	print("\n" + out_str + "\n");
 }

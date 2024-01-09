@@ -37,6 +37,7 @@ function BVT_StartPulse(N, Voltage, Current)
 		if (dev.r(192) == 0)
 		{
 			print("Ошибка сброшена");
+			sleep(500);
 			dev.c(1);
 			while(dev.r(192) != 4)
 				sleep(100);
