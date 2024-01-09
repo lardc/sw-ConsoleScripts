@@ -90,6 +90,12 @@ function KEI_ReadMaximum()
 }
 //--------------------
 
+function KEI_ReadMinimum()
+{
+	return tmc.q('TRAC:STAT:MIN? "TestBuffer"');
+}
+//--------------------
+
 function KEI_ReadArrayMaximum()
 {
 	AverageValue = 0;
