@@ -10,7 +10,7 @@ cal_V_TriggerDelay	= 500e-6				// s
 cal_V_Ilow 			= [0.1, 2, 20]			// mA
 cal_V_Ihigh 		= [1, 20, 200]			// mA
 cal_V_Rint 			= [8600, 34, 34]		// Ohm
-cal_V_Rext			= [16000, 1200, 100]	// Ohm
+cal_V_Rext			= [16000, 999.436, 100.095]	// Ohm
 cal_Vset_Low 		= 2;					// V
 cal_Vset_High 		= 30;					// V
 cal_Vmsr_Low 		= 2;					// V
@@ -308,7 +308,7 @@ function CAL_Collect(SetpointValues, IterationsCount)
 					cal_V.push(Vco)
 					print("Vco,   V: " + Vco)
 					
-					var KEIData = KEI_ReadAverage()
+					var KEIData = KEI_ReadMaximum()
 					cal_KEIData.push(KEIData)
 					print("KEI,     V: " + KEIData)
 
@@ -327,7 +327,7 @@ function CAL_Collect(SetpointValues, IterationsCount)
 					cal_V.push(Vneg)
 					print("Vneg,  V: " + Vneg)
 					
-					var KEIData = KEI_ReadAverage()
+					var KEIData = KEI_ReadMinimum()
 					KEIData = KEIData * (-1)
 					cal_KEIData.push(KEIData)
 					print("KEI,     V: " + KEIData)
