@@ -137,6 +137,25 @@ function ITU_PlotFast()
 	plot2(dev.rafs(1), i_, time_scale, 0)
 }
 
+function ITU_PlotSaved(Prefix)
+{
+	var res = {}
+	res.v =			load(Prefix + '_v.txt')
+	res.i_ =		load(Prefix + '_i.txt')
+	res.vrms =		load(Prefix + '_vrms.txt')
+	res.irms = 		load(Prefix + '_irms.txt')
+	res.pwm = 		load(Prefix + '_pwm.txt')
+	res.cosphi = 	load(Prefix + '_cosphi.txt')
+	
+	var time_scale = 50e-6
+	plot(res.pwm, time_scale, 0);				sleep(200)
+	plot(res.cosphi, time_scale, 0);			sleep(200)
+	plot2(res.vrms, res.irms, time_scale, 0);	sleep(200)
+	plot2(res.v, res.i_, time_scale, 0)
+	
+	return res
+}
+
 function ITU_TestOptics()
 {
 	var cnt = 0
