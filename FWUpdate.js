@@ -174,6 +174,29 @@ function FWU_RestoreCommon(Name, Num)
 	}
 }
 
+function AlterRegDump(Name, Num, Start1, Stop1, Start2, Stop2)
+{
+	if (typeof Num === 'undefined')
+		print("Необходимо указать номер блока в аргументе функции")
+	else
+	{
+		var ReadRegs = function(Start, Stop)
+		{
+			var res = []
+			for(var j = Start; j <= Stop; j++)
+				res.push(j + '; ' + dev.r(j) + ';')
+			return res
+		}
+		
+		var regs = ReadRegs(Start1, Stop1)
+		regs = regs.concat(ReadRegs(Start2, Stop2))
+
+		var NumStr = "00" + Num
+		NumStr = NumStr.substr(NumStr.length - 3)		
+		save("../../sw-ConsoleScripts/regdump/" + Name + "_" + NumStr + ".regdump", regs)
+	}
+}
+
 // GTU
 function FWU_GTU()
 {
@@ -272,26 +295,17 @@ function FWU_ControlUnit()
 // dVdt
 function FWU_CROVU()
 {
-	FWUpdate("../../hw-dVdtControlBoard/Firmware/Release/dVdtControlBoard.hex");
+	FWUpdate("../../hw-dVdtControlBoard/Firmware/Release/dVdtControlBoard.hex")
 }
 
-function FWU_DumpCROVU()
+function FWU_DumpCROVU(Num)
 {
-	// Проверка наличия расширенных регистров
-	try
-	{
-		dev.Read16Silent(320);
-		dev.Dump('../../hw-dVdtControlBoard/Firmware/dVdtControlBoardExt.regdump', 320, 511);
-	}
-	catch(e) {}
-	
-	dev.Dump('../../hw-dVdtControlBoard/Firmware/dVdtControlBoard.regdump', 0, 126);
+	AlterRegDump("CROVU", Num, 0, 126, 320, 511)
 }
 
-function FWU_RestoreCROVU()
+function FWU_RestoreCROVU(Num)
 {
-	dev.Restore("../../hw-dVdtControlBoard/Firmware/dVdtControlBoard.regdump");
-	dev.Restore("../../hw-dVdtControlBoard/Firmware/dVdtControlBoardExt.regdump");
+	FWU_RestoreCommon("CROVU", Num)
 }
 //------------------------
 
