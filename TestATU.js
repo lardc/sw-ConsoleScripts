@@ -121,7 +121,7 @@ function ATU_PrintWarning()
 }
 
 // Resource test by power
-function ATU_ResourseTest(PreCurrent, Power, Sleep)
+function ATU_ResourseTest(PreCurrent, Power, Hours, Sleep)
 {
 	var csv_array = [];
 	var count_pulse = 0;
@@ -132,9 +132,9 @@ function ATU_ResourseTest(PreCurrent, Power, Sleep)
 	catu_p_set = [];
 
 	var i = 0;
-	var today = new Date();								// Узнаем и сохраняем текущее время
-	var hours = today.getHours() + bvt_resource_test;	// Узнаем кол-во часов в текущем времени и прибавляем к нему продолжительность ресурсного теста
-	today.setHours(hours);								// Задаем новое количество часов в дату
+	var today = new Date();					// Узнаем и сохраняем текущее время
+	var hours = today.getHours() + Hours;	// Узнаем кол-во часов в текущем времени и прибавляем к нему продолжительность ресурсного теста
+	today.setHours(hours);					// Задаем новое количество часов в дату
 
 	csv_array.push("time; catu_v; catu_i; catu_p_set; catu_p; p_sc");
 
