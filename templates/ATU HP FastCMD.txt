@@ -32,12 +32,19 @@ i("TestATU.js");
 ATU_Pulse(150,1000);
 ATU_StartPower(100,2000);
 
-// Ресурсный тест
+// Ресурсный тест на диоде
 i("CalATUHP.js");
 CATU_Init(12,14,1,2,3);
 catu_LoadV = 3300;
 catu_LoadType = 1;
-ATU_ResourseTest(150, 16000, 200, 5000)
+ATU_ResourseTest(150, 16000, 5000)
+
+// Ресурсный тест на резисторе
+i("CalATUHP.js");
+CATU_Init(12,14,1,2,3);
+catu_LoadR	= 540;
+catu_LoadType = 2;
+ATU_ResourseTest(150, 30000, 5000)
 
 // Диапазон 0.5 – 45 А 
 / (Offset: 12) (K: 13)

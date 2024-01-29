@@ -121,7 +121,7 @@ function ATU_PrintWarning()
 }
 
 // Resource test by power
-function ATU_ResourseTest(PreCurrent, Power, Num, Sleep)
+function ATU_ResourseTest(PreCurrent, Power, Sleep)
 {
 	var csv_array = [];
 	var count_pulse = 0;
@@ -131,36 +131,32 @@ function ATU_ResourseTest(PreCurrent, Power, Num, Sleep)
 	catu_p = [];
 	catu_p_set = [];
 
-	v_sc = [];
-	i_sc = [];
-	p_sc = [];
+	var i = 0;
+	var today = new Date();								// Узнаем и сохраняем текущее время
+	var hours = today.getHours() + bvt_resource_test;	// Узнаем кол-во часов в текущем времени и прибавляем к нему продолжительность ресурсного теста
+	today.setHours(hours);								// Задаем новое количество часов в дату
 
-	csv_array.push("catu_v; v_sc; catu_i; i_sc; catu_p_set; catu_p; p_sc");
+	csv_array.push("time; catu_v; catu_i; catu_p_set; catu_p; p_sc");
 
-	for (var i = 0; i < Num; i++)
+	while((new Date()).getTime() < today.getTime())		// Сравниваем текущее время на компьютере в мс, с конечным временем в мс
 	{
-		print("#" + (i + 1));
 		ATU_StartPower(PreCurrent, Power);
+		var left_time = new Date((today.getTime()) - ((new Date()).getTime()));
+		print("#" + i + " Осталось " + (left_time.getHours()-3) + " ч и " + left_time.getMinutes() + " мин");
 
 		catu_v[i] = dev.r(110);
 		catu_i[i] = dev.r(111);
 		catu_p[i] = dev.r(112) * (atu_hp ? 10 : 1);
 		catu_p_set[i] = dev.r(65) * 10;
 
-		v_sc[i] = CATU_MeasureV();
-		i_sc[i] = CATU_MeasureI();
-		p_sc[i] = Math.round(v_sc[i] * i_sc[i] / 1000);
-
-		v_sc[i] = 0;
-		i_sc[i] = 0;
-		p_sc[i] = 0;
-
 		count_pulse = dev.r(105);
 
-		if (anykey()) return;
+		csv_array.push((new Date()) + ";" + catu_v[i] + ";" + catu_i[i] + ";" + catu_p_set[i] + ";" + catu_p[i] + ";" + count_pulse);
+		save("data/ATUResourceTest.csv", csv_array);
+
+		i++;
 		sleep(Sleep);
 		if (anykey()) return;
-		csv_array.push(catu_v[i] + ";" + v_sc[i] + ";" + catu_i[i] + ";" + i_sc[i] + ";" + catu_p_set[i] + ";" + catu_p[i] + ";" + p_sc[i] + ";" + count_pulse);
+
 	}
-	save("data/ATUResourceTest.csv", csv_array);
 }
