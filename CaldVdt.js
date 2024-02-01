@@ -46,13 +46,12 @@ cdvdt_def_SetpointStartAddr[cdvdt_def_NO_RANGE] = 30;
 //
 cdvdt_CalVoltage = 900;
 cdvdt_SelectedRange = cdvdt_def_RANGE_LOW;
-cdvdt_HVProbeScale = "1000"	// Коэффициент деления щупа
+cdvdt_HVProbeScale = 1000	// Коэффициент деления щупа
 cdvdt_DeviderRate = 10; 		// Делить скорости. Установить равным 1 если плата без диапазонов 
 
 // Voltage settings for unit calibration
 cdvdt_Vmin = 500;
 cdvdt_Vmax = 4500;
-cdvdt_Vstp = 500;
 //
 cdvdt_collect_v = 0;
 
@@ -73,7 +72,7 @@ cdvdt_RatePoint = [200, 500, 1000, 1600, 2000, 2500];
 cdvdt_NO_AVERAGES = 1;
 cdvdt_AVERAGES_4 = 4;
 cdvdt_AVERAGES_16 = 16;
-cdvdt_def_UseAverage = cdvdt_AVERAGES_4;
+cdvdt_def_UseAverage = cdvdt_NO_AVERAGES;
 
 // Data arrays
 cdvdt_scatter = [];
@@ -203,114 +202,70 @@ function CdVdt_MeasureRate()
 
 function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 {
-	var ctou_tgd_u90 = Voltage * HighLevel / 100;
-	var ctou_tgd_u10 = Voltage * LowLevel / 100;
+	var cdvdt_u90 = Voltage * HighLevel / 100;
+	var cdvdt_u10 = Voltage * LowLevel / 100;
 
-	var ctou_tgd_u90_err_high = ctou_tgd_u90 * 1.1
-	var ctou_tgd_u90_err_low = ctou_tgd_u90 * 0.9
+	var cdvdt_u90_err_high = cdvdt_u90 * 1.1
+	var cdvdt_u90_err_low = cdvdt_u90 * 0.8
 
-	var ctou_tgd_u10_err_high = ctou_tgd_u10 * 1.2
-	var ctou_tgd_u10_err_low = ctou_tgd_u10 * 0.8
+	var cdvdt_u10_err_high = cdvdt_u10 * 1.3
+	var cdvdt_u10_err_low = cdvdt_u10 * 0.8
 
-	var cursor_place_calc = (((ctou_tgd_u90 - ctou_tgd_u10) / Rate) / 2) * 1e-6;
+	var cursor_place_calc = (((cdvdt_u90 - cdvdt_u10) / Rate) / 2) * 1e-6;
 	var cursor_place1 = -cursor_place_calc;
 	var cursor_place2 = cursor_place_calc;
 
-	var ctou_tgd_u_err = 0;
-	var ctou_tgd_u_preverr1 = 0;
-	var ctou_tgd_u_preverr2 = 0;
-	var ctou_tgd_integral1 = 0;
-	var ctou_tgd_integral2 = 0;
-	var ctou_tgd_derivative = 0;
-	var ctou_tgd_kp = 5e-10;
-	var ctou_tgd_ki = 5e-9;
-	var ctou_tgd_kd = 0e-9;
+	var cdvdt_u_err = 0;
+	var cdvdt_timescale = TEK_Exec("horizontal:main:scale?") / 25;
 
-	// Первое измерение для расчета будущей уставки
 	do
 	{
 		TEK_Send("cursor:vbars:position1 "+ cursor_place1);
 		TEK_Send("cursor:vbars:position2 "+ cursor_place2);
-		p(cursor_place1)
-		ctou_tgd_u_hpos2 = parseFloat(TEK_Exec("cursor:vbars:hpos2?"));
-		ctou_tgd_u_hpos2.toFixed(1);
-		p(ctou_tgd_u_hpos2)
-		ctou_tgd_u_hpos1 = parseFloat(TEK_Exec("cursor:vbars:hpos1?"));
-		ctou_tgd_u_hpos1.toFixed(1);
-		p(ctou_tgd_u_hpos1)
+		cdvdt_u_hpos2 = parseFloat(TEK_Exec("cursor:vbars:hpos2?"));
+		cdvdt_u_hpos2.toFixed(1);
+		cdvdt_u_hpos1 = parseFloat(TEK_Exec("cursor:vbars:hpos1?"));
+		cdvdt_u_hpos1.toFixed(1);
+	} while(cdvdt_u_hpos1 > 10e6 || cdvdt_u_hpos2 > 10e6)
 
-	} while(ctou_tgd_u_hpos1 > 10e6 || ctou_tgd_u_hpos2 > 10e6)
-
-	while((ctou_tgd_u_hpos2 > ctou_tgd_u90_err_high || ctou_tgd_u_hpos2 < ctou_tgd_u90_err_low) ||
-		(ctou_tgd_u_hpos1 > ctou_tgd_u10_err_high || ctou_tgd_u_hpos1 < ctou_tgd_u10_err_low))
+	while((cdvdt_u_hpos2 > cdvdt_u90_err_high || cdvdt_u_hpos2 < cdvdt_u90_err_low) ||
+		(cdvdt_u_hpos1 > cdvdt_u10_err_high || cdvdt_u_hpos1 < cdvdt_u10_err_low))
 	{
-		// ПИД регулятор hpos2
-		ctou_tgd_u_err = ctou_tgd_u_hpos2 - ctou_tgd_u90;
-		//p("err2 = " + ctou_tgd_u_err.toFixed(2));
-		ctou_tgd_integral2 = ctou_tgd_integral2 + ctou_tgd_u_err * ctou_tgd_ki;
-		ctou_tgd_derivative = ctou_tgd_u_err - ctou_tgd_u_preverr2;
-		ctou_tgd_u_preverr2 = ctou_tgd_u_err;
-		cursor_place_fixed2 = ctou_tgd_u_err * ctou_tgd_kp + ctou_tgd_integral2 * ctou_tgd_ki + ctou_tgd_derivative * ctou_tgd_kd;
-		//-----------------
-		
-		//Если cursor_place_fixed2 будет выдавать значения менее 10 нс, то принудительно сделать шаг 10 нс.
-		//Иначе при очень маленькой ошибке курсор замирает на долгое время
-		
-		if(Math.abs(cursor_place_fixed2) < 1e-8)
-			if(cursor_place_fixed2 > 0)
-				cursor_place_fixed2 = 1e-8;
-			else
-				cursor_place_fixed2 = -1e-8;
+		cdvdt_u_err = cdvdt_u_hpos2 - cdvdt_u90;
+		if(cdvdt_u_err > 0)
+			cursor_place_fixed2 = cdvdt_timescale;
+		else
+			cursor_place_fixed2 = -cdvdt_timescale;
 		
 		// Корректировка, отправка нового положения курсора и измерение напряжения в этой точке
 		cursor_place2 = cursor_place2 - cursor_place_fixed2;
-		//p("cursor_place2 " + cursor_place2 * 1e6);
 		TEK_Send("cursor:vbars:position2 " + cursor_place2);
-		ctou_tgd_u_hpos2 = parseFloat(TEK_Exec("cursor:vbars:hpos2?"));
-		ctou_tgd_u_hpos2.toFixed(1);
-		//p("ctou_tgd_u_hpos2 = " + ctou_tgd_u_hpos2);
+		cdvdt_u_hpos2 = parseFloat(TEK_Exec("cursor:vbars:hpos2?"));
+		cdvdt_u_hpos2.toFixed(1);
+
 		if (anykey()) return 0;
 
-		// ПИД регулятор hpos1
-		ctou_tgd_u_err = ctou_tgd_u_hpos1 - ctou_tgd_u10;
-		//p("err1 = " + ctou_tgd_u_err.toFixed(2));
-		ctou_tgd_integral1 = ctou_tgd_integral1 + ctou_tgd_u_err * ctou_tgd_ki;
-		ctou_tgd_derivative = ctou_tgd_u_err - ctou_tgd_u_preverr1;
-		ctou_tgd_u_preverr1 = ctou_tgd_u_err;
-		cursor_place_fixed1 = ctou_tgd_u_err * ctou_tgd_kp + ctou_tgd_integral1 * ctou_tgd_ki + ctou_tgd_derivative * ctou_tgd_kd;
-		//-----------------
-		
-		//Если cursor_place_fixed1 будет выдавать значения менее 10 нс, то принудительно сделать шаг 10 нс.
-		//Иначе при очень маленькой ошибке курсор замирает на долгое время
-
-		if(Math.abs(cursor_place_fixed2) < 1e-8)
-			if(cursor_place_fixed2 > 0)
-				cursor_place_fixed2 = 1e-8;
-			else
-				cursor_place_fixed2 = -1e-8;
+		cdvdt_u_err = cdvdt_u_hpos1 - cdvdt_u10;
+		if(cdvdt_u_err > 0)
+			cursor_place_fixed1 = cdvdt_timescale;
+		else
+			cursor_place_fixed1 = -cdvdt_timescale;
 
 		// Корректировка, отправка нового положения курсора и измерение напряжения в этой точке
 		cursor_place1 = cursor_place1 - cursor_place_fixed1;
-		//p("cursor_place1 " + cursor_place1 * 1e6);
 		TEK_Send("cursor:vbars:position1 " + cursor_place1);
-		ctou_tgd_u_hpos1 = parseFloat(TEK_Exec("cursor:vbars:hpos1?"));
-		ctou_tgd_u_hpos1.toFixed(1);
-		//p("ctou_tgd_u_hpos1 = " + ctou_tgd_u_hpos1);
+		cdvdt_u_hpos1 = parseFloat(TEK_Exec("cursor:vbars:hpos1?"));
+		cdvdt_u_hpos1.toFixed(1);
+
 		if (anykey()) return 0;
-		
 	}
 
 	var U1 = TEK_Exec("cursor:vbars:hpos1?");
-	//print("U1 = " + U1);
 	var U2 = TEK_Exec("cursor:vbars:hpos2?");
-	//print("U2 = " + U2);
 	var dT = TEK_Exec("cursor:vbars:delta?");
-	//print("dT = " + dT);
-	
 	var dVdt = (U2 - U1) / dT / 1000000;
-	print("dVdt = " + parseFloat(dVdt).toFixed(2));
 
-	return parseFloat(dVdt).toFixed(2);
+	return parseFloat(dVdt);
 }
 
 function CdVdt_TekVScale(Channel, Voltage)
@@ -324,7 +279,7 @@ function CdVdt_TekVScale(Channel, Voltage)
 
 function CdVdt_TekHScale(Channel, Voltage, Rate)
 {
-	var k = 1.5;
+	var k = 2.8;
 	var RiseTime = ((Voltage / Rate) / k) * 1e-6;
 	TEK_Horizontal(RiseTime.toExponential(), "0");
 	TEK_Busy();
@@ -479,6 +434,7 @@ function CdVdt_CellCalibrateRate(CellNumber)
 
 function CdVdt_Collect(Iterations)
 {
+	var cdvdt_Vstp = Math.round((cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Points - 1));
 	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, cdvdt_Vstp);
 	
 	var cntDone = 0;
@@ -571,14 +527,15 @@ function CdVdt_CollectFixedRate(Repeat)
 
 	if (dev.r(192) == DS_None)
 	{
-		print("Отсуствует питание в блоке");
+		print("Unit is in a none state");
 		dev.c(1);
 		while(_dVdt_Active())
 			sleep(100);
-		print("Питание в блок подано");
+		print("The unit has been switched to enabled state");
 		sleep(500);
 	}
 	
+	var cdvdt_Vstp = Math.round((cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Points - 1));
 	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, cdvdt_Vstp);
 	
 	var cntDone = 0;
@@ -646,7 +603,7 @@ function CdVdt_CollectFixedRate(Repeat)
 
 					case dVdt_AutoCursor:
 						CdVdt_SwitchToCursor();
-						var rate = CdVdt_MeasureAutoCursor(v, cdvdt_RatePoint[i], 10, 90);
+						var rate = CdVdt_MeasureAutoCursor(v, cdvdt_RatePoint[i], 10, 80).toFixed(1);
 						CdVdt_TekMeasurement(1);
 						break;
 				}

@@ -107,18 +107,14 @@ dev.co(8)
 dev.nid(1)
 dev.c(1)
 dev.c(115)
-
 include(“CaldVdt.js”);
 cdvdt_DeviderRate = 10;
-cdvdt_HVProbeScale = "1000";
+cdvdt_HVProbeScale = 1000;
 cdvdt_RatePoint = [100, 200, 320, 500, 1000, 1600, 2000];
-//cdvdt_RatePoint = [100, 1000, 2000];
 cdvdt_Vmin = 500;
 cdvdt_Vmax = 4500;
-//cdvdt_Vmax = 500;
-cdvdt_Vstp = 500;
-//cdvdt_Vstp = 2000;
-cdvdt_MeasureMethod = dVdt_Approx;
+cdvdt_Points = 10;
+cdvdt_MeasureMethod = dVdt_AutoCursor;
 cdvdt_def_UseSaveImage = 1;
 cdvdt_def_UseAverage = cdvdt_NO_AVERAGES
 CdVdt_Init(1,5,1);
