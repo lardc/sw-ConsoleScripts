@@ -244,14 +244,14 @@ function FWU_ATUHP()
 	FWUpdateSTM("../../hw-ATUControlBoard/Firmware/Release/ATUControlBoard.binary");
 }
 
-function FWU_DumpATUHP()
+function FWU_DumpATUHP(Num)
 {
-	dev.Dump("../../hw-ATUControlBoard/Firmware/ATUControlBoard.regdump", 0, 95);
+	FWU_DumpCommon("ATUHP", Num, 126)
 }
 
-function FWU_RestoreATUHP()
+function FWU_RestoreATUHP(Num)
 {
-	dev.Restore("../../hw-ATUControlBoard/Firmware/ATUControlBoard.regdump");
+	FWU_RestoreCommon("ATUHP", Num)
 }
 
 // TOMU
