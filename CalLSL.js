@@ -2,7 +2,7 @@ include("TestLSLH.js")
 include("Tektronix.js")
 include("CalGeneral.js")
 include("DMM6500.js")
-// include("Numeric.js")
+include("Numeric.js")
 
 // Calibration setup parameters
 clsl_Rshunt = 750;					// in uOhms
