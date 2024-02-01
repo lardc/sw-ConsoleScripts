@@ -1225,5 +1225,3 @@ function CBVT_VerifyVrrm(rangeId, rangeMin, rangeMax, count, verificationCount, 
 	CBVT_VerifyV();
 	return [cbvt_v_set, cbvt_v, cbvt_v_sc, cbvt_v_err];
 }
-
-print("Scripts CalBVT.js initialize");
