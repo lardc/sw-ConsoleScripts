@@ -487,7 +487,7 @@ function CGTU_Probe(ProbeCMD)
 		// tektronix data
 		cgtu_vgt_sc.push(vgt_sc);
 		// relative error
-		cgtu_vgt_err.push(((vgt_sc - vgt) / vgt * 100).toFixed(2));
+		cgtu_vgt_err.push(((vgt - vgt_sc) / vgt_sc * 100).toFixed(2));
 		// Set error
 		cgtu_vgt_set_err.push(((vgt_sc - vgt_set) / vgt_set * 100).toFixed(2));
 		// Summary error
@@ -498,7 +498,7 @@ function CGTU_Probe(ProbeCMD)
 		print("Vset,    mV: " + vgt_set);
 		print("Vgt,     mV: " + vgt);
 		print("Tek,     mV: " + vgt_sc);
-		print("Vset err, %: " + ((vgt_set - vgt_sc) / vgt_sc * 100).toFixed(2));
+		print("Vset err, %: " + ((vgt_sc - vgt_set) / vgt_set * 100).toFixed(2));
 		print("Vgt err,  %: " + ((vgt - vgt_sc) / vgt_sc * 100).toFixed(2));
 	}
 	
@@ -515,7 +515,7 @@ function CGTU_Probe(ProbeCMD)
 		// tektronix data
 		cgtu_igt_sc.push(igt_sc);
 		// relative error
-		cgtu_igt_err.push(((igt_sc - igt) / igt * 100).toFixed(2));
+		cgtu_igt_err.push(((igt - igt_sc) / igt_sc * 100).toFixed(2));
 		// Set error
 		cgtu_igt_set_err.push(((igt_sc - igt_set) / igt_set * 100).toFixed(2));
 		// Summary error
@@ -526,7 +526,7 @@ function CGTU_Probe(ProbeCMD)
 		print("Iset,    mA: " + igt_set);
 		print("Igt,     mA: " + igt);
 		print("Tek,     mA: " + igt_sc);
-		print("Iset err, %: " + ((igt_set - igt_sc) / igt_sc * 100).toFixed(2));
+		print("Iset err, %: " + ((igt_sc - igt_set) / igt_set * 100).toFixed(2));
 		print("Igt err,  %: " + ((igt - igt_sc) / igt_sc * 100).toFixed(2));
 	}
 	
@@ -542,7 +542,7 @@ function CGTU_Probe(ProbeCMD)
 		// tektronix data
 		cgtu_vd_sc.push(vd_sc);
 		// relative error
-		cgtu_vd_err.push(((vd_sc - vd) / vd * 100).toFixed(2));
+		cgtu_vd_err.push(((vd - vd_sc) / vd_sc * 100).toFixed(2));
 		// Set error
 		cgtu_vd_set_err.push(((vd_sc - vd_set) / vd_set * 100).toFixed(2));
 		// Summary error
@@ -553,7 +553,7 @@ function CGTU_Probe(ProbeCMD)
 		print("Vset,    mV: " + vd_set);
 		print("Vd,      mV: " + vd);
 		print("Tek,     mV: " + vd_sc);
-		print("Vset err, %: " + ((vd_set - vd_sc) / vd_sc * 100).toFixed(2));
+		print("Vset err, %: " + ((vd_sc - vd_set) / vd_set * 100).toFixed(2));
 		print("Vgt err,  %: " + ((vd - vd_sc) / vd_sc * 100).toFixed(2));
 	}
 	
@@ -570,7 +570,7 @@ function CGTU_Probe(ProbeCMD)
 		// tektronix data
 		cgtu_id_sc.push(id_sc);
 		// relative error
-		cgtu_id_err.push(((id_sc - id) / id * 100).toFixed(2));
+		cgtu_id_err.push(((id - id_sc) / id_sc * 100).toFixed(2));
 		// Set error
 		cgtu_id_set_err.push(((id_sc - id_set) / id_set * 100).toFixed(2));
 		// Summary error
@@ -581,7 +581,7 @@ function CGTU_Probe(ProbeCMD)
 		print("Iset,    mA: " + id_set);
 		print("Id,      mA: " + id);
 		print("Tek,     mA: " + id_sc);
-		print("Iset err, %: " + ((id_set - id_sc) / id_sc * 100).toFixed(2));
+		print("Iset err, %: " + ((id_sc - id_set) / id_set * 100).toFixed(2));
 		print("Igt err,  %: " + ((id - id_sc) / id_sc * 100).toFixed(2));
 	}
 	
