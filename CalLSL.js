@@ -98,6 +98,11 @@ function CLSL_Init_Tek(portDevice, portTek, channelMeasureI, channelMeasureU, ch
 	// Init Tektronix port
 	TEK_PortInit(portTek);
 	
+	TEK_ChannelInit(clsl_chMeasureI, "1", "1");
+	TEK_ChannelInit(clsl_chMeasureU, "1", "1");
+	TEK_ChannelInit(clsl_chSync, "1", "1");
+	CLSL_TriggerInit(clsl_chSync);
+
 	// Tektronix init
 	for (var i = 1; i <= 4; i++)
 	{
@@ -106,9 +111,6 @@ function CLSL_Init_Tek(portDevice, portTek, channelMeasureI, channelMeasureU, ch
 		else
 			TEK_ChannelOff(i);
 	}
-	
-	TEK_ChannelInit(clsl_chSync, "1", "1");
-	CLSL_TriggerInit(clsl_chSync);
 }
 
 function CLSL_Init_DMM(portDevice)
@@ -880,9 +882,8 @@ function CLSL_CollectUg(VoltageValues, IterationsCount)
 
 function CLSL_TriggerInit(Channel)
 {
-	TEK_TriggerInit(clsl_chSync, 2.5);
+	TEK_TriggerInit(Channel, 2.5);
 	TEK_Send("trigger:main:edge:slope fall");
-	sleep(1000);
 }
 
 function CLSL_TekScale(Channel, Value)
