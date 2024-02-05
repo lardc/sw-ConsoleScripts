@@ -218,7 +218,6 @@ function SiC_CALC_dVdt(Data, LowLevel10, HighLevel90)
 	var dVdt = 0
 	var DataLimit = []
 	var Linear = [];
-	var Linear2 = [];
 	var TimeStep = SiC_GD_GetTimeScale() / 250
 	var MaxLevel = Data[0]
 
@@ -231,7 +230,6 @@ function SiC_CALC_dVdt(Data, LowLevel10, HighLevel90)
 	var i_position = 0
 	var i_correct = 0;
 
-	//plot(Data, 1, 1)
 	// поиск максимального значения для выбора границ
 	for (var i = 0; i < Data.length; ++i)
 	{
@@ -252,7 +250,6 @@ function SiC_CALC_dVdt(Data, LowLevel10, HighLevel90)
 		}
 		else if (Data[i] <= LowValue)
 			i_position = i;
-	//plot(DataLimit, 1, 1)
 
 	// рассчет апроксимационной прямой
 	for (var i = 0; i < DataLimit.length - 1; i++)
@@ -273,17 +270,8 @@ function SiC_CALC_dVdt(Data, LowLevel10, HighLevel90)
 
 	for (var i = 0; (k * i_correct + b) < MaxLevel; i_correct++)
 		Linear[i + i_position + i_correct] = k * i_correct + b;
-
-	// рассчет прямой по двум точкам
-	k_2points = (DataLimit[DataLimit.length - 1] - DataLimit[0]) / (DataLimit.length - 1)
-	dVdt_2points = k_2points / TimeStep * 1e-6;
-	//p("dVdt 2 points("+ LowLevel10 +"-"+ HighLevel90 +") = " + (dVdt_2points).toFixed(2) + " V/us");
-
-	for (var i = 0; DataLimit[0] + i * k_2points < MaxLevel; i++)
-		Linear2[i_position + i + 1] = DataLimit[0] + i * k_2points;
 	
-
-	plot3(Data, Linear , Linear2, 1, 1)
+	//plot2(Data, Linear, 1, 1)
 
 	dVdt = k / TimeStep * 1e-6;
 	//p("dVdt approx("+ LowLevel10 +"-"+ HighLevel90 +") = " + (dVdt).toFixed(2) + " V/us");
