@@ -28,8 +28,7 @@ function LSLH_StartMeasure(Current)
 		if (dev.r(192) == DS_Fault)
 		{
 			PrintStatus();
-			dev.c(3);
-			p("Сброшен Fault");
+			return 0;
 		}
 
 		if (dev.r(192) == DS_None || dev.r(192) == DS_Disabled)
@@ -39,6 +38,7 @@ function LSLH_StartMeasure(Current)
 		{
 			var end = new Date();
 			pinline('\rВремя заряда, с: ' + (end - start) / 1000);
+			if(anykey()) return 0;
 			sleep(100);
 		}
 		p("");
@@ -49,7 +49,14 @@ function LSLH_StartMeasure(Current)
 	if(dev.r(192) == DS_Ready)
 	{
 		dev.c(100);
-		while(dev.r(192) != DS_Ready){sleep(500);}
+
+		if (dev.r(192) == DS_Fault)
+		{
+			PrintStatus();
+			return 0;
+		}
+
+		while(dev.r(192) != DS_Ready) sleep(500);
 		
 		if(LSLH_Print)
 		{			
