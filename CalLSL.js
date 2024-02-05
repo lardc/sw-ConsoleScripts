@@ -33,7 +33,7 @@ clsl_UgMin = 1000;					// in mV
 clsl_UgMax = 11000;					// in mV
 //
 clsl_Iterations = 1;
-clsl_UseAvg = 1;
+clsl_UseAvg = 0;
 
 // Counters
 clsl_CntTotal = 0;
@@ -540,28 +540,28 @@ function CLSL_CollectItm(CurrentValues, IterationsCount)
 {
 	clsl_CntTotal = IterationsCount * CurrentValues.length;
 	clsl_CntDone = 1;
-
-	var AvgNum;
-	if(clsl_measuring_device == "TPS2000")
-	{
-		if (clsl_UseAvg)
-		{
-			AvgNum = 4;
-			TEK_AcquireAvg(AvgNum);
-		}
-		else
-		{
-			AvgNum = 1;
-			TEK_AcquireSample();
-		}
-	}
-	else if (clsl_measuring_device == "DMM6000")
-		AvgNum = 1;
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
 		for (var j = 0; j < CurrentValues.length; j++)
 		{
+			var AvgNum;
+			if(clsl_measuring_device == "TPS2000")
+			{
+				if (CurrentValues[j] * clsl_Rshunt / 1000000 < 0.3)
+				{
+					AvgNum = 4;
+					TEK_AcquireAvg(AvgNum);
+				}
+				else
+				{
+					AvgNum = 1;
+					TEK_AcquireSample();
+				}
+			}
+			else if (clsl_measuring_device == "DMM6000")
+				AvgNum = 1;
+
 			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
 			//
 			if(clsl_measuring_device == "TPS2000")
@@ -618,28 +618,28 @@ function CLSL_CollectIset(CurrentValues, IterationsCount)
 {
 	clsl_CntTotal = IterationsCount * CurrentValues.length;
 	clsl_CntDone = 1;
-
-	var AvgNum;
-	if(clsl_measuring_device == "TPS2000")
-	{
-		if (clsl_UseAvg)
-		{
-			AvgNum = 4;
-			TEK_AcquireAvg(AvgNum);
-		}
-		else
-		{
-			AvgNum = 1;
-			TEK_AcquireSample();
-		}
-	}
-	else if (clsl_measuring_device == "DMM6000")
-		AvgNum = 1;
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
 		for (var j = 0; j < CurrentValues.length; j++)
 		{
+			var AvgNum;
+			if(clsl_measuring_device == "TPS2000")
+			{
+				if (CurrentValues[j] * clsl_Rshunt / 1000000 < 0.3)
+				{
+					AvgNum = 4;
+					TEK_AcquireAvg(AvgNum);
+				}
+				else
+				{
+					AvgNum = 1;
+					TEK_AcquireSample();
+				}
+			}
+			else if (clsl_measuring_device == "DMM6000")
+				AvgNum = 1;
+
 			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
 			//
 			if(clsl_measuring_device == "TPS2000")
