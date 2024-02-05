@@ -200,10 +200,11 @@ function CdVdt_MeasureRate()
 	return (TEK_Measure(3) * 0.8 / TimeRate  * 1e-6).toFixed(1);
 }
 
-function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
+function CdVdt_MeasureAutoCursor(Voltage, VoltageSet, Rate, LowLevel, HighLevel)
 {
 	var cdvdt_u90 = Voltage * HighLevel / 100;
 	var cdvdt_u10 = Voltage * LowLevel / 100;
+	var cdvdt_u50 = Voltage * 0.5;
 
 	var cdvdt_u90_err_high = cdvdt_u90 * 1.1
 	var cdvdt_u90_err_low = cdvdt_u90 * 0.8
@@ -211,9 +212,10 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 	var cdvdt_u10_err_high = cdvdt_u10 * 1.3
 	var cdvdt_u10_err_low = cdvdt_u10 * 0.8
 
-	var cursor_place_calc = (((cdvdt_u90 - cdvdt_u10) / Rate) / 2) * 1e-6;
-	var cursor_place1 = -cursor_place_calc;
-	var cursor_place2 = cursor_place_calc;
+	var corr_place_calc = (VoltageSet / Rate - Voltage / Rate) * 1e-6;
+	p("corr_place_calc " + corr_place_calc)
+	var cursor_place1 = ((cdvdt_u10 - cdvdt_u50) / Rate) * 1e-6 - corr_place_calc;
+	var cursor_place2 = ((cdvdt_u90 - cdvdt_u50) / Rate) * 1e-6 - corr_place_calc;
 
 	var cdvdt_u_err = 0;
 	var cdvdt_timescale = TEK_Exec("horizontal:main:scale?") / 25;
@@ -396,11 +398,14 @@ function CdVdt_CellCalibrateRate(CellNumber)
 				break;
 
 			case dVdt_Approx:
-				var rate = SiC_CALC_dVdt(SiC_GD_GetChannelCurve(cdvdt_chMeasure),10,80).toFixed(2);
+				var rate = SiC_CALC_dVdt(SiC_GD_GetChannelCurve(cdvdt_chMeasure),10,80).toFixed(1);
 				break;
 
 			case dVdt_AutoCursor:
-				//
+				rate = CdVdt_MeasureRate();
+				CdVdt_SwitchToCursor();
+				var rate = CdVdt_MeasureAutoCursor(v, v, rate, 10, 80).toFixed(1);
+				CdVdt_TekMeasurement(1);
 				break;
 		}
 
@@ -603,7 +608,7 @@ function CdVdt_CollectFixedRate(Repeat)
 
 					case dVdt_AutoCursor:
 						CdVdt_SwitchToCursor();
-						var rate = CdVdt_MeasureAutoCursor(v, cdvdt_RatePoint[i], 10, 80).toFixed(1);
+						var rate = CdVdt_MeasureAutoCursor(v, VoltageArray[k], cdvdt_RatePoint[i], 10, 80).toFixed(1);
 						CdVdt_TekMeasurement(1);
 						break;
 				}
