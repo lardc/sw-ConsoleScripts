@@ -1,0 +1,8 @@
+devTek = {}
+devTek.ss = function() { p() }
+devTek.sswr = function() { return [] }
+dev = {}
+dev.r = function(reg) { var ret = 4; p('r  ' + reg + ' > ' + ret); return ret }
+dev.w = function(reg, val) { p('w  ' + reg + ' = ' + val) }
+dev.c = function(act) { p('c  ' + act) }
+dev.rs = function(reg) { var ret = 0; p('rs ' + reg + ' > ' + ret); return ret }
