@@ -184,8 +184,9 @@ function CBVT_VerifyV()
 function CBVT_CalibrateI()
 {
 	var Vmax = Math.round((cbvt_ImaxAC / 10) * cbvt_R * 0.95 / 1000);
-	cbvt_Vmin = Math.round((cbvt_IminAC / 10) * cbvt_R * 1.05 / 1000);
+	var Vmin = Math.round((cbvt_IminAC / 10) * cbvt_R * 1.05 / 1000);
 	cbvt_Vmax = (Vmax > cbvt_VmaxAC) ? cbvt_VmaxAC : Vmax;
+	cbvt_Vmin = (Vmin < cbvt_VminAC) ? cbvt_VminAC : Vmin;
 	cbvt_Vstp = Math.round((cbvt_Vmax - cbvt_Vmin) / (cbvt_Points - 1));
 	
 	cbvt_VoltageValues = CGEN_GetRange(cbvt_Vmin, cbvt_Vmax, cbvt_Vstp);
@@ -220,8 +221,9 @@ function CBVT_CalibrateI()
 function CBVT_VerifyI()
 {
 	var Vmax = Math.round((cbvt_ImaxAC / 10) * cbvt_R * 0.95 / 1000);
-	cbvt_Vmin = Math.round((cbvt_IminAC / 10) * cbvt_R * 1.05 / 1000);
+	var Vmin = Math.round((cbvt_IminAC / 10) * cbvt_R * 1.05 / 1000);
 	cbvt_Vmax = (Vmax > cbvt_VmaxAC) ? cbvt_VmaxAC : Vmax;
+	cbvt_Vmin = (Vmin < cbvt_VminAC) ? cbvt_VminAC : Vmin;
 	cbvt_Vstp = Math.round((cbvt_Vmax - cbvt_Vmin) / (cbvt_Points - 1));
 
 	cbvt_VoltageValues = CGEN_GetRange(cbvt_Vmin, cbvt_Vmax, cbvt_Vstp);
