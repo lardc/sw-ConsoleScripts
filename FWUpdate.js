@@ -189,10 +189,16 @@ function AlterRegDump(Name, Num, Start1, Stop1, Start2, Stop2)
 		}
 		
 		var regs = ReadRegs(Start1, Stop1)
-		regs = regs.concat(ReadRegs(Start2, Stop2))
+		try
+		{
+			dev.Read16Silent(Start2)
+			dev.Read16Silent(Stop2)
+			regs = regs.concat(ReadRegs(Start2, Stop2))
+		}
+		catch(e) {}
 
 		var NumStr = "00" + Num
-		NumStr = NumStr.substr(NumStr.length - 3)		
+		NumStr = NumStr.substr(NumStr.length - 3)
 		save("../../sw-ConsoleScripts/regdump/" + Name + "_" + NumStr + ".regdump", regs)
 	}
 }
