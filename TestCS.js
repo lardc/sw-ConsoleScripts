@@ -200,29 +200,7 @@ function CS_Clamp(Num, Force)
 }
 
 function CS_Temp(Sleep)
-{
-	//---------------------------------------
-	print("Reset calibration coefficients? (press 'y' or 'n')");
-	var key;
-	do
-	{
-		key = readkey();
-	}
-	while (key != "y" && key != "n");
-	if (key == "y")	
-	{
-		CCS_TempReadCal1(0, 1, 0);
-		CCS_TempReadCal2(0, 1, 0);
-		print("Coefficients were reseted.");
-		print("-----");
-	}
-	else
-	{
-		print("Coefficients were NOT reseted.");
-		print("-----");
-	}
-	//---------------------------------------
-	
+{	
 	//---------------------------------------
 	print("Reset data arrays? (press 'y' or 'n')");
 	var key;
