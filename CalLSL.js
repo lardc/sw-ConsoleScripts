@@ -741,7 +741,7 @@ function CLSL_CollectIg(CurrentValues, IterationsCount)
 
 			for (var k = 0; k < AvgNum; k++)
 			{
-				if (!LSLH_StartMeasure(100))
+				if (!LSLH_StartMeasure(300))
 				sleep(500);
 			}
 
@@ -835,7 +835,7 @@ function CLSL_CollectUg(VoltageValues, IterationsCount)
 
 			for (var k = 0; k < AvgNum; k++)
 			{
-				if (!LSLH_StartMeasure(100))
+				if (!LSLH_StartMeasure(300))
 				sleep(500);
 			}
 
