@@ -574,13 +574,13 @@ function CBVT_Probe(PrintMode)
 		case 1:
 			print("V,     V: " + v);
 			print("Vtek,  V: " + f_v);
-			print("Погр,  %: " + ((v - f_v) / f_v * 100).toFixed(2));
+			print("Error, %: " + ((v - f_v) / f_v * 100).toFixed(2));
 			break;
 		
 		case 2:
 			print("I,    mA: " + i.toFixed(cbvt_UseMicroAmps ? 3 : 1));
 			print("Itek, mA: " + f_i.toFixed(3));
-			print("Погр,  %: " + ((i - f_i) / f_i * 100).toFixed(2));
+			print("Error, %: " + ((i - f_i) / f_i * 100).toFixed(2));
 			break;
 	}
 	
@@ -621,13 +621,13 @@ function CBVT_ProbeDC(PrintMode)
 		case 1:
 			print("V,     V: " + v);
 			print("Vtek,  V: " + f_v);
-			print("Погр,  %: " + ((v - f_v) / f_v * 100).toFixed(2));
+			print("Error, %: " + ((v - f_v) / f_v * 100).toFixed(2));
 			break;
 		
 		case 2:
 			print("I,    uA: " + i);
 			print("Itek, uA: " + f_i.toFixed(3));
-			print("Погр,  %: " + ((i - f_i) / f_i * 100).toFixed(2));
+			print("Error, %: " + ((i - f_i) / f_i * 100).toFixed(2));
 			break;
 	}
 	
