@@ -3,53 +3,53 @@
 //direct
 a = BVT_Plot();
 plot2(a.Voltage, a.Current, 1, 0);
-save('Udrm_Unit.csv', a.Voltage)
+save('Vdrm_Unit.csv', a.Voltage)
 save('Idrm_Unit.csv', a.Current)
 
 include("TEK_GetData.js");
 include("SiC_GetData.js");
 TEK_GD_Init(12);
-SaveChannelData("Udrm_OSC", SiC_GD_GetChannelCurve(1));
+SaveChannelData("Vdrm_OSC", SiC_GD_GetChannelCurve(1));
 SaveChannelData("Idrm_OSC", SiC_GD_GetChannelCurve(2));
 
 ///BVT
 //reverse
 a = BVT_Plot();
 plot2(a.Voltage, a.Current, 1, 0);
-save('Urrm_Unit.csv', a.Voltage)
+save('Vrrm_Unit.csv', a.Voltage)
 save('Irrm_Unit.csv', a.Current)
 
 include("TEK_GetData.js");
 include("SiC_GetData.js");
 TEK_GD_Init(12);
-SaveChannelData("Urrm_OSC", SiC_GD_GetChannelCurve(1));
+SaveChannelData("Vrrm_OSC", SiC_GD_GetChannelCurve(1));
 SaveChannelData("Irrm_OSC", SiC_GD_GetChannelCurve(2));
 
 
 /// LSL for diode
 Ifm_Unit = dev.rafs(1)
-Ufm_Unit = dev.rafs(2)
-plot2(Ufm_Unit, Ifm_Unit, 1, 0);
-save('Ufm_Unit.csv', Ufm_Unit)
+Vfm_Unit = dev.rafs(2)
+plot2(Vfm_Unit, Ifm_Unit, 1, 0);
+save('Vfm_Unit.csv', Vfm_Unit)
 save('Ifm_Unit.csv', Ifm_Unit)
 
 include("TEK_GetData.js");
 include("SiC_GetData.js");
 TEK_GD_Init(12);
-SaveChannelData("Ufm_OSC", SiC_GD_GetChannelCurve(1));
+SaveChannelData("Vfm_OSC", SiC_GD_GetChannelCurve(1));
 SaveChannelData("Ifm_OSC", SiC_GD_GetChannelCurve(2));
 
 /// LSL for thyristor
 Itm_Unit = dev.rafs(1)
-Utm_Unit = dev.rafs(2)
-plot2(Utm_Unit, Itm_Unit, 1, 0);
+Vtm_Unit = dev.rafs(2)
+plot2(Vtm_Unit, Itm_Unit, 1, 0);
 save('Itm_Unit.csv', Itm_Unit)
-save('Utm_Unit.csv', Utm_Unit)
+save('Vtm_Unit.csv', Vtm_Unit)
 
 include("TEK_GetData.js");
 include("SiC_GetData.js");
 TEK_GD_Init(12);
-SaveChannelData("Utm_OSC", SiC_GD_GetChannelCurve(1));
+SaveChannelData("Vtm_OSC", SiC_GD_GetChannelCurve(1));
 SaveChannelData("Itm_OSC", SiC_GD_GetChannelCurve(2));
 SaveChannelData("Ig_OSC", SiC_GD_GetChannelCurve(3));
 
@@ -74,19 +74,19 @@ SaveChannelData("Id_OSC", SiC_GD_GetChannelCurve(3));
 include("TestGTU_4.0.js");
 GTU_Holding();
 Vd_Unit = dev.rafs(3)
-Ih_Unit = dev.rafs(4)
-plot2(Vd_Unit, Ih_Unit, 1, 0);
+Id_Unit = dev.rafs(4)
+plot2(Vd_Unit, Id_Unit, 1, 0);
 save('Vd_Unit.csv', Vd_Unit)
-save('Ih_Unit.csv', Ih_Unit)
+save('Id_Unit.csv', Id_Unit)
 
 // Il
 include("TestGTU_4.0.js");
 GTU_Latching();
 Vd_Unit = dev.rafs(3)
-Il_Unit = dev.rafs(4)
-plot2(Vd_Unit, Il_Unit, 1, 0);
+Id_Unit = dev.rafs(4)
+plot2(Vd_Unit, Id_Unit, 1, 0);
 save('Vd_Unit.csv', Vd_Unit)
-save('Il_Unit.csv', Il_Unit)
+save('Id_Unit.csv', Id_Unit)
 
 
 include("TEK_GetData.js");
@@ -101,5 +101,4 @@ SaveChannelData("Id_OSC", SiC_GD_GetChannelCurve(3));
 include("TEK_GetData.js");
 include("SiC_GetData.js");
 TEK_GD_Init(12);
-SaveChannelData("Ud_OSC", SiC_GD_GetChannelCurve(1));
-
+SaveChannelData("Vd_OSC", SiC_GD_GetChannelCurve(1));
