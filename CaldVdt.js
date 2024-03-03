@@ -212,11 +212,12 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 	var cdvdt_u10_err_high = cdvdt_u10 * 1.3
 	var cdvdt_u10_err_low = cdvdt_u10 * 0.8
 
-	var cursor_place1 = ((cdvdt_u10 - cdvdt_u50) / Rate) * 1e-6 - cdvdt_timescale;
-	var cursor_place2 = ((cdvdt_u90 - cdvdt_u50) / Rate) * 1e-6 - cdvdt_timescale;
+	var cdvdt_timescale = TEK_Exec("horizontal:main:scale?") / 25;
+
+	var cursor_place1 = ((cdvdt_u10 - cdvdt_u50) / Rate) * 1e-6 - 3 * cdvdt_timescale;
+	var cursor_place2 = ((cdvdt_u90 - cdvdt_u50) / Rate) * 1e-6 - 3 * cdvdt_timescale;
 
 	var cdvdt_u_err = 0;
-	var cdvdt_timescale = TEK_Exec("horizontal:main:scale?") / 25;
 
 	do
 	{
