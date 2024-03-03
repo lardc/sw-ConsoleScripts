@@ -43,13 +43,15 @@ mme_TOU = 12;
 
 mme_plot = 0;
 
-dev.co(17)
-MME_Test([mme_SL, mme_BVTR],1,1000);
+dev.co(8)
+MME_Test([mme_SL, mme_BVTR],3,0);
 
 
 /// МТБЗ-155-18-A2M3-C1-У2
 
 include("MME.js");
+cgtu_CompatibleMode = 0; // Powerex GTU
+
 mme_sl_current = 1005
 
 mme_bvt_current = 5;
@@ -95,5 +97,5 @@ mme_TOU = 12;
 
 mme_plot = 0;
 
-dev.co(17)
-MME_Test([mme_GTU, mme_SL, mme_BVTD, mme_BVTR, mme_CROVU],1,1000);
+dev.co(8)
+MME_Test([mme_GTU, mme_SL, mme_BVTD, mme_BVTR, mme_CROVU],1,0);
