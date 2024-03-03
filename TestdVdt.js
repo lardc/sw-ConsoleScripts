@@ -10,10 +10,10 @@ DS_InProcess = 4;
 
 // Voltage settings for unit test
 dvdt_Vmin = 500;
-dvdt_Vmax = 4355;
+dvdt_Vmax = 4500;
 dvdt_Vstp = 500;
 
-dvdt_RatePoint = [20, 50, 100, 200];
+dvdt_RatePoint = [100, 200, 320, 500, 1000, 1600, 2000];
 
 function _dVdt_Active()
 {
@@ -194,7 +194,10 @@ function dVdt_CellPulse(CellID, Voltage, Gate, Range, NoShutdown)
 	while(_dVdt_Active()) sleep(50);
 	
 	if ((typeof NoShutdown == 'undefined') || NoShutdown == 0)
+	{
+		sleep(500)
 		dVdt_CellCall(CellID, 2);
+	}
 }
 
 function dVdt_IdleShortTestDetector()
@@ -207,7 +210,7 @@ function dVdt_IdleShortTestDetector()
 		dev.w(129, dvdt_RatePoint[i] * 10);
 		for (var j = 0; j < SetV.length; j++)
 		{
-			dev.w(128, SetV[i]);
+			dev.w(128, SetV[j]);
 			dev.c(100);
 			while(_dVdt_Active()) sleep(50);
 			
@@ -227,7 +230,7 @@ function dVdt_IdleShortTestDetector()
 
 			p("______________");
 
-			if (anykey()) return;				
+			if (anykey()) return;
 		}	
 
 	}
