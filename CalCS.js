@@ -20,6 +20,10 @@ ccs_t_min = 50;
 ccs_t_max = 200;
 ccs_t_stp = 5;
 
+// TRM Address
+TRM_Addr1 = 1;
+TRM_Addr2 = 2;
+
 // Temperature calibration
 ccs_tempdac_set1 = [];
 ccs_tempdac_set2 = [];
@@ -267,51 +271,81 @@ function CCS_ClampCollectAutomatic()
 	return true;
 }
 
-function CCS_TempReadCalibrate()
+function CCS_TempReadCalibrate(TRM_AddrArray)
 {
-	// Check arrays
-	if (cs_time.length != cs_t_remote1.length || cs_time.length != cs_t_remote2.length ||
-		cs_time.length != cs_t_remote_ext.length)
+	for (i = 0; i < TRM_AddrArray.length; i++)
 	{
-		print("Exit. Data arrays have different lengths.");
-		return;
-	}
-	
-	for (var i = 0; i < cs_time.length; i++)
-	{
-		if (cs_time[i] == null || cs_t_remote1[i] == null || cs_t_remote2[i] == null || cs_t_remote_ext[i] == null)
+		switch (TRM_AddrArray[i])
 		{
-			print("Exit. Data arrays have empty elements.");
-			return;
+			case TRM_Addr1:
+				CCS_TempReadCal1(0, 1, 0);
+				print("TRM1 coefficients were reseted.");
+				print("-----");
+				break;
+			
+			case TRM_Addr2:
+				CCS_TempReadCal2(0, 1, 0);
+				print("TRM2 coefficients were reseted.");
+				print("-----");
+				break;
 		}
 	}
 	
-	// Calculate error
-	for (var i = 0; i < cs_time.length; i++)
+	// Turn off heating
+	dev.w(72, 250);
+	dev.c(108);
+	
+	CS_Temp(10000);
+	
+	for (i = 0; i < TRM_AddrArray.length; i++)
 	{
-		ccs_tempread_err1[i] = (cs_t_remote1[i] - cs_t_remote_ext[i]).toFixed(1);
-		ccs_tempread_err2[i] = (cs_t_remote2[i] - cs_t_remote_ext[i]).toFixed(1);
+		switch (TRM_AddrArray[i])
+		{
+			case TRM_Addr1:
+				// Calculate error
+				for (var j = 0; j < cs_time.length; j++)
+					ccs_tempread_err1[j] = (cs_t_remote1[j] - cs_t_remote_ext[j]).toFixed(1);
+				
+				// Plot error
+				scattern(cs_t_remote_ext, ccs_tempread_err1, "Temp (in C)", "Error (C)", "Temperature TRM1 absolute error");
+				
+				// Save data
+				CCS_SaveTempRead1("cs_temp_read1");
+				
+				// Calculate correction
+				var ccs_corr1 = CGEN_GetCorrection2("cs_temp_read1");
+				CCS_TempReadCal1(ccs_corr1[0], ccs_corr1[1], ccs_corr1[2]);
+				
+				// Plot and save fixed error
+				CCS_PlotAndSaveFixedError("cs_temp_read1_fixed", cs_t_remote1, cs_t_remote_ext, ccs_corr1, TRM_Addr1);
+				
+				// Print correction
+				CCS_PrintTempReadCal1();
+				break;
+			
+			case TRM_Addr2:
+				// Calculate error
+				for (var j = 0; j < cs_time.length; j++)
+					ccs_tempread_err2[j] = (cs_t_remote2[j] - cs_t_remote_ext[j]).toFixed(1);
+				
+				// Plot error
+				scattern(cs_t_remote_ext, ccs_tempread_err2, "Temp (in C)", "Error (C)", "Temperature TRM2 absolute error");
+				
+				// Save data
+				CCS_SaveTempRead2("cs_temp_read2");
+				
+				// Calculate correction
+				var ccs_corr2 = CGEN_GetCorrection2("cs_temp_read2");
+				CCS_TempReadCal2(ccs_corr2[0], ccs_corr2[1], ccs_corr2[2]);
+				
+				// Plot and save fixed error
+				CCS_PlotAndSaveFixedError("cs_temp_read2_fixed", cs_t_remote2, cs_t_remote_ext, ccs_corr2, TRM_Addr2);
+				
+				// Print correction
+				CCS_PrintTempReadCal2();
+				break;
+		}		
 	}
-	
-	// Plot error
-	scatter(cs_t_remote_ext, ccs_tempread_err1); sleep(200);
-	scatter(cs_t_remote_ext, ccs_tempread_err2);
-	
-	// Save data
-	CCS_SaveTempRead("cs_temp_read1", "cs_temp_read2");
-	
-	// Calculate correction
-	var ccs_corr1 = CGEN_GetCorrection2("cs_temp_read1");
-	CCS_TempReadCal1(ccs_corr1[0], ccs_corr1[1], ccs_corr1[2]);
-	var ccs_corr2 = CGEN_GetCorrection2("cs_temp_read2");
-	CCS_TempReadCal2(ccs_corr2[0], ccs_corr2[1], ccs_corr2[2]);
-	
-	// Plot and save fixed error
-	CCS_PlotAndSaveFixedError("cs_temp_read1_fixed", cs_t_remote1, cs_t_remote_ext, ccs_corr1); sleep(200);
-	CCS_PlotAndSaveFixedError("cs_temp_read2_fixed", cs_t_remote2, cs_t_remote_ext, ccs_corr2);
-	
-	// Print correction
-	CCS_PrintTempReadCal();
 }
 
 function CCS_SaveClamp(Name)
@@ -370,9 +404,13 @@ function CCS_SaveTempToDAC(NameCH1, NameCH2)
 	CGEN_SaveArrays(NameCH2, ccs_tempdac_ch2, ccs_tempdac_set2, ccs_tempdac_err2);
 }
 
-function CCS_SaveTempRead(NameCH1, NameCH2)
+function CCS_SaveTempRead1(NameCH1)
 {
 	CGEN_SaveArrays(NameCH1, cs_t_remote1, cs_t_remote_ext, ccs_tempread_err1);
+}
+
+function CCS_SaveTempRead2(NameCH2)
+{
 	CGEN_SaveArrays(NameCH2, cs_t_remote2, cs_t_remote_ext, ccs_tempread_err2);
 }
 
@@ -423,7 +461,7 @@ function CCS_TempToDACVerify()
 	}
 }
 
-function CCS_PlotAndSaveFixedError(Name, InputArray, ReferenceArray, CorrectionArray)
+function CCS_PlotAndSaveFixedError(Name, InputArray, ReferenceArray, CorrectionArray, TRM_Addr)
 {
 	var err = [];
 	var fixed = [];
@@ -438,7 +476,7 @@ function CCS_PlotAndSaveFixedError(Name, InputArray, ReferenceArray, CorrectionA
 	}
 	
 	CGEN_SaveArrays(Name, fixed, ReferenceArray, err);	
-	scatter(ReferenceArray, err);
+	scattern(ReferenceArray, err, "Temp (in C)", "Error (in %)", "Temperature TRM" + TRM_Addr + " predicted error");
 }
 
 function CCS_DACWrite(Channel, Value)
@@ -508,12 +546,15 @@ function CCS_PrintTempToDACCal()
 	print("DAC2 P0:	" + (dev.rs(45) / 10));
 }
 
-function CCS_PrintTempReadCal()
+function CCS_PrintTempReadCal1()
 {
 	print("Temp1 P2 x1e6:	" + dev.rs(34));
 	print("Temp1 P1 x1000:	" + dev.r(35));
 	print("Temp1 P0:	" + (dev.rs(36) / 10));
+}
 
+function CCS_PrintTempReadCal2()
+{
 	print("Temp2 P2 x1e6:	" + dev.rs(37));
 	print("Temp2 P1 x1000:	" + dev.r(38));
 	print("Temp2 P0:	" + (dev.rs(39) / 10));
