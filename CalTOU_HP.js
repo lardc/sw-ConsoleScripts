@@ -155,6 +155,10 @@ function CTOU_VerifyId()
 
 	// Collect data
 	var CurrentArray = CGEN_GetRange(ctou_idmin, ctou_idmax, ctou_idstp);
+	var ArrayDiag = '# Current array: '
+	for(var i = 0; i < CurrentArray.length; i++)
+		ArrayDiag += CurrentArray[i] + '; '
+	p(ArrayDiag)
 
 	if (CTOU_IdCollect(CurrentArray, ctou_Iterations))
 	{
@@ -289,25 +293,21 @@ function CTOU_IdCollect(CurrentValues, IterationsCount)
 		{
 			print("-- result " + ctou_cntDone++ + " of " + ctou_cntTotal + " --");
 			
-			CTOU_TekScale(ctou_chMeasureId, (CurrentValues[j] * ctou_Ri));
+			CTOU_TekScale(ctou_chMeasureId, CurrentValues[j] * ctou_Ri);
 			TEK_TriggerInit(ctou_chSync, 4);
 			sleep(1000);
 
-			//
 			var tou_print_copy = tou_print;
 			tou_print = 0;
-
 			for (var k = 0; k < AvgNum; k++)
-			{
 				TOUHP_Measure(ctou_ud_test, CurrentValues[j] * 10);
-			}
-			
 			tou_print = tou_print_copy;
 			
 			// Set data
 			var id_set = dev.r(129);
 			ctou_id_set.push(id_set);
-			print("Idset, A: " + id_set);
+			print("Icalc, A: " + CurrentValues[j]);
+			print("Idset, A: " + (id_set / 10));
 			
 			// Unit data
 			var id_read = dev.r(250);
@@ -569,11 +569,11 @@ function CTOMU_CommutationControl(Control)
 {
 	if(Control)
 	{
-		dev.w(14,0);
-		dev.w(190,0);
+		dev.w(14, 0);
+		dev.w(190, 0);
+		dev.c(21);
 		dev.c(22);
-		dev.c(23);
 	}
 	else
-		dev.w(14,1);
+		dev.w(14, 1);
 }
