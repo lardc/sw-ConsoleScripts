@@ -463,27 +463,27 @@ function CLSL_CollectUtm(VoltageValues, IterationsCount)
 	clsl_CntTotal = IterationsCount * VoltageValues.length;
 	clsl_CntDone = 1;
 
-	var AvgNum;
-	if(clsl_measuring_device == "TPS2000")
-	{
-		if (clsl_UseAvg)
-		{
-			AvgNum = 4;
-			TEK_AcquireAvg(AvgNum);
-		}
-		else
-		{
-			AvgNum = 1;
-			TEK_AcquireSample();
-		}
-	}
-	else if (clsl_measuring_device == "DMM6000")
-		AvgNum = 1;
-
 	for (var i = 0; i < IterationsCount; i++)
 	{
 		for (var j = 0; j < VoltageValues.length; j++)
 		{
+			var AvgNum;
+			if(clsl_measuring_device == "TPS2000")
+			{
+				if (VoltageValues[j] < 1500)
+				{
+					AvgNum = 4;
+					TEK_AcquireAvg(AvgNum);
+				}
+				else
+				{
+					AvgNum = 1;
+					TEK_AcquireSample();
+				}
+			}
+			else if (clsl_measuring_device == "DMM6000")
+				AvgNum = 1;
+
 			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
 			
 			if(clsl_measuring_device == "TPS2000")
