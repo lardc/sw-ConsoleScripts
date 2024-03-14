@@ -14,12 +14,19 @@ GatePulseDelay	= 0;		// uS
 //
 LSLH_Print = 1;
 
+// Переменные совместимости
+LSLH_Compatibility = 1; // 0 для LSLH, в которых отсуствует возможность программной настройки сигнала управления
+
 function LSLH_StartMeasure(Current)
 {
-	dev.w(150, GatePulseTime);
-	dev.w(151, GateVoltage);
-	dev.w(152, GateCurrent);
-	dev.w(153, GatePulseDelay);
+	if (LSLH_Compatibility)
+	{
+		dev.w(150, GatePulseTime);
+		dev.w(151, GateVoltage);
+		dev.w(152, GateCurrent);
+		dev.w(153, GatePulseDelay);
+	}
+	
 	dev.w(140, Current);
 	
 	var start = new Date();
