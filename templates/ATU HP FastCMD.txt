@@ -46,7 +46,7 @@ catu_LoadR	= 540;
 catu_LoadType = 2;
 ATU_ResourseTest(150, 30000, 8, 5000)
 
-// Диапазон 0.5 – 45 А 
+// Диапазон тока, в А 
 / (Offset: 12) (K: 13)
 / [P0: 14] [P1: 15] [P2: 16]
 i("CalATUHP.js");
@@ -62,7 +62,7 @@ CATU_VerifyI();
 
 CATU_CalibrateI();
 
-// Диапазон 0 – 9500 В 
+// Диапазон напяржения, в В 
 / (Offset: 7) (K: 8)
 / [P0: 9] [P1: 10] [P2: 11]
 i("CalATUHP.js");
@@ -79,16 +79,38 @@ CATU_VerifyV();
 
 CATU_CalibrateV();
 
-// Диапазон 2 – 75 кВт
+// Диапазон мощности, в кВт на резисторе
 / (Offset: -) (K: -)
-/ [P0: -] [P1: -] [P2: -]
+/ [P0: -] [P1: 23] [P2: -]
 i("CalATUHP.js");
-catu_Iterations = 3;
+catu_Power		= 30000;
+catu_Iterations = 1;
 catu_Pmin = 2000;
-catu_Pstp = 7300;
+catu_Pstp = (catu_Power - catu_Pmin) / (10 - 1);
 catu_LoadType = 2;
-catu_LoadR = 1156; // измерить точно
-CATU_Init(12,14,1,2,3);
+catu_LoadV		= 0;		// в В для прибора
+catu_LoadR		= 1156;		// в Ом
+catu_ShuntRes	= 0.05;		// в Ом, измерить точно
+CATU_Init(1,5,1,2,3);
+//dev.nid(9);
+
+CATU_VerifyP();
+
+CATU_CalibrateP();
+
+// Диапазон мощности кВт на приборе
+/ (Offset: -) (K: -)
+/ [P0: -] [P1: 23] [P2: -]
+i("CalATUHP.js");
+catu_Power		= 16000;
+catu_Iterations	= 1;
+catu_Pmin		= 2000;
+catu_Pstp		= (catu_Power - catu_Pmin) / (10 - 1);
+catu_LoadType	= 1;
+catu_LoadV		= 2600;		// в В
+catu_LoadR		= 0;		// в Ом для резистора
+catu_ShuntRes	= 0.1;		// в Ом, измерить точно
+CATU_Init(1,5,1,2,3);
 //dev.nid(9);
 
 CATU_VerifyP();
