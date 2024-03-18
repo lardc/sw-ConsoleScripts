@@ -115,6 +115,10 @@ function GTU_Holding()
 	dev.w(130 + (cgtu_CompatibleMode ? 3 : 0), gtu_vg_lim);
 	dev.w(131 + (cgtu_CompatibleMode ? 3 : 0), gtu_ig_lim);
 	
+	dev.w(130, 0);
+	dev.w(161, 0);
+	dev.w(129, 0);
+	
 	dev.c(102);
 	
 	while(dev.r(192) == 5) sleep(50);
