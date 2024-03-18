@@ -87,11 +87,14 @@ mme_GTU_Result_Ih  = 0;
 mme_GTU_Result_Il  = 0;
 mme_GTU_Result_Vgnt = 0;
 mme_GTU_Result_Ignt = 0;
+mme_GTU_Result_IhGOST  = 0;
 //
 mme_SL_Result_Utm = 0;
 //
 mme_BVT_Result_Idrm = 0;
 mme_BVT_Result_Irrm = 0;
+//
+mme_ATU_Result_Prsm = 0;
 //
 mme_CROVU_Result_dUdt = 0;
 //
@@ -516,7 +519,7 @@ function MME_GTUSL(Current)
 		print("problem: " + dev.r(196));
 
 	print("Ih,   mA: " + dev.r(201));
-	
+/*
 	// recommutate
 	MME_CU(111);
 	print("CU ok");
@@ -526,6 +529,7 @@ function MME_GTUSL(Current)
 	dev.w(130, 0);
 	gtu_plot = mme_plot;
 	GTU_Holding();
+	*/
 }
 
 function MME_SL(Current)
@@ -641,6 +645,9 @@ function MME_Test(UnitArray, Counter, Pause)
 			case mme_GTU:
 				csv_headrow += "Kelvin test; Vgt in mV; Igt in mA; Res in Ohm; Hold in mA; Latch in mA; ";
 				break;
+			case mme_GTUSL:
+				csv_headrow += "Hold GOST in mA; ";
+				break;
 			case mme_SL:
 				csv_headrow += "Utm/Ufm in mV; ";
 				break;
@@ -655,7 +662,7 @@ function MME_Test(UnitArray, Counter, Pause)
 			case mme_CSMAX:
 				break;
 			case mme_ATU:
-				// надо добавить
+				csv_headrow += "Prsm in kW; ";
 				break;
 			case mme_CROVU:
 				csv_headrow += "dVdt test; ";
@@ -665,9 +672,6 @@ function MME_Test(UnitArray, Counter, Pause)
 				break;
 			case mme_QRR_CROVU:
 				csv_headrow += "dVdt (qrr) test; ";
-				break;
-			case mme_GTUSL:
-				// надо добавить
 				break;
 			case mme_VGNT:
 				csv_headrow += "Vgnt in mV; Ignt in mA; ";
@@ -744,7 +748,7 @@ function MME_Test(UnitArray, Counter, Pause)
 					MME_CU(115);
 					MME_ATU();
 					MME_CU(110);
-					// MME_Collect добавить потом
+					MME_Collect(mme_ATU);
 					break;
 
 				case mme_CROVU:
@@ -780,7 +784,7 @@ function MME_Test(UnitArray, Counter, Pause)
 					MME_CS(mme_cs_force);
 					MME_GTUSL(mme_sl_current_ih);
 					MME_CU(110);
-					// MME_Collect добавить потом
+					MME_Collect(mme_GTUSL);
 					break;
 
 				case mme_VGNT:
@@ -889,7 +893,11 @@ function MME_Collect(Unit)
 			mme_GTU_Result_Ih  = gtu_ih[gtu_ih.length - 1];
 			mme_GTU_Result_Il  = gtu_il[gtu_il.length - 1];
 			break;
-			
+		
+		case mme_GTUSL:
+			dev.nid(mme_Nid_GTU);
+			mme_GTU_Result_IhGOST = dev.r(201);
+
 		case mme_SL:
 			dev.nid(mme_Nid_SL);
 			mme_SL_Result_Utm = dev.r(198);
@@ -911,9 +919,14 @@ function MME_Collect(Unit)
 			mme_GTU_Result_Ignt = dev.r(206);
 			break;
 
+		case mme_ATU:
+			dev.nid(mme_Nid_ATU);
+			mme_ATU_Result_Prsm = dev.r(112) / 100;
+			break;
+
 		case mme_CROVU:
 			dev.nid(mme_Nid_CROVU);
-			mme_CROVU_Result_dUdt = dev.r(197);
+			mme_CROVU_Result_dUdt = dev.r(198);
 			break;
 
 		case mme_QRR:
@@ -962,7 +975,12 @@ function MME_PrintSummaryResult(UnitArray)
 				out_str += mme_GTU_Result_Kelvin + ";" + mme_GTU_Result_Vgt + ";" + mme_GTU_Result_Igt + ";" +
 					mme_GTU_Result_Res + ";" +mme_GTU_Result_Ih + ";" + mme_GTU_Result_Il + ";";
 				break;
-			
+				
+			case mme_GTUSL:
+				print("IhGOST	= " + mme_GTU_Result_IhGOST);
+				out_str += mme_GTU_Result_IhGOST + ";";
+				break;
+				
 			case mme_SL:
 				print("Utm	= " + mme_SL_Result_Utm);
 				out_str += mme_SL_Result_Utm + ";";
@@ -984,6 +1002,11 @@ function MME_PrintSummaryResult(UnitArray)
 				out_str += mme_GTU_Result_Vgnt + ";" + mme_GTU_Result_Ignt + ";";
 				break;
 				
+			case mme_ATU:
+				print("Prsm	= " + mme_ATU_Result_Prsm);
+				out_str += mme_ATU_Result_Prsm + ";";
+				break;
+			
 			case mme_CROVU:
 				if (mme_CROVU_Result_dUdt == 1)
 				{
