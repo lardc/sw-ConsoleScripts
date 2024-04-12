@@ -4,9 +4,9 @@ include("CalGeneral.js")
 
 // Version check
 isOld = false;
-for (i of registers)
+for (i = 0; i < 5; i++)
 {
-	isOld = (i == 0 ? true : false);
+	isOld = (i != 0 ? true : false);
 }
 
 // Global definitions
@@ -24,7 +24,7 @@ cgtu_UseAvg = 1;
 cgtu_UseRangeTuning = 1;
 
 // Current limits
-cgtu_Imax = 700;
+cgtu_Imax = isOld ? 700 : 1000;
 cgtu_Imin = 50;
 cgtu_Istp = 50;
 
@@ -93,6 +93,7 @@ cgtu_id_set_corr = [];
 
 // Channels
 cgtu_chMeasure = 1;
+cgtu_chMeasureGate = 1;
 cgtu_chMeasurePower = 1;
 cgtu_chSync = 3;
 
@@ -101,10 +102,437 @@ cgtu_Iterations = 1;
 
 // Measurement errors
 EUosc = 3;
-ER = 0.5;
+ER = isOld ? 1 : 0.5;
 E0 = 0;
 
+// General functions
+function CGTU_Probe(ProbeCMD)
+{
+	var f
+	// Acquire mode
+	var AvgNum;
+	if (cgtu_UseAvg)
+	{
+		AvgNum = 4;
+		TEK_AcquireAvg(AvgNum);
+	}
+	else
+	{
+		AvgNum = 1;
+		TEK_AcquireSample();
+	}
+	sleep(500);
+
+	for (var i = 0; i < (cgtu_UseAvg ? (AvgNum + 1) : 1); i++)
+	{
+		dev.c(ProbeCMD);
+		while (dev.r(192) != 0) sleep(50);
+		sleep(500);
+	}
+	
+	sleep(1000);
+	
+	if (ProbeCMD == 110)
+	{
+		if (isOld)
+		{
+			f = CGTU_Measure((ProbeCMD == 110) ? cgtu_chMeasureGate : cgtu_chMeasurePower);
+			var igt = dev.r(204);
+			var vgt = dev.r(205);
+			var igt_sc = (f / cgtu_ResGate).toFixed(1);
+			var vgt_sc = f;
+
+			// gtu data
+			cgtu_igt.push(igt);
+			cgtu_vgt.push(vgt);
+			// tektronix data
+			cgtu_igt_sc.push(igt_sc);
+			cgtu_vgt_sc.push(vgt_sc);
+			// relative error
+			cgtu_igt_err.push(((igt - igt_sc) / igt_sc * 100).toFixed(2))
+			cgtu_vgt_err.push(((vgt - vgt_sc) / vgt_sc * 100).toFixed(2))
+			// Summary error
+			E0 = Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
+			cgtu_igt_err_sum.push(1.1 * Math.sqrt(Math.pow((igt - igt_sc) / igt_sc * 100, 2) + Math.pow(E0, 2)));
+			cgtu_vgt_err_sum.push(1.1 * Math.sqrt(Math.pow((vgt - vgt_sc) / vgt_sc * 100, 2) + Math.pow(E0, 2)));
+		}
+		else
+		{
+			var vgt = (dev.r(204) + dev.r(233) / 1000).toFixed(2);
+			var vgt_sc = f.toFixed(2);
+			var vgt_set = dev.r(130 + (cgtu_CompatibleMode ? 3 : 0));
+			f = CGTU_Measure(cgtu_chMeasure);
+
+			// gtu data
+			cgtu_vgt.push(vgt);
+			cgtu_vgt_set.push(vgt_set);
+			// tektronix data
+			cgtu_vgt_sc.push(vgt_sc);
+			// relative error
+			cgtu_vgt_err.push(((vgt - vgt_sc) / vgt_sc * 100).toFixed(2));
+			// Set error
+			cgtu_vgt_set_err.push(((vgt_sc - vgt_set) / vgt_set * 100).toFixed(2));
+			// Summary error
+			E0 = Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
+			cgtu_vgt_err_sum.push(1.1 * Math.sqrt(Math.pow((vgt - vgt_sc) / vgt_sc * 100, 2) + Math.pow(E0, 2)));
+			cgtu_vgt_set_err_sum.push(1.1 * Math.sqrt(Math.pow((vgt_set - vgt_sc) / vgt_sc * 100, 2) + Math.pow(E0, 2)));
+			
+			print("Vset,    mV: " + vgt_set);
+			print("Vgt,     mV: " + vgt);
+			print("Tek,     mV: " + vgt_sc);
+			print("Vset err, %: " + ((vgt_sc - vgt_set) / vgt_set * 100).toFixed(2));
+			print("Vgt err,  %: " + ((vgt - vgt_sc) / vgt_sc * 100).toFixed(2));
+		}
+	}
+	if (ProbeCMD != 110 && isOld)
+	{
+		var ih = dev.r(204);
+		var ih_sc = (f / cgtu_ResPower).toFixed(1);
+		
+		cgtu_ih.push(ih);
+		cgtu_ih_sc.push(ih_sc);
+		cgtu_ih_err.push(((ih_sc - ih) / ih_sc * 100).toFixed(2));
+		
+		// Summary error
+		E0 = Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
+		cgtu_ih_err_sum.push(1.1 * Math.sqrt(Math.pow(((ih_sc - ih) / ih_sc).toFixed(2) * 100, 2) + Math.pow(E0, 2)));
+	}
+	
+	if (!isOld)
+	{
+		if (ProbeCMD == 111)
+		{	
+			f = CGTU_Measure(cgtu_chMeasure);
+			var igt = (dev.r(204) + dev.r(233) / 1000).toFixed(2);
+			var igt_sc = (f / cgtu_Res).toFixed(2);
+			var igt_set = dev.r(131 + (cgtu_CompatibleMode ? 3 : 0));
+			
+			// gtu data
+			cgtu_igt.push(igt);
+			cgtu_igt_set.push(igt_set);
+			// tektronix data
+			cgtu_igt_sc.push(igt_sc);
+			// relative error
+			cgtu_igt_err.push(((igt - igt_sc) / igt_sc * 100).toFixed(2));
+			// Set error
+			cgtu_igt_set_err.push(((igt_sc - igt_set) / igt_set * 100).toFixed(2));
+			// Summary error
+			E0 = Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
+			cgtu_igt_err_sum.push(1.1 * Math.sqrt(Math.pow((igt - igt_sc) / igt_sc * 100, 2) + Math.pow(E0, 2)));
+			cgtu_igt_set_err_sum.push(1.1 * Math.sqrt(Math.pow((igt_set - igt_sc) / igt_sc * 100, 2) + Math.pow(E0, 2)));
+			
+			print("Iset,    mA: " + igt_set);
+			print("Igt,     mA: " + igt);
+			print("Tek,     mA: " + igt_sc);
+			print("Iset err, %: " + ((igt_sc - igt_set) / igt_set * 100).toFixed(2));
+			print("Igt err,  %: " + ((igt - igt_sc) / igt_sc * 100).toFixed(2));
+		}
+		
+		if (ProbeCMD == 112)
+		{
+			f = CGTU_Measure(cgtu_chMeasure);
+			var vd = (dev.r(204) + dev.r(233) / 1000).toFixed(2);
+			var vd_sc = f;
+			var vd_set = dev.r(128 + (cgtu_CompatibleMode ? 3 : 0));
+			
+			// gtu data
+			cgtu_vd.push(vd);
+			// tektronix data
+			cgtu_vd_sc.push(vd_sc);
+			// relative error
+			cgtu_vd_err.push(((vd - vd_sc) / vd_sc * 100).toFixed(2));
+			// Set error
+			cgtu_vd_set_err.push(((vd_sc - vd_set) / vd_set * 100).toFixed(2));
+			// Summary error
+			E0 = Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
+			cgtu_vd_err_sum.push(1.1 * Math.sqrt(Math.pow((vd - vd_sc) / vd_sc * 100, 2) + Math.pow(E0, 2)));
+			cgtu_vd_set_err_sum.push(1.1 * Math.sqrt(Math.pow((vd_set - vd_sc) / vd_sc * 100, 2) + Math.pow(E0, 2)));
+			
+			print("Vset,    mV: " + vd_set);
+			print("Vd,      mV: " + vd);
+			print("Tek,     mV: " + vd_sc);
+			print("Vset err, %: " + ((vd_sc - vd_set) / vd_set * 100).toFixed(2));
+			print("Vgt err,  %: " + ((vd - vd_sc) / vd_sc * 100).toFixed(2));
+		}
+		
+		if (ProbeCMD == 113)
+		{
+			f = CGTU_Measure(cgtu_chMeasure);
+			var id = (dev.r(204) + dev.r(233) / 1000).toFixed(2);
+			var id_sc = (f / cgtu_Res).toFixed(2);
+			var id_set = dev.r(129 + (cgtu_CompatibleMode ? 3 : 0));
+			
+			// gtu data
+			cgtu_id.push(id);
+			cgtu_id_set.push(id_set);
+			// tektronix data
+			cgtu_id_sc.push(id_sc);
+			// relative error
+			cgtu_id_err.push(((id - id_sc) / id_sc * 100).toFixed(2));
+			// Set error
+			cgtu_id_set_err.push(((id_sc - id_set) / id_set * 100).toFixed(2));
+			// Summary error
+			E0 = Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
+			cgtu_id_err_sum.push(1.1 * Math.sqrt(Math.pow((id - id_sc) / id_sc * 100, 2) + Math.pow(E0, 2)));
+			cgtu_id_set_err_sum.push(1.1 * Math.sqrt(Math.pow((id_set - id_sc) / id_sc * 100, 2) + Math.pow(E0, 2)));
+			
+			print("Iset,    mA: " + id_set);
+			print("Id,      mA: " + id);
+			print("Tek,     mA: " + id_sc);
+			print("Iset err, %: " + ((id_sc - id_set) / id_set * 100).toFixed(2));
+			print("Igt err,  %: " + ((id - id_sc) / id_sc * 100).toFixed(2));
+		}
+	}
+
+	if (isOld)
+	{
+		print("Iset, mA: " + dev.r(140));
+		if (ProbeCMD == 110)
+		{
+			print("Igt,  mA: " + dev.r(204));
+			print("Vgt,  mV: " + dev.r(205));
+		}
+		else
+			print("Ih,   mA: " + dev.r(204));
+		print("Tek,  mV: " + f);
+	}
+
+	cgtu_cntDone++;
+	print("-- result " + cgtu_cntDone + " of " + cgtu_cntTotal + " --");
+	
+	sleep(500);
+}
+
+function CGTU_TriggerTune()
+{
+	TEK_Send("trigger:main:pulse:width:polarity negative");
+	TEK_Send("trigger:main:pulse:width:width" + (isOld ? "50e-3" : "5e-3"));
+}
+
+function CGTU_TekCursor(Channel)
+{
+	TEK_Send("cursor:select:source ch" + Channel);
+	TEK_Send("cursor:function vbars");
+	TEK_Send("cursor:vbars:position1" + (isOld ? "-60e-3" : "-6e-3"));
+	TEK_Send("cursor:vbars:position2 0");
+}
+
+function CGTU_TekScale(Channel, Value)
+{
+	if (isOld)
+	{
+		TEK_ChannelScale(Channel, Value);
+	}
+	else
+	{
+		// 0.9 - use 90% of full range
+		// 8 - number of scope grids in full scale
+		var scale = (Value / (8 * 0.8));
+		TEK_Send("ch" + Channel + ":scale " + scale);
+	}
+}
+
+function CGTU_Measure(Channel)
+{
+	TEK_Send("cursor:select:source ch" + Channel);
+	sleep(500);
+	
+	var f = TEK_Exec("cursor:vbars:hpos1?");
+	if (Math.abs(f) > 2e+4)
+		f = 0;
+	return Math.round(f * 1000);
+}
+
+// Reset Arrays
+function CGTU_ResetA()
+{
+	// Results storage
+	cgtu_igt = [];
+	cgtu_vgt = [];
+	cgtu_ih = [];
+	cgtu_vd = [];
+	cgtu_id = [];
+	cgtu_vd_set = [];
+	cgtu_vgt_set = [];
+	cgtu_igt_set = [];
+	cgtu_id_set = [];
+
+	// Tektronix data
+	cgtu_igt_sc = [];
+	cgtu_vgt_sc = [];
+	cgtu_ih_sc = [];
+	cgtu_vd_sc = [];
+	cgtu_id_sc = [];
+
+	// Relative error
+	cgtu_igt_err = [];
+	cgtu_vgt_err = [];
+	cgtu_ih_err = [];
+	cgtu_vd_err = [];
+	cgtu_id_err = [];
+	cgtu_vgt_set_err = [];
+	cgtu_vd_set_err = [];
+	cgtu_igt_set_err = [];
+	cgtu_id_set_err = [];
+
+	// Summary error
+	cgtu_igt_err_sum = [];
+	cgtu_vgt_err_sum = [];
+	cgtu_ih_err_sum = [];
+	cgtu_vd_err_sum = [];
+	cgtu_id_err_sum = [];
+	cgtu_vgt_set_err_sum = [];
+	cgtu_vd_set_err_sum = [];
+	cgtu_igt_set_err_sum = [];
+	cgtu_id_set_err_sum = [];
+
+	// Correction
+	cgtu_igt_corr = [];
+	cgtu_vgt_corr = [];
+	cgtu_ih_corr = [];
+	cgtu_vd_corr = [];
+	cgtu_id_corr = [];
+	cgtu_vd_set_corr = [];
+	cgtu_vgt_set_corr = [];
+	cgtu_igt_set_corr = [];
+	cgtu_id_set_corr = [];
+}
+// General functions end
+
 // CalGTU_4.0
+if (!isOld)
+{
+function CGTU_Init(portGate, portTek, channelMeasure, channelSync)
+{
+	if (channelMeasure < 1 || channelMeasure > 4 ||
+		channelSync < 1 || channelSync > 4)
+	{
+		print("Wrong channel numbers");
+		return;
+	}
+	
+	// Copy channel information
+	cgtu_chMeasure = channelMeasure;
+	cgtu_chSync = channelSync;
+
+	// Init GTU
+	dev.Disconnect();
+	dev.co(portGate);
+	
+	// Init Tektronix
+	TEK_PortInit(portTek);
+	
+	// Tektronix init
+	// Init channels
+	TEK_ChannelInit(cgtu_chMeasure, "1", "1");
+	TEK_ChannelInit(cgtu_chSync, "1", "1");
+	// Init trigger
+	TEK_TriggerPulseInit(cgtu_chSync, "2.5");
+	CGTU_TriggerTune();
+	// Horizontal settings
+	TEK_Horizontal("1e-3", "-4e-3");
+	
+	// Display channels
+	for (var i = 1; i <= 4; i++)
+	{
+		if (i == cgtu_chMeasure || i == cgtu_chSync)
+			TEK_ChannelOn(i);
+		else
+			TEK_ChannelOff(i);
+	}
+	
+	// Init measurement
+	CGTU_TekCursor(cgtu_chMeasure);
+}
+
+function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
+{	
+	cgtu_cntTotal = IterationsCount * cgtu_Values.length;
+	cgtu_cntDone = 0;
+	
+	// Init trigger
+	//TEK_TriggerPulseInit(((ProbeCMD == 110) || (ProbeCMD == 111)) ? cgtu_chMeasure : cgtu_chMeasure, "1");
+	//CGTU_TriggerTune();
+	
+	// Configure scale
+	switch (ProbeCMD)
+	{
+		case 110:
+			CGTU_TekScale(cgtu_chMeasure, cgtu_Vmax / 1000);
+			break;
+			
+		case 111:
+			CGTU_TekScale(cgtu_chMeasure, cgtu_Imax * Resistance / 1000);
+			break;
+			
+		case 112:
+			CGTU_TekScale(cgtu_chMeasure, cgtu_Vmax / 1000);
+			break;
+			
+		case 113:
+			CGTU_TekScale(cgtu_chMeasure, cgtu_Imax * Resistance / 1000);
+			break;
+	}
+	
+	sleep(500);
+	
+	for (var i = 0; i < IterationsCount; i++)
+	{
+		for (var j = 0; j < cgtu_Values.length; j++)
+		{
+			if (cgtu_UseRangeTuning)
+			{
+				switch (ProbeCMD)
+				{
+					case 110:	// VG
+						CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] / 1000);
+						//TEK_TriggerLevelF(cgtu_Values[j] / (1000 * 2));
+						sleep(2000);
+						
+						// Configure GTU
+						dev.w(130 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
+						CGTU_Probe(ProbeCMD);
+						break;
+						
+					case 111:	// IG
+						CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] * Resistance / 1000);
+						//TEK_TriggerLevelF(cgtu_Values[j] * Resistance / (580 * 2));
+						sleep(2000);
+						
+						// Configure GTU
+						dev.w(131 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
+						CGTU_Probe(ProbeCMD);
+						break;
+						
+					case 112:	// VD
+						CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] / 1000);
+						//TEK_TriggerLevelF(cgtu_Values[j] / (1000 * 2));
+						sleep(2000);
+						
+						// Configure GTU
+						dev.w(128 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
+						CGTU_Probe(ProbeCMD);
+						break;
+						
+					case 113:	// ID
+						CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] * Resistance / 1000);
+						//TEK_TriggerLevelF(cgtu_Values[j] * Resistance / (600 * 2));
+						sleep(2000);
+						
+						// Configure GTU
+						dev.w(129 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
+						CGTU_Probe(ProbeCMD);
+						break;
+				}
+			}
+			
+			if (anykey()) return 0;
+		}
+	}
+	
+	return 1;
+}
+
 function CGTU_CalibrateIGate()
 {
 	// Collect data
@@ -562,11 +990,120 @@ function CGTU_VerifyIh(rangeId, rangeMin, rangeMax, count, verificationCount, re
 	CGTU_VerifyIPower();
 	return [cgtu_id_set, cgtu_id, cgtu_id_sc, cgtu_id_set_err];
 }
+
+function CGTU_CalVGT(P2, P1, P0)
+{
+	dev.ws(28, Math.round(P2 * 1e6));
+	dev.w(29, Math.round(P1 * 1000));
+	dev.ws(30, Math.round(P0));
+}
+
+function CGTU_CalIGT(P2, P1, P0)
+{
+	switch (cgtu_RangeIgt)
+	{
+		case 0:
+			dev.ws(115, Math.round(P2 * 1e6));
+			dev.w(116, Math.round(P1 * 1000));
+			dev.ws(117, Math.round(P0));
+			break;
+		case 1:
+			dev.ws(33, Math.round(P2 * 1e6));
+			dev.w(34, Math.round(P1 * 1000));
+			dev.ws(35, Math.round(P0));
+			break;
+		default:
+			print("Incorrect Igt range.");
+			break;
+	}
+}
+}
 // end CalGTU_4.0
 
 // =================================
 
-// CalGTU Old
+// CalGTU_Old
+if (isOld)
+{
+function CGTU_Init(portGate, portTek, channelMeasureGate, channelMeasurePower)
+{
+	if (channelMeasureGate < 1 || channelMeasureGate > 4 ||
+		channelMeasurePower < 1 || channelMeasurePower > 4)
+	{
+		print("Wrong channel numbers");
+		return;
+	}
+	
+	// Copy channel information
+	cgtu_chMeasureGate = channelMeasureGate;
+	cgtu_chMeasurePower = channelMeasurePower;
+	
+	// Init GTU
+	dev.Disconnect();
+	dev.Connect(portGate);
+	
+	// Init Tektronix
+	TEK_PortInit(portTek);
+	
+	// Tektronix init
+	// Init channels
+	TEK_ChannelInit(cgtu_chMeasureGate, "1", "1");
+	TEK_ChannelInit(cgtu_chMeasurePower, "1", "1");
+	// Init trigger
+	TEK_TriggerPulseInit(cgtu_chMeasureGate, "1");
+	CGTU_TriggerTune();
+	// Horizontal settings
+	TEK_Horizontal("10e-3", "-40e-3");
+	
+	// Display channels
+	for (var i = 1; i <= 4; i++)
+	{
+		if (i == cgtu_chMeasureGate || i == cgtu_chMeasurePower)
+			TEK_ChannelOn(i);
+		else
+			TEK_ChannelOff(i);
+	}
+	
+	// Init measurement
+	CGTU_TekCursor(cgtu_chMeasureGate);
+	CGTU_TekCursor(cgtu_chMeasurePower);
+}
+
+function CGTU_Collect(ProbeCMD, Resistance, cgtu_CurrentValues, IterationsCount)
+{	
+	cgtu_cntTotal = IterationsCount * cgtu_CurrentValues.length;
+	cgtu_cntDone = 0;
+	
+	// Init trigger
+	TEK_TriggerPulseInit((ProbeCMD == 110) ? cgtu_chMeasureGate : cgtu_chMeasurePower, "1");
+	CGTU_TriggerTune();
+	
+	// Configure scale
+	CGTU_TekScale((ProbeCMD == 110) ? cgtu_chMeasureGate : cgtu_chMeasurePower, cgtu_Imax * Resistance / 1000);
+	sleep(500);
+	
+	for (var i = 0; i < IterationsCount; i++)
+	{
+		for (var j = 0; j < cgtu_CurrentValues.length; j++)
+		{
+			if (cgtu_UseRangeTuning)
+				CGTU_TekScale((ProbeCMD == 110) ? cgtu_chMeasureGate : cgtu_chMeasurePower, cgtu_CurrentValues[j] * Resistance / 1000);
+			
+			// Configure trigger
+			TEK_TriggerLevelF(cgtu_CurrentValues[j] * Resistance / (1000 * 2));
+			sleep(1000);
+			
+			// Configure GTU
+			dev.w(140, cgtu_CurrentValues[j]);
+			CGTU_Probe(ProbeCMD);
+			
+			if (anykey()) return 0;
+		}
+	}
+	
+	return 1;
+}
+
 function CGTU_CalibrateGate()
 {
 	// Collect data
@@ -809,3 +1346,17 @@ function CGTU_ResetPowerCal()
 		CGTU_CalIH(1, 0);
 }
 
+function CGTU_CalIGT(K, Offset)
+{
+	dev.w(50, Math.round(K * 1000));
+	dev.w(51, 1000);
+	dev.ws(57, Math.round(Offset));
+}
+
+function CGTU_CalVGT(K, Offset)
+{
+	dev.w(52, Math.round(K * 1000));
+	dev.w(53, 1000);
+	dev.ws(56, Math.round(Offset));
+}
+}
