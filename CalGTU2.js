@@ -4,9 +4,12 @@ include("CalGeneral.js")
 
 // Version check
 isOld = false;
-for (i = 0; i < 5; i++)
+function CGTU_VersionCheck()
 {
-	isOld = (i != 0 ? true : false);
+	for (i = 0; i < 5; i++)
+	{
+		isOld = (dev.r(i) != 0 ? true : false);
+	}
 }
 
 // Global definitions
