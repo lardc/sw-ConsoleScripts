@@ -6,7 +6,7 @@ include("CalGeneral.js")
 isOld = false;
 function CGTU_VersionCheck()
 {
-	for (i = 0; i < 5; i++)
+	for (var i = 0; i < 5; i++)
 	{
 		isOld = (dev.r(i) != 0 ? true : false);
 	}
