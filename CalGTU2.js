@@ -3,13 +3,17 @@ include("Tektronix.js")
 include("CalGeneral.js")
 
 // Version check
-isOld = false;
-function CGTU_VersionCheck()
+try
 {
 	for (var i = 0; i < 5; i++)
 	{
-		isOld = (dev.r(i) != 0 ? true : false);
+		cgtu_isOld = (dev.r(i) != 0 ? true : false);
 	}
+}
+catch(err)
+{
+	p("Error: GTU is disconnected.");
+	cgtu_isOld = false;
 }
 
 // Global definitions
@@ -27,7 +31,7 @@ cgtu_UseAvg = 1;
 cgtu_UseRangeTuning = 1;
 
 // Current limits
-cgtu_Imax = isOld ? 700 : 1000;
+cgtu_Imax = cgtu_isOld ? 700 : 1000;
 cgtu_Imin = 50;
 cgtu_Istp = 50;
 
@@ -46,7 +50,6 @@ cgtu_PlotSummaryError = 0;
 // Results storage
 cgtu_igt = [];
 cgtu_vgt = [];
-cgtu_ih = [];
 cgtu_vd = [];
 cgtu_id = [];
 cgtu_vd_set = [];
@@ -57,14 +60,14 @@ cgtu_id_set = [];
 // Tektronix data
 cgtu_igt_sc = [];
 cgtu_vgt_sc = [];
-cgtu_ih_sc = [];
+cgtu_id_sc = [];
 cgtu_vd_sc = [];
 cgtu_id_sc = [];
 
 // Relative error
 cgtu_igt_err = [];
 cgtu_vgt_err = [];
-cgtu_ih_err = [];
+cgtu_id_err = [];
 cgtu_vd_err = [];
 cgtu_id_err = [];
 cgtu_vgt_set_err = [];
@@ -75,7 +78,7 @@ cgtu_id_set_err = [];
 // Summary error
 cgtu_igt_err_sum = [];
 cgtu_vgt_err_sum = [];
-cgtu_ih_err_sum = [];
+cgtu_id_err_sum = [];
 cgtu_vd_err_sum = [];
 cgtu_id_err_sum = [];
 cgtu_vgt_set_err_sum = [];
@@ -86,7 +89,7 @@ cgtu_id_set_err_sum = [];
 // Correction
 cgtu_igt_corr = [];
 cgtu_vgt_corr = [];
-cgtu_ih_corr = [];
+cgtu_id_corr = [];
 cgtu_vd_corr = [];
 cgtu_id_corr = [];
 cgtu_vd_set_corr = [];
@@ -104,9 +107,9 @@ cgtu_chSync = 3;
 cgtu_Iterations = 1;
 
 // Measurement errors
-EUosc = 3;
-ER = isOld ? 1 : 0.5;
-E0 = 0;
+cgtu_EUosc = 3;
+cgtu_ER = cgtu_isOld ? 1 : 0.5;
+cgtu_E0 = 0;
 
 // General functions
 function CGTU_Probe(ProbeCMD)
@@ -137,7 +140,7 @@ function CGTU_Probe(ProbeCMD)
 	
 	if (ProbeCMD == 110)
 	{
-		if (isOld)
+		if (cgtu_isOld)
 		{
 			f = CGTU_Measure((ProbeCMD == 110) ? cgtu_chMeasureGate : cgtu_chMeasurePower);
 			var igt = dev.r(204);
@@ -155,9 +158,9 @@ function CGTU_Probe(ProbeCMD)
 			cgtu_igt_err.push(((igt - igt_sc) / igt_sc * 100).toFixed(2))
 			cgtu_vgt_err.push(((vgt - vgt_sc) / vgt_sc * 100).toFixed(2))
 			// Summary error
-			E0 = Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
-			cgtu_igt_err_sum.push(1.1 * Math.sqrt(Math.pow((igt - igt_sc) / igt_sc * 100, 2) + Math.pow(E0, 2)));
-			cgtu_vgt_err_sum.push(1.1 * Math.sqrt(Math.pow((vgt - vgt_sc) / vgt_sc * 100, 2) + Math.pow(E0, 2)));
+			cgtu_E0 = Math.sqrt(Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2));
+			cgtu_igt_err_sum.push(1.1 * Math.sqrt(Math.pow((igt - igt_sc) / igt_sc * 100, 2) + Math.pow(cgtu_E0, 2)));
+			cgtu_vgt_err_sum.push(1.1 * Math.sqrt(Math.pow((vgt - vgt_sc) / vgt_sc * 100, 2) + Math.pow(cgtu_E0, 2)));
 		}
 		else
 		{
@@ -176,9 +179,9 @@ function CGTU_Probe(ProbeCMD)
 			// Set error
 			cgtu_vgt_set_err.push(((vgt_sc - vgt_set) / vgt_set * 100).toFixed(2));
 			// Summary error
-			E0 = Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
-			cgtu_vgt_err_sum.push(1.1 * Math.sqrt(Math.pow((vgt - vgt_sc) / vgt_sc * 100, 2) + Math.pow(E0, 2)));
-			cgtu_vgt_set_err_sum.push(1.1 * Math.sqrt(Math.pow((vgt_set - vgt_sc) / vgt_sc * 100, 2) + Math.pow(E0, 2)));
+			cgtu_E0 = Math.sqrt(Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2));
+			cgtu_vgt_err_sum.push(1.1 * Math.sqrt(Math.pow((vgt - vgt_sc) / vgt_sc * 100, 2) + Math.pow(cgtu_E0, 2)));
+			cgtu_vgt_set_err_sum.push(1.1 * Math.sqrt(Math.pow((vgt_set - vgt_sc) / vgt_sc * 100, 2) + Math.pow(cgtu_E0, 2)));
 			
 			print("Vset,    mV: " + vgt_set);
 			print("Vgt,     mV: " + vgt);
@@ -187,21 +190,21 @@ function CGTU_Probe(ProbeCMD)
 			print("Vgt err,  %: " + ((vgt - vgt_sc) / vgt_sc * 100).toFixed(2));
 		}
 	}
-	if (ProbeCMD != 110 && isOld)
+	if (ProbeCMD != 110 && cgtu_isOld)
 	{
 		var ih = dev.r(204);
 		var ih_sc = (f / cgtu_ResPower).toFixed(1);
 		
-		cgtu_ih.push(ih);
-		cgtu_ih_sc.push(ih_sc);
-		cgtu_ih_err.push(((ih_sc - ih) / ih_sc * 100).toFixed(2));
+		cgtu_id.push(ih);
+		cgtu_id_sc.push(ih_sc);
+		cgtu_id_err.push(((ih_sc - ih) / ih_sc * 100).toFixed(2));
 		
 		// Summary error
-		E0 = Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
-		cgtu_ih_err_sum.push(1.1 * Math.sqrt(Math.pow(((ih_sc - ih) / ih_sc).toFixed(2) * 100, 2) + Math.pow(E0, 2)));
+		cgtu_E0 = Math.sqrt(Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2));
+		cgtu_id_err_sum.push(1.1 * Math.sqrt(Math.pow(((ih_sc - ih) / ih_sc).toFixed(2) * 100, 2) + Math.pow(cgtu_E0, 2)));
 	}
 	
-	if (!isOld)
+	if (!cgtu_isOld)
 	{
 		if (ProbeCMD == 111)
 		{	
@@ -220,9 +223,9 @@ function CGTU_Probe(ProbeCMD)
 			// Set error
 			cgtu_igt_set_err.push(((igt_sc - igt_set) / igt_set * 100).toFixed(2));
 			// Summary error
-			E0 = Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
-			cgtu_igt_err_sum.push(1.1 * Math.sqrt(Math.pow((igt - igt_sc) / igt_sc * 100, 2) + Math.pow(E0, 2)));
-			cgtu_igt_set_err_sum.push(1.1 * Math.sqrt(Math.pow((igt_set - igt_sc) / igt_sc * 100, 2) + Math.pow(E0, 2)));
+			cgtu_E0 = Math.sqrt(Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2));
+			cgtu_igt_err_sum.push(1.1 * Math.sqrt(Math.pow((igt - igt_sc) / igt_sc * 100, 2) + Math.pow(cgtu_E0, 2)));
+			cgtu_igt_set_err_sum.push(1.1 * Math.sqrt(Math.pow((igt_set - igt_sc) / igt_sc * 100, 2) + Math.pow(cgtu_E0, 2)));
 			
 			print("Iset,    mA: " + igt_set);
 			print("Igt,     mA: " + igt);
@@ -247,9 +250,9 @@ function CGTU_Probe(ProbeCMD)
 			// Set error
 			cgtu_vd_set_err.push(((vd_sc - vd_set) / vd_set * 100).toFixed(2));
 			// Summary error
-			E0 = Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
-			cgtu_vd_err_sum.push(1.1 * Math.sqrt(Math.pow((vd - vd_sc) / vd_sc * 100, 2) + Math.pow(E0, 2)));
-			cgtu_vd_set_err_sum.push(1.1 * Math.sqrt(Math.pow((vd_set - vd_sc) / vd_sc * 100, 2) + Math.pow(E0, 2)));
+			cgtu_E0 = Math.sqrt(Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2));
+			cgtu_vd_err_sum.push(1.1 * Math.sqrt(Math.pow((vd - vd_sc) / vd_sc * 100, 2) + Math.pow(cgtu_E0, 2)));
+			cgtu_vd_set_err_sum.push(1.1 * Math.sqrt(Math.pow((vd_set - vd_sc) / vd_sc * 100, 2) + Math.pow(cgtu_E0, 2)));
 			
 			print("Vset,    mV: " + vd_set);
 			print("Vd,      mV: " + vd);
@@ -275,9 +278,9 @@ function CGTU_Probe(ProbeCMD)
 			// Set error
 			cgtu_id_set_err.push(((id_sc - id_set) / id_set * 100).toFixed(2));
 			// Summary error
-			E0 = Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
-			cgtu_id_err_sum.push(1.1 * Math.sqrt(Math.pow((id - id_sc) / id_sc * 100, 2) + Math.pow(E0, 2)));
-			cgtu_id_set_err_sum.push(1.1 * Math.sqrt(Math.pow((id_set - id_sc) / id_sc * 100, 2) + Math.pow(E0, 2)));
+			cgtu_E0 = Math.sqrt(Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2));
+			cgtu_id_err_sum.push(1.1 * Math.sqrt(Math.pow((id - id_sc) / id_sc * 100, 2) + Math.pow(cgtu_E0, 2)));
+			cgtu_id_set_err_sum.push(1.1 * Math.sqrt(Math.pow((id_set - id_sc) / id_sc * 100, 2) + Math.pow(cgtu_E0, 2)));
 			
 			print("Iset,    mA: " + id_set);
 			print("Id,      mA: " + id);
@@ -287,7 +290,7 @@ function CGTU_Probe(ProbeCMD)
 		}
 	}
 
-	if (isOld)
+	if (cgtu_isOld)
 	{
 		print("Iset, mA: " + dev.r(140));
 		if (ProbeCMD == 110)
@@ -309,20 +312,20 @@ function CGTU_Probe(ProbeCMD)
 function CGTU_TriggerTune()
 {
 	TEK_Send("trigger:main:pulse:width:polarity negative");
-	TEK_Send("trigger:main:pulse:width:width" + (isOld ? "50e-3" : "5e-3"));
+	TEK_Send("trigger:main:pulse:width:width" + (cgtu_isOld ? "50e-3" : "5e-3"));
 }
 
 function CGTU_TekCursor(Channel)
 {
 	TEK_Send("cursor:select:source ch" + Channel);
 	TEK_Send("cursor:function vbars");
-	TEK_Send("cursor:vbars:position1" + (isOld ? "-60e-3" : "-6e-3"));
+	TEK_Send("cursor:vbars:position1" + (cgtu_isOld ? "-60e-3" : "-6e-3"));
 	TEK_Send("cursor:vbars:position2 0");
 }
 
 function CGTU_TekScale(Channel, Value)
 {
-	if (isOld)
+	if (cgtu_isOld)
 	{
 		TEK_ChannelScale(Channel, Value);
 	}
@@ -352,7 +355,6 @@ function CGTU_ResetA()
 	// Results storage
 	cgtu_igt = [];
 	cgtu_vgt = [];
-	cgtu_ih = [];
 	cgtu_vd = [];
 	cgtu_id = [];
 	cgtu_vd_set = [];
@@ -363,14 +365,12 @@ function CGTU_ResetA()
 	// Tektronix data
 	cgtu_igt_sc = [];
 	cgtu_vgt_sc = [];
-	cgtu_ih_sc = [];
 	cgtu_vd_sc = [];
 	cgtu_id_sc = [];
 
 	// Relative error
 	cgtu_igt_err = [];
 	cgtu_vgt_err = [];
-	cgtu_ih_err = [];
 	cgtu_vd_err = [];
 	cgtu_id_err = [];
 	cgtu_vgt_set_err = [];
@@ -381,7 +381,6 @@ function CGTU_ResetA()
 	// Summary error
 	cgtu_igt_err_sum = [];
 	cgtu_vgt_err_sum = [];
-	cgtu_ih_err_sum = [];
 	cgtu_vd_err_sum = [];
 	cgtu_id_err_sum = [];
 	cgtu_vgt_set_err_sum = [];
@@ -392,7 +391,6 @@ function CGTU_ResetA()
 	// Correction
 	cgtu_igt_corr = [];
 	cgtu_vgt_corr = [];
-	cgtu_ih_corr = [];
 	cgtu_vd_corr = [];
 	cgtu_id_corr = [];
 	cgtu_vd_set_corr = [];
@@ -403,8 +401,6 @@ function CGTU_ResetA()
 // General functions end
 
 // CalGTU_4.0
-if (!isOld)
-{
 function CGTU_Init(portGate, portTek, channelMeasure, channelSync)
 {
 	if (channelMeasure < 1 || channelMeasure > 4 ||
@@ -1020,15 +1016,12 @@ function CGTU_CalIGT(P2, P1, P0)
 			break;
 	}
 }
-}
 // end CalGTU_4.0
 
 // =================================
 
 // CalGTU_Old
-if (isOld)
-{
-function CGTU_Init(portGate, portTek, channelMeasureGate, channelMeasurePower)
+function CGTU_Init_Old(portGate, portTek, channelMeasureGate, channelMeasurePower)
 {
 	if (channelMeasureGate < 1 || channelMeasureGate > 4 ||
 		channelMeasurePower < 1 || channelMeasurePower > 4)
@@ -1072,7 +1065,7 @@ function CGTU_Init(portGate, portTek, channelMeasureGate, channelMeasurePower)
 	CGTU_TekCursor(cgtu_chMeasurePower);
 }
 
-function CGTU_Collect(ProbeCMD, Resistance, cgtu_CurrentValues, IterationsCount)
+function CGTU_Collect_Old(ProbeCMD, Resistance, cgtu_CurrentValues, IterationsCount)
 {	
 	cgtu_cntTotal = IterationsCount * cgtu_CurrentValues.length;
 	cgtu_cntDone = 0;
@@ -1180,19 +1173,19 @@ function CGTU_CalibratePower()
 		CGTU_SavePower("gtu_ih");
 		
 		// Plot relative error distribution
-		scattern(cgtu_ih_sc, cgtu_ih_err, "Ih (in mA)", "Error (in %)", "Ih relative error");
+		scattern(cgtu_id_sc, cgtu_id_err, "Ih (in mA)", "Error (in %)", "Ih relative error");
 		
 		if (CGEN_UseQuadraticCorrection())
 		{
 			// Calculate correction
-			cgtu_ih_corr = CGEN_GetCorrection2("gtu_ih");
-			CGTU_CalIH2(cgtu_ih_corr[0], cgtu_ih_corr[1], cgtu_ih_corr[2]);
+			cgtu_id_corr = CGEN_GetCorrection2("gtu_ih");
+			CGTU_CalIH2(cgtu_id_corr[0], cgtu_id_corr[1], cgtu_id_corr[2]);
 		}
 		else
 		{
 			// Calculate correction
-			cgtu_ih_corr = CGEN_GetCorrection("gtu_ih");
-			CGTU_CalIH(cgtu_ih_corr[0], cgtu_ih_corr[1]);
+			cgtu_id_corr = CGEN_GetCorrection("gtu_ih");
+			CGTU_CalIH(cgtu_id_corr[0], cgtu_id_corr[1]);
 		}
 		
 		// Print correction
@@ -1227,8 +1220,8 @@ function CGTU_VerifyPower()
 		CGTU_SavePower("gtu_ih_fixed");
 		
 		// Plot relative error distribution
-		scattern(cgtu_ih_sc, cgtu_ih_err, "Ih (in mA)", "Error (in %)", "Ih relative error");
-		scattern(cgtu_ih_sc, cgtu_ih_err_sum, "Ih (in mA)", "Error (in %)", "Ih summary error");
+		scattern(cgtu_id_sc, cgtu_id_err, "Ih (in mA)", "Error (in %)", "Ih relative error");
+		scattern(cgtu_id_sc, cgtu_id_err_sum, "Ih (in mA)", "Error (in %)", "Ih summary error");
 	}
 }
 
@@ -1238,7 +1231,7 @@ function CGTU_CollectGate(IterationsCount)
 
 	print("Gate resistance set to " + cgtu_ResGate + " Ohms");
 	print("-----------");
-	return CGTU_Collect(110, cgtu_ResGate, cgtu_CurrentValues, IterationsCount);
+	return CGTU_Collect_Old(110, cgtu_ResGate, cgtu_CurrentValues, IterationsCount);
 }
 
 function CGTU_CollectPower(IterationsCount)
@@ -1247,7 +1240,7 @@ function CGTU_CollectPower(IterationsCount)
 
 	print("Power resistance set to " + cgtu_ResPower + " Ohms");
 	print("-----------");
-	return CGTU_Collect(111, cgtu_ResPower, cgtu_CurrentValues, IterationsCount);
+	return CGTU_Collect_Old(111, cgtu_ResPower, cgtu_CurrentValues, IterationsCount);
 }
 
 function CGTU_SaveGate(NameIGT, NameVGT)
@@ -1258,7 +1251,7 @@ function CGTU_SaveGate(NameIGT, NameVGT)
 
 function CGTU_SavePower(NameIH)
 {
-	CGEN_SaveArrays(NameIH, cgtu_ih, cgtu_ih_sc, cgtu_ih_err, cgtu_ih_err_sum);
+	CGEN_SaveArrays(NameIH, cgtu_id, cgtu_id_sc, cgtu_id_err, cgtu_id_err_sum);
 }
 
 function CGTU_CalIGT2(P2, P1, P0)
@@ -1362,4 +1355,6 @@ function CGTU_CalVGT(K, Offset)
 	dev.w(53, 1000);
 	dev.ws(56, Math.round(Offset));
 }
-}
+
+CGTU_Init = cgtu_isOld ? CGTU_Init_Old : CGTU_Init;
+CGTU_Collect = cgtu_isOld ? CGTU_Collect_Old : CGTU_Collect;
