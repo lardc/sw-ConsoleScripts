@@ -93,6 +93,18 @@ function CGEN_GetRange(Start, End, Step)
 	return ResArray;
 }
 
+function CGEN_GetRangeLogarithm(Start, End, Num)
+{
+	var ResArray = [];
+	var N = Num - 1;
+	var x = Math.pow(End / Start, 1 / N);
+
+	for (var i = 0; i <= N; i++)
+		ResArray.push(Math.round(Start * Math.pow(x, i)));
+
+	return ResArray;
+}
+
 function CGEN_GetRandomInt(Min, Max)
 {
 	return Math.floor(Math.random() * (Max - Min)) + Min;
