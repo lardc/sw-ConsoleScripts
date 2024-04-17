@@ -1,6 +1,7 @@
 include("TestLSLPC.js")
 include("Tektronix.js")
 include("CalGeneral.js")
+include("TEK_GetData.js")
 
 // Переменные совместимости
 cal_LSLPC_Compatibility = 1; // 0 - если прошивка блока на IAR, 1 - если прошивка на Atolic
@@ -103,8 +104,7 @@ function CAL_VerifyId()
 	CAL_TekInit();
 
 	// Reload values
-	var cal_IdStp = Math.round((cal_IdMax[cal_CurrentRange] - cal_IdMin[cal_CurrentRange]) / (cal_Points - 1));
-	var CurrentArray = CGEN_GetRange(cal_IdMin[cal_CurrentRange], cal_IdMax[cal_CurrentRange], cal_IdStp);
+	var CurrentArray = CGEN_GetRangeLogarithm(cal_IdMin[cal_CurrentRange], cal_IdMax[cal_CurrentRange], cal_Points);
 
 	if (CAL_CollectId(CurrentArray, cal_Iterations))
 	{
@@ -162,7 +162,7 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 
 			// Relative error
 			Id_UnitArray = dev.rafs(1);
-			var IdUnit = SiC_GD_MAX(Id_UnitArray).Value
+			var IdUnit = TEK_GD_Sinus_MAX(Id_UnitArray)
 			IdUnitErr = ((IdUnit - IdSc) / IdSc * 100).toFixed(2);
 			cal_IdUnitErr.push(IdUnitErr);
 			print("Idunit, A: " + IdUnit);
