@@ -496,6 +496,16 @@ function MME_GTU()
 	}
 }
 
+function MME_GTUIH()
+{
+	if (mme_use_GTU)
+	{
+		gtu_plot = mme_plot;
+		dev.nid(mme_Nid_GTU);
+		GTU_Holding();
+	}
+}
+
 function MME_GTUSL(Current)
 {
 	// activate gtu
@@ -518,18 +528,7 @@ function MME_GTUSL(Current)
 	if (dev.r(197) == 2)
 		print("problem: " + dev.r(196));
 
-	print("Ih,   mA: " + dev.r(201));
-/*
-	// recommutate
-	MME_CU(111);
-	print("CU ok");
-	
-	// measure in ordinary way
-	dev.nid(mme_Nid_GTU);
-	dev.w(130, 0);
-	gtu_plot = mme_plot;
-	GTU_Holding();
-	*/
+	print("IhGOST,   mA: " + (dev.r(201) + dev.r(231) / 1000));
 }
 
 function MME_SL(Current)
@@ -624,6 +623,7 @@ function MME_ResetA()
 function MME_Test(UnitArray, Counter, Pause)
 {
 	csv_array	= [];
+	var test_start_time = new Date();
 	csv_headrow	= "Current Time; ";
 
 	if (!MME_IsReady())
@@ -783,8 +783,10 @@ function MME_Test(UnitArray, Counter, Pause)
 					MME_CU(116);
 					MME_CS(mme_cs_force);
 					MME_GTUSL(mme_sl_current_ih);
-					MME_CU(110);
 					MME_Collect(mme_GTUSL);
+					MME_CU(111);
+					MME_GTUIH();
+					MME_CU(110);
 					break;
 
 				case mme_VGNT:
@@ -820,7 +822,7 @@ function MME_Test(UnitArray, Counter, Pause)
 			print("Temp2, C: " + (dev.r(102) / 10));
 		}
 		
-		MME_PrintSummaryResult(UnitArray);
+		MME_PrintSummaryResult(UnitArray, test_start_time);
 	
 		print("Global counter: " + (++mme_counter));
 		print("-------------");
@@ -896,7 +898,7 @@ function MME_Collect(Unit)
 		
 		case mme_GTUSL:
 			dev.nid(mme_Nid_GTU);
-			mme_GTU_Result_IhGOST = dev.r(201);
+			mme_GTU_Result_IhGOST = dev.r(201) + dev.r(231) / 1000;
 
 		case mme_SL:
 			dev.nid(mme_Nid_SL);
@@ -951,10 +953,9 @@ function MME_Collect(Unit)
 	}
 }
 
-function MME_PrintSummaryResult(UnitArray)
+function MME_PrintSummaryResult(UnitArray, TestStartTime)
 {
 	out_str = "";
-	//csv_array	= [];
 
 	print("");
 	print("Summary result:");
@@ -1051,7 +1052,7 @@ function MME_PrintSummaryResult(UnitArray)
 	}
 	
 	csv_array.push(out_str);
-	save("data/MME_Test.csv", csv_array);
+	save("data/MME_Test" + TestStartTime.getTime() + ".csv", csv_array);
 
 	print("\n" + out_str + "\n");
 }
