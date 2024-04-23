@@ -458,28 +458,34 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 	cgtu_cntTotal = IterationsCount * cgtu_Values.length;
 	cgtu_cntDone = 0;
 
-	// Init trigger
-	//TEK_TriggerPulseInit(((ProbeCMD == 110) || (ProbeCMD == 111)) ? cgtu_chMeasure : cgtu_chMeasure, "1");
-	//CGTU_TriggerTune();
-
-	// Configure scale
-	switch (ProbeCMD)
+	if (cgtu_2Wire)
 	{
-		case 110:
-			CGTU_TekScale(cgtu_chMeasure, cgtu_Vmax / 1000);
-			break;
+		TEK_TriggerPulseInit((ProbeCMD == 110) ? cgtu_chMeasure : cgtu_chMeasurePower, "1");
+		CGTU_TriggerTune();
 
-		case 111:
-			CGTU_TekScale(cgtu_chMeasure, cgtu_Imax * Resistance / 1000);
-			break;
+		CGTU_TekScale((ProbeCMD == 110) ? cgtu_chMeasure : cgtu_chMeasurePower, cgtu_Imax * Resistance / 1000);
+	}
+	else
+	{
+		// Configure scale
+		switch (ProbeCMD)
+		{
+			case 110:
+				CGTU_TekScale(cgtu_chMeasure, cgtu_Vmax / 1000);
+				break;
 
-		case 112:
-			CGTU_TekScale(cgtu_chMeasure, cgtu_Vmax / 1000);
-			break;
+			case 111:
+				CGTU_TekScale(cgtu_chMeasure, cgtu_Imax * Resistance / 1000);
+				break;
 
-		case 113:
-			CGTU_TekScale(cgtu_chMeasure, cgtu_Imax * Resistance / 1000);
-			break;
+			case 112:
+				CGTU_TekScale(cgtu_chMeasure, cgtu_Vmax / 1000);
+				break;
+
+			case 113:
+				CGTU_TekScale(cgtu_chMeasure, cgtu_Imax * Resistance / 1000);
+				break;
+		}
 	}
 
 	sleep(500);
@@ -490,48 +496,66 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 		{
 			if (cgtu_UseRangeTuning)
 			{
-				switch (ProbeCMD)
+				if (cgtu_2Wire)
 				{
-					case 110:	// VG
-						CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] / 1000);
-						//TEK_TriggerLevelF(cgtu_Values[j] / (1000 * 2));
-						sleep(2000);
-
-						// Configure GTU
-						dev.w(130 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
-						CGTU_Probe(ProbeCMD);
-						break;
-
-					case 111:	// IG
-						CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] * Resistance / 1000);
-						//TEK_TriggerLevelF(cgtu_Values[j] * Resistance / (580 * 2));
-						sleep(2000);
-
-						// Configure GTU
-						dev.w(131 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
-						CGTU_Probe(ProbeCMD);
-						break;
-
-					case 112:	// VD
-						CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] / 1000);
-						//TEK_TriggerLevelF(cgtu_Values[j] / (1000 * 2));
-						sleep(2000);
-
-						// Configure GTU
-						dev.w(128 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
-						CGTU_Probe(ProbeCMD);
-						break;
-
-					case 113:	// ID
-						CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] * Resistance / 1000);
-						//TEK_TriggerLevelF(cgtu_Values[j] * Resistance / (600 * 2));
-						sleep(2000);
-
-						// Configure GTU
-						dev.w(129 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
-						CGTU_Probe(ProbeCMD);
-						break;
+					CGTU_TekScale((ProbeCMD == 110) ? cgtu_chMeasure : cgtu_chMeasurePower, cgtu_Values[j] * Resistance / 1000);
 				}
+				else
+				{
+					switch (ProbeCMD)
+					{
+						case 110:	// VG
+							CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] / 1000);
+							//TEK_TriggerLevelF(cgtu_Values[j] / (1000 * 2));
+							sleep(2000);
+
+							// Configure GTU
+							dev.w(130 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
+							CGTU_Probe(ProbeCMD);
+							break;
+
+						case 111:	// IG
+							CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] * Resistance / 1000);
+							//TEK_TriggerLevelF(cgtu_Values[j] * Resistance / (580 * 2));
+							sleep(2000);
+
+							// Configure GTU
+							dev.w(131 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
+							CGTU_Probe(ProbeCMD);
+							break;
+
+						case 112:	// VD
+							CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] / 1000);
+							//TEK_TriggerLevelF(cgtu_Values[j] / (1000 * 2));
+							sleep(2000);
+
+							// Configure GTU
+							dev.w(128 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
+							CGTU_Probe(ProbeCMD);
+							break;
+
+						case 113:	// ID
+							CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] * Resistance / 1000);
+							//TEK_TriggerLevelF(cgtu_Values[j] * Resistance / (600 * 2));
+							sleep(2000);
+
+							// Configure GTU
+							dev.w(129 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
+							CGTU_Probe(ProbeCMD);
+							break;
+					}
+				}
+			}
+
+			if (cgtu_2Wire)
+			{
+				// Configure trigger
+				TEK_TriggerLevelF(cgtu_Values[j] * Resistance / (1000 * 2));
+				sleep(1000);
+
+				// Configure GTU
+				dev.w(140, cgtu_Values[j]);
+				CGTU_Probe(ProbeCMD);
 			}
 
 			if (anykey()) return 0;
@@ -1029,41 +1053,7 @@ function CGTU_CalIGT(P2, P1, P0)
 
 // =================================
 
-function CGTU_Collect_Old(ProbeCMD, Resistance, cgtu_CurrentValues, IterationsCount)
-{	
-	cgtu_cntTotal = IterationsCount * cgtu_CurrentValues.length;
-	cgtu_cntDone = 0;
-	
-	// Init trigger
-	TEK_TriggerPulseInit((ProbeCMD == 110) ? cgtu_chMeasure : cgtu_chMeasurePower, "1");
-	CGTU_TriggerTune();
-	
-	// Configure scale
-	CGTU_TekScale((ProbeCMD == 110) ? cgtu_chMeasure : cgtu_chMeasurePower, cgtu_Imax * Resistance / 1000);
-	sleep(500);
-	
-	for (var i = 0; i < IterationsCount; i++)
-	{
-		for (var j = 0; j < cgtu_CurrentValues.length; j++)
-		{
-			if (cgtu_UseRangeTuning)
-				CGTU_TekScale((ProbeCMD == 110) ? cgtu_chMeasure : cgtu_chMeasurePower, cgtu_CurrentValues[j] * Resistance / 1000);
-			
-			// Configure trigger
-			TEK_TriggerLevelF(cgtu_CurrentValues[j] * Resistance / (1000 * 2));
-			sleep(1000);
-			
-			// Configure GTU
-			dev.w(140, cgtu_CurrentValues[j]);
-			CGTU_Probe(ProbeCMD);
-			
-			if (anykey()) return 0;
-		}
-	}
-	
-	return 1;
-}
-
+// CalGTU.js
 function CGTU_CalibrateGate()
 {
 	// Collect data
@@ -1195,7 +1185,7 @@ function CGTU_CollectGate(IterationsCount)
 
 	print("Gate resistance set to " + cgtu_ResGate + " Ohms");
 	print("-----------");
-	return CGTU_Collect_Old(110, cgtu_ResGate, cgtu_CurrentValues, IterationsCount);
+	return CGTU_Collect(110, cgtu_ResGate, cgtu_CurrentValues, IterationsCount);
 }
 
 function CGTU_CollectPower(IterationsCount)
@@ -1204,7 +1194,7 @@ function CGTU_CollectPower(IterationsCount)
 
 	print("Power resistance set to " + cgtu_ResPower + " Ohms");
 	print("-----------");
-	return CGTU_Collect_Old(111, cgtu_ResPower, cgtu_CurrentValues, IterationsCount);
+	return CGTU_Collect(111, cgtu_ResPower, cgtu_CurrentValues, IterationsCount);
 }
 
 function CGTU_SaveGate(NameIGT, NameVGT)
@@ -1320,4 +1310,3 @@ function CGTU_CalVGT(K, Offset)
 	dev.ws(56, Math.round(Offset));
 }
 
-CGTU_Collect = cgtu_2Wire ? CGTU_Collect_Old : CGTU_Collect;
