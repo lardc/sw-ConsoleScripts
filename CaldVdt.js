@@ -52,6 +52,7 @@ cdvdt_DeviderRate = 10; 		// Делить скорости. Установить
 // Voltage settings for unit calibration
 cdvdt_Vmin = 500;
 cdvdt_Vmax = 4500;
+cdvdt_Points = 10;
 //
 cdvdt_collect_v = 0;
 
@@ -318,7 +319,7 @@ function CdVdt_CellCalibrateRateA(CellArray)
 
 function CdVdt_CellCalibrateRate(CellNumber)
 {
-	var GateSetpointV = CGEN_GetRange(cdvdt_def_VGateMin, cdvdt_def_VGateMax, Math.round((cdvdt_def_VGateMax - cdvdt_def_VGateMin) / (cdvdt_def_SetpointCount - 1)));
+	var GateSetpointV = CGEN_GetRangeLogarithm(cdvdt_def_VGateMin, cdvdt_def_VGateMax, cdvdt_def_SetpointCount);
 	
 	// Power enable cell
 	dVdt_CellCall(CellNumber, 1);
@@ -542,8 +543,7 @@ function CdVdt_CollectFixedRate(Repeat)
 		sleep(500);
 	}
 	
-	var cdvdt_Vstp = Math.round((cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Points - 1));
-	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, cdvdt_Vstp);
+	var VoltageArray = CGEN_GetRangeLogarithm(cdvdt_Vmin, cdvdt_Vmax, cdvdt_Points);
 	
 	var cntDone = 0;
 	var cntTotal = VoltageArray.length * cdvdt_RatePoint.length * Repeat;
@@ -739,11 +739,8 @@ function CdVdt_StoreVoltageAndRate(CMD, RateScope, Voltage, VoltageScope)
 
 function CdVdt_StoreVoltageAndFixRate(Rate, RateScope, Voltage, VoltageScope)
 {
-	var ConfiguredRate, RateErr, RateSet;
+	var RateErr = ((RateScope - Rate) / Rate * 100).toFixed(1);
 	var VoltageErr = ((VoltageScope - Voltage) / Voltage * 100).toFixed(1);
-	
-	RateErr = ((RateScope - Rate) / Rate * 100).toFixed(1);
-	cdvdt_scatter05.push(RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
 	
 	cdvdt_scatter.push(Rate + ";" + RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
 }
@@ -817,86 +814,6 @@ function CdVdt_ClearDisplay()
 		TEK_AcquireAvg(cdvdt_def_UseAverage);
 	//sleep(500);
 	TEK_Busy();
-}
-
-function CdVdt_ResourceTest(Repeat)
-{
-	CdVdt_ResetA();
-	
-	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, cdvdt_Vstp);
-	var random = 0;
-	var cntDone = 0;
-	var cntFailedVerify = 0;
-	var cntTotal = VoltageArray.length * cdvdt_RatePoint.length * Repeat;
-	
-	// Re-enable power
-	if(dev.r(192) == DS_None)
-	{
-		dev.c(1);
-		while (dev.r(192) != DS_Ready)
-		sleep(100);
-	}	
-	else	
-	{
-		dev.c(2);
-		while (dev.r(192) != DS_None)
-			sleep(100);
-
-		dev.c(1);
-		while (dev.r(192) != DS_Ready)
-			sleep(100);
-	}
-	
-	for (var counter = 0; counter < Repeat; counter++)
-	{
-		for (var k = 0; k < VoltageArray.length; k++)
-		{
-			dev.w(128, VoltageArray[k]);
-			for (var i = 0; i < cdvdt_RatePoint.length; i++)
-			{
-				sleep(1000);
-				dev.w(129, cdvdt_RatePoint[i] * cdvdt_DeviderRate)
-
-				dev.w(150, random);
-				dev.c(117);
-
-				sleep(1000);
-				p("random = " + random);
-
-				dev.c(100);
-				sleep(1000);
-				while(_dVdt_Active()) sleep(50);
-				
-				
-				print("dVdt set,  V/us: " + cdvdt_RatePoint[i]);
-				print("Vset,         V: " + VoltageArray[k]);
-				if (dev.r(197) == 2)
-					print("Test Failed");
-				else if (dev.r(197) == 1)
-					print("Test OK");
-				cntDone++;
-				print("-- result " + cntDone + " of " + cntTotal + " --");
-
-				if((random == 1 && dev.r(197) == 1) || (random == 0 && dev.r(197) == 2))
-					cntFailedVerify++;
-				
-				print("Кол-во неудачных тестов = " + cntFailedVerify);
-
-				random = Math.round(Math.random())
-				if (anykey())
-				{
-					print("Stopped from user!");
-					return;
-				}
-
-			}
-		}
-	}
-	// Power disable
-	dev.w(150, 0);
-	dev.c(117);
-	dev.c(2);
-	print("Кол-во неудачных тестов = " + cntFailedVerify);
 }
 
 function CdVdt_CollectdVdt(Repeat)

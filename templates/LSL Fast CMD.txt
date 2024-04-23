@@ -45,6 +45,7 @@ clsl_CurrentRange = 0;
 clsl_UseAvg = 0;
 clsl_Iterations = 3;
 CLSL_Init_Tek(5,6,1,2,3);
+clsl_measuring_device = "TPS2000";
 
 CLSL_VerifyItm();
 
@@ -62,6 +63,7 @@ clsl_CurrentRange = 1;
 clsl_Iterations = 3;
 clsl_UseAvg = 0;
 CLSL_Init_Tek(5,6,1,2,3);
+clsl_measuring_device = "TPS2000";
 
 CLSL_VerifyItm();
 
@@ -78,6 +80,7 @@ clsl_Rshunt = 250; // мкОм
 clsl_Iterations = 3;
 clsl_UseAvg = 0;
 CLSL_Init_Tek(5,6,1,2,3);
+clsl_measuring_device = "TPS2000";
 
 CLSL_VerifyIset();
 
@@ -115,6 +118,7 @@ clsl_Points = 10;
 clsl_Iterations = 3;
 clsl_UseAvg = 0;
 CLSL_Init_Tek(5,6,1,2,3);
+clsl_measuring_device = "TPS2000";
 
 CLSL_VerifyUg();
 
@@ -135,6 +139,7 @@ clsl_GateRshunt = 10531; // в мОм
 clsl_Iterations = 3;
 clsl_UseAvg = 0;
 CLSL_Init_Tek(5,6,1,2,3);
+clsl_measuring_device = "TPS2000";
 
 CLSL_VerifyIg();
 
