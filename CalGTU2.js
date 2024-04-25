@@ -400,11 +400,6 @@ function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 	cgtu_Imax = cgtu_2Wire ? 700 : 1000;
 	cgtu_ER = cgtu_2Wire ? 1 : 0.5;
 
-	// Default arguments
-	portGate = (typeof portGate === typeof undefined) ? 1 : portGate;
-	portTek = (typeof portTek === typeof undefined) ? 1 : portTek;
-	channelMeasure = (typeof channelMeasure === typeof undefined) ? 3 : channelMeasure;
-
 	if (channelMeasure < 1 || channelMeasure > 4 ||
 		channelSyncOrMeasurePower < 1 || channelSyncOrMeasurePower > 4)
 	{
