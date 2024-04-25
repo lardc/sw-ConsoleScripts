@@ -148,10 +148,10 @@ function CGTU_Probe(ProbeCMD)
 		}
 		else
 		{
+			f = CGTU_Measure(cgtu_chMeasure);
 			var vgt = (dev.r(204) + dev.r(233) / 1000).toFixed(2);
 			var vgt_sc = f.toFixed(2);
 			var vgt_set = dev.r(130 + (cgtu_CompatibleMode ? 3 : 0));
-			f = CGTU_Measure(cgtu_chMeasure);
 
 			// gtu data
 			cgtu_vgt.push(vgt);
@@ -382,9 +382,7 @@ function CGTU_ResetA()
 	cgtu_igt_set_corr = [];
 	cgtu_id_set_corr = [];
 }
-// General functions end
 
-// CalGTU_4.0
 function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 {
 	// Version check
@@ -560,6 +558,53 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 	return 1;
 }
 
+function CGTU_CalVGT(P2, P1, P0)
+{
+	if (cgtu_2Wire && P2 == null)
+	{
+		dev.w(52, Math.round(P1 * 1000));
+		dev.w(53, 1000);
+		dev.ws(56, Math.round(P0));
+	}
+	else
+	{
+		dev.ws(28, Math.round(P2 * 1e6));
+		dev.w(29, Math.round(P1 * 1000));
+		dev.ws(30, Math.round(P0));
+	}
+}
+
+function CGTU_CalIGT(P2, P1, P0)
+{
+	if (cgtu_2Wire && P2 == null)
+	{
+		dev.w(50, Math.round(P1 * 1000));
+		dev.w(51, 1000);
+		dev.ws(57, Math.round(P0));
+	}
+	else
+	{
+		switch (cgtu_RangeIgt)
+		{
+			case 0:
+				dev.ws(115, Math.round(P2 * 1e6));
+				dev.w(116, Math.round(P1 * 1000));
+				dev.ws(117, Math.round(P0));
+				break;
+			case 1:
+				dev.ws(33, Math.round(P2 * 1e6));
+				dev.w(34, Math.round(P1 * 1000));
+				dev.ws(35, Math.round(P0));
+				break;
+			default:
+				print("Incorrect Igt range.");
+				break;
+		}
+	}
+}
+// General functions end
+
+// CalGTU_4.0
 function CGTU_CalibrateIGate()
 {
 	// Collect data
@@ -1017,33 +1062,6 @@ function CGTU_VerifyIh(rangeId, rangeMin, rangeMax, count, verificationCount, re
 	CGTU_VerifyIPower();
 	return [cgtu_id_set, cgtu_id, cgtu_id_sc, cgtu_id_set_err];
 }
-
-function CGTU_CalVGT(P2, P1, P0)
-{
-	dev.ws(28, Math.round(P2 * 1e6));
-	dev.w(29, Math.round(P1 * 1000));
-	dev.ws(30, Math.round(P0));
-}
-
-function CGTU_CalIGT(P2, P1, P0)
-{
-	switch (cgtu_RangeIgt)
-	{
-		case 0:
-			dev.ws(115, Math.round(P2 * 1e6));
-			dev.w(116, Math.round(P1 * 1000));
-			dev.ws(117, Math.round(P0));
-			break;
-		case 1:
-			dev.ws(33, Math.round(P2 * 1e6));
-			dev.w(34, Math.round(P1 * 1000));
-			dev.ws(35, Math.round(P0));
-			break;
-		default:
-			print("Incorrect Igt range.");
-			break;
-	}
-}
 // end CalGTU_4.0
 
 // =================================
@@ -1075,10 +1093,10 @@ function CGTU_CalibrateGate()
 		{
 			// Calculate correction
 			cgtu_igt_corr = CGEN_GetCorrection("gtu_igt");
-			CGTU_CalIGT(cgtu_igt_corr[0], cgtu_igt_corr[1]);
+			CGTU_CalIGT(null, cgtu_igt_corr[0], cgtu_igt_corr[1]);
 			
 			cgtu_vgt_corr = CGEN_GetCorrection("gtu_vgt");
-			CGTU_CalVGT(cgtu_vgt_corr[0], cgtu_vgt_corr[1]);
+			CGTU_CalVGT(null, cgtu_vgt_corr[0], cgtu_vgt_corr[1]);
 		}
 		
 		// Print correction
@@ -1276,8 +1294,8 @@ function CGTU_ResetGateCal()
 	}
 	else
 	{
-		CGTU_CalIGT(1, 0);
-		CGTU_CalVGT(1, 0);
+		CGTU_CalIGT(null, 1, 0);
+		CGTU_CalVGT(null, 1, 0);
 	}
 	
 	dev.w(95, 0);
@@ -1289,19 +1307,5 @@ function CGTU_ResetPowerCal()
 		CGTU_CalIH2(0, 1, 0);
 	else
 		CGTU_CalIH(1, 0);
-}
-
-function CGTU_CalIGT(K, Offset)
-{
-	dev.w(50, Math.round(K * 1000));
-	dev.w(51, 1000);
-	dev.ws(57, Math.round(Offset));
-}
-
-function CGTU_CalVGT(K, Offset)
-{
-	dev.w(52, Math.round(K * 1000));
-	dev.w(53, 1000);
-	dev.ws(56, Math.round(Offset));
 }
 
