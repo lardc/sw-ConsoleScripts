@@ -16,7 +16,6 @@ cgtu_CurrentValues = [];
 // Igt Current range number
 cgtu_RangeIgt = 1;    // 0 = Range [ < 50 mA]; 1 = Range [ > 50 mA] for measure & set
 //
-cgtu_UseAvg = 1;
 cgtu_UseRangeTuning = 1;
 
 // Current limits
@@ -192,7 +191,7 @@ function CGTU_Probe(ProbeCMD)
 	if (!cgtu_2Wire)
 	{
 		if (ProbeCMD == 111)
-		{	
+		{
 			f = CGTU_Measure(cgtu_chMeasure);
 			var igt = (dev.r(204) + dev.r(233) / 1000).toFixed(2);
 			var igt_sc = (f / cgtu_Res).toFixed(2);
