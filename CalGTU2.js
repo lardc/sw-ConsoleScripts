@@ -8,7 +8,7 @@ cgtu_2Wire = false;
 // Global definitions
 cgtu_CompatibleMode = 1; // GTU with SL = 1; for other GTU = 0
 
-cgtu_Res  = 10;  // in Ohms
+cgtu_Res = 10;  // in Ohms
 
 cgtu_ResPower = 10;  // in Ohms
 cgtu_CurrentValues = [];
@@ -32,7 +32,7 @@ cgtu_Vmin = 2000;    // in mV
 cgtu_cntTotal = 0;
 cgtu_cntDone = 0;
 //
-cgtu_UseAvg = 1;
+cgtu_UseAvg = 0;
 cgtu_UseRangeTuning = 1;
 cgtu_PlotSummaryError = 0;
 
@@ -126,10 +126,10 @@ function CGTU_Probe(ProbeCMD)
 	{
 		if (cgtu_2Wire)
 		{
-			f = CGTU_Measure((ProbeCMD == 110) ? cgtu_chMeasure : cgtu_chMeasurePower);
+			f = CGTU_Measure(cgtu_chMeasure);
 			var igt = dev.r(204);
 			var vgt = dev.r(205);
-			var igt_sc = (f / cgtu_ResGate).toFixed(1);
+			var igt_sc = (f / cgtu_Res).toFixed(1);
 			var vgt_sc = f;
 
 			// gtu data
@@ -176,6 +176,7 @@ function CGTU_Probe(ProbeCMD)
 	}
 	if (ProbeCMD != 110 && cgtu_2Wire)
 	{
+		f = CGTU_Measure(cgtu_chMeasurePower);
 		var ih = dev.r(204);
 		var ih_sc = (f / cgtu_ResPower).toFixed(1);
 		
@@ -1196,9 +1197,9 @@ function CGTU_CollectGate(IterationsCount)
 {
 	cgtu_CurrentValues = CGEN_GetRange(cgtu_Imin, cgtu_Imax, cgtu_Istp);
 
-	print("Gate resistance set to " + cgtu_ResGate + " Ohms");
+	print("Gate resistance set to " + cgtu_Res + " Ohms");
 	print("-----------");
-	return CGTU_Collect(110, cgtu_ResGate, cgtu_CurrentValues, IterationsCount);
+	return CGTU_Collect(110, cgtu_Res, cgtu_CurrentValues, IterationsCount);
 }
 
 function CGTU_CollectPower(IterationsCount)
