@@ -495,48 +495,34 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 				}
 				else
 				{
+					var BaseReg;
+					var ScaleValue = cgtu_Values[j] / 1000;
 					switch (ProbeCMD)
 					{
 						case 110:	// VG
-							CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] / 1000);
-							//TEK_TriggerLevelF(cgtu_Values[j] / (1000 * 2));
-							sleep(2000);
-
-							// Configure GTU
-							dev.w(130 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
-							CGTU_Probe(ProbeCMD);
+							BaseReg = 130;
 							break;
 
 						case 111:	// IG
-							CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] * Resistance / 1000);
-							//TEK_TriggerLevelF(cgtu_Values[j] * Resistance / (580 * 2));
-							sleep(2000);
-
-							// Configure GTU
-							dev.w(131 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
-							CGTU_Probe(ProbeCMD);
+							BaseReg = 131;
+							ScaleValue *= Resistance;
 							break;
 
 						case 112:	// VD
-							CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] / 1000);
-							//TEK_TriggerLevelF(cgtu_Values[j] / (1000 * 2));
-							sleep(2000);
-
-							// Configure GTU
-							dev.w(128 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
-							CGTU_Probe(ProbeCMD);
+							BaseReg = 128;
 							break;
 
 						case 113:	// ID
-							CGTU_TekScale(cgtu_chMeasure, cgtu_Values[j] * Resistance / 1000);
-							//TEK_TriggerLevelF(cgtu_Values[j] * Resistance / (600 * 2));
-							sleep(2000);
-
-							// Configure GTU
-							dev.w(129 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
-							CGTU_Probe(ProbeCMD);
+							BaseReg = 129;
+							ScaleValue *= Resistance;
 							break;
 					}
+					
+					CGTU_TekScale(cgtu_chMeasure, ScaleValue);
+					sleep(2000);
+					// Configure GTU
+					dev.w(BaseReg + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
+					CGTU_Probe(ProbeCMD);
 				}
 			}
 
