@@ -519,14 +519,6 @@ function CSL_CalcDUT(Current1, Current2, Scale)
 	print("csl_DUTConst:	" + csl_DUTConst);
 }
 
-function CSL_PrintIsetCal()
-{
-	print("Setpoint correction");
-	print("I P2 x1e6:	" +  dev.rs(11));
-	print("I P1 x1000:	" +  dev.r (12));
-	print("I P0:		" + (dev.rs(13) / 10));
-}
-
 function CSL_PrintICal()
 {
 	if (CGEN_UseQuadraticCorrection())
@@ -681,13 +673,6 @@ function CSL_ResetVfsCal()
 function CSL_ResetIsetCal()
 {
 	CSL_CalISet(0, 1, 0);
-}
-
-function CSL_CalV(K, Offset)
-{
-	dev.w(22, Math.round(K * 1000));
-	dev.w(23, 1000);
-	dev.ws(32, Math.round(Offset));
 }
 
 function CSL_CalV2(P2, P1, P0)
