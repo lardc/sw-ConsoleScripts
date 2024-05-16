@@ -52,7 +52,6 @@ clsl_DUTConst = 0;		// in mV
 clsl_UseAvg = 1;
 clsl_UseRangeTuning = 1;
 //
-clsl_lsl_Enable = 1;
 clsl_lsl_RangeI = 1;
 
 // Current ranges
@@ -138,13 +137,15 @@ clsl_ER = 1;
 clsl_E0 = 0;
 
 clsl_PWM = false;
+clsl_Linear_IAR = false;
+clsl_Linear = false;
 
 
 // general
 function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channelSyncTrigger)
 {
 	// Version check
-	for (var i = 0; i < 5; i++)
+	for (var i = 4; i <= 8; i++)
 	{
 		if (dev.r(i) !== 0)
 		{
@@ -152,6 +153,24 @@ function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channe
 			break;
 		}
 		clsl_PWM = true;
+	}
+
+	if (!clsl_PWM)
+	{
+		for (var i = 31; i <= 33; i++)
+		{
+			if (dev.r(i) !== 0)
+			{
+				clsl_Linear_IAR = false;
+				break;
+			}
+			clsl_Linear_IAR = true;
+		}
+	}
+
+	if (!clsl_PWM && !clsl_Linear_IAR)
+	{
+		clsl_Linear = true;
 	}
 
 	if (channelMeasureU < 1 || channelMeasureU > 4 ||
@@ -409,18 +428,15 @@ function CLSL_CalIset(P2, P1, P0)
 {
 	if (clsl_PWM)
 	{
-		if (clsl_lsl_Enable)
-		{
-			dev.ws(11, Math.round(P2 * 1e6));
-			dev.w (12, Math.round(P1 * 1000));
-			dev.ws(13, Math.round(P0 * 10));
-		}
-		else
-		{
-			dev.ws(77, Math.round(P2 * 1e6));
-			dev.w (78, Math.round(P1 * 1000));
-			dev.ws(79, Math.round(P0));
-		}
+		dev.ws(77, Math.round(P2 * 1e6));
+		dev.w (78, Math.round(P1 * 1000));
+		dev.ws(79, Math.round(P0));
+	}
+	else if (clsl_Linear_IAR)
+	{
+		dev.ws(11, Math.round(P2 * 1e6));
+		dev.w (12, Math.round(P1 * 1000));
+		dev.ws(13, Math.round(P0 * 10));
 	}
 	else
 	{
@@ -631,9 +647,9 @@ function CLSL_Collect(CurrentValues, VoltageMode, IterationsCount)
 	if (clsl_ForceShuntRes)
 		clsl_ShuntRes = clsl_ForceShuntRes;
 	else
-		clsl_ShuntRes = (clsl_lsl_Enable) ? (dev.r(4) / 1000) : (dev.r(14) / dev.r(15));
+		clsl_ShuntRes = (clsl_Linear_IAR) ? (dev.r(4) / 1000) : (dev.r(14) / dev.r(15));
 	
-	if (clsl_lsl_Enable)
+	if (clsl_Linear_IAR)
 		print("LSL current range set to " + clsl_lsl_RangeI);
 	
 	if (VoltageMode)
@@ -769,7 +785,7 @@ function CLSL_CalcDUT(Current1, Current2, Scale)
 
 function CLSL_PrintIsetCal()
 {
-	if (clsl_lsl_Enable)
+	if (clsl_Linear_IAR)
 	{
 		print("Iset P2 x1e6:	" + dev.rs(11));
 		print("Iset P1 x1000:	" + dev.r(12));
@@ -787,7 +803,7 @@ function CLSL_PrintICal()
 {
 	if (CGEN_UseQuadraticCorrection())
 	{
-		if (clsl_lsl_Enable)
+		if (clsl_Linear_IAR)
 		{
 			print("Range " + clsl_lsl_RangeI + " correction");
 			print("I P2 x1e6:	" +  dev.rs(17 + clsl_lsl_RangeI * 3));
@@ -812,7 +828,7 @@ function CLSL_PrintVCal()
 {
 	if (CGEN_UseQuadraticCorrection())
 	{
-		if (clsl_lsl_Enable)
+		if (clsl_Linear_IAR)
 		{
 			print("V P2 x1e6:	" + dev.rs(14));
 			print("V P1 x1000:	" + dev.r(15));
@@ -895,7 +911,7 @@ function CLSL_CalV(K, Offset)
 
 function CLSL_CalV2(P2, P1, P0)
 {
-	if (clsl_lsl_Enable)
+	if (clsl_Linear_IAR)
 	{
 		dev.ws(14, Math.round(P2 * 1e6));
 		dev.w (15, Math.round(P1 * 1000));
@@ -932,7 +948,7 @@ function CLSL_CalI(K, Offset)
 
 function CLSL_CalI2(P2, P1, P0)
 {
-	if (clsl_lsl_Enable)
+	if (clsl_Linear_IAR)
 	{
 		dev.ws(17 + clsl_lsl_RangeI * 3, Math.round(P2 * 1e6));
 		dev.w (18 + clsl_lsl_RangeI * 3, Math.round(P1 * 1000));
