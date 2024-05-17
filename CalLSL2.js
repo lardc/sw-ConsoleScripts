@@ -52,7 +52,6 @@ clsl_DUTConst = 0;		// in mV
 clsl_UseAvg = 1;
 clsl_UseRangeTuning = 1;
 //
-clsl_lsl_RangeI = 1;
 
 // Current ranges
 // 
@@ -650,7 +649,7 @@ function CLSL_Collect(CurrentValues, VoltageMode, IterationsCount)
 		clsl_ShuntRes = (clsl_Linear_IAR) ? (dev.r(4) / 1000) : (dev.r(14) / dev.r(15));
 	
 	if (clsl_Linear_IAR)
-		print("LSL current range set to " + clsl_lsl_RangeI);
+		print("LSL current range set to " + clsl_CurrentRange);
 	
 	if (VoltageMode)
 	{
@@ -805,10 +804,10 @@ function CLSL_PrintICal()
 	{
 		if (clsl_Linear_IAR)
 		{
-			print("Range " + clsl_lsl_RangeI + " correction");
-			print("I P2 x1e6:	" +  dev.rs(17 + clsl_lsl_RangeI * 3));
-			print("I P1 x1000:	" +  dev.r (18 + clsl_lsl_RangeI * 3));
-			print("I P0:		" + (dev.rs(19 + clsl_lsl_RangeI * 3) / 10));
+			print("Range " + clsl_CurrentRange + " correction");
+			print("I P2 x1e6:	" +  dev.rs(17 + clsl_CurrentRange * 3));
+			print("I P1 x1000:	" +  dev.r (18 + clsl_CurrentRange * 3));
+			print("I P0:		" + (dev.rs(19 + clsl_CurrentRange * 3) / 10));
 		}
 		else
 		{
@@ -950,9 +949,9 @@ function CLSL_CalI2(P2, P1, P0)
 {
 	if (clsl_Linear_IAR)
 	{
-		dev.ws(17 + clsl_lsl_RangeI * 3, Math.round(P2 * 1e6));
-		dev.w (18 + clsl_lsl_RangeI * 3, Math.round(P1 * 1000));
-		dev.ws(19 + clsl_lsl_RangeI * 3, Math.round(P0 * 10));
+		dev.ws(17 + clsl_CurrentRange * 3, Math.round(P2 * 1e6));
+		dev.w (18 + clsl_CurrentRange * 3, Math.round(P1 * 1000));
+		dev.ws(19 + clsl_CurrentRange * 3, Math.round(P0 * 10));
 	}
 	else
 	{
