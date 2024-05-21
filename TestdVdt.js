@@ -12,6 +12,9 @@ DS_InProcess = 4;
 dvdt_Vmin = 500;
 dvdt_Vmax = 4500;
 dvdt_Vstp = 500;
+dvdt_Points = 10;
+
+dvdt_DeviderRate = 10; 		// Делитель скорости. Установить равным 1 если плата без диапазонов 
 
 dvdt_RatePoint = [100, 200, 320, 500, 1000, 1600, 2000];
 
@@ -204,10 +207,16 @@ function dVdt_IdleShortTestDetector()
 {
 	var SetV = CGEN_GetRange(dvdt_Vmin, dvdt_Vmax, (dvdt_Vmax - dvdt_Vmin) / 4);
 
-	
+	if(dev.r(192) == DS_None)
+	{
+		dev.c(1);
+		while (dev.r(192) != DS_Ready)
+			sleep(100);
+	}
+
 	for (var i = 0; i < dvdt_RatePoint.length; i++)
 	{
-		dev.w(129, dvdt_RatePoint[i] * 10);
+		dev.w(129, dvdt_RatePoint[i] * dvdt_DeviderRate);
 		for (var j = 0; j < SetV.length; j++)
 		{
 			dev.w(128, SetV[j]);
@@ -218,7 +227,7 @@ function dVdt_IdleShortTestDetector()
 			p("Напряжение:" + SetV[j] + " В");
 
 			sleep(300);
-			if (dev.r(197) == 1)
+			if (dev.r(198) == 1)
 			{
 				p("Режим ХХ");
 			}
@@ -244,12 +253,108 @@ function dVdt_StartPulse(Voltage, Rate)
 		while (dev.r(192) != DS_Ready)
 			sleep(100);
 	}
+
 	dev.w(128, Voltage);
-	dev.w(129, Rate * 10);
+	dev.w(129, Rate * dvdt_DeviderRate);
 	dev.c(100);
 	while(_dVdt_Active()) sleep(50);
 	if (dev.r(197) == 2)
 		print("Test Failed");
 	else if (dev.r(197) == 1)
 		print("Test OK");
+}
+
+function dVdt_ResourceTest(dVdt_resource_test, random_test_dut)
+{
+	var VoltageArray = CGEN_GetRangeNew(dvdt_Vmin, dvdt_Vmax, dvdt_Points);
+	var random = 0;
+	var cntDone = 0;
+	var cntFailedVerify = 0;
+	
+	// Re-enable power
+	if(dev.r(192) == DS_None)
+	{
+		dev.c(1);
+		while (dev.r(192) != DS_Ready)
+		sleep(100);
+	}	
+	else	
+	{
+		dev.c(2);
+		while (dev.r(192) != DS_None)
+			sleep(100);
+
+		dev.c(1);
+		while (dev.r(192) != DS_Ready)
+			sleep(100);
+	}
+	
+	var i = 0;
+	var today = new Date();								// Узнаем и сохраняем текущее время
+	var hours = today.getHours() + dVdt_resource_test;	// Узнаем кол-во часов в текущем времени и прибавляем к нему продолжительность ресурсного теста
+	today.setHours(hours);								// Задаем новое количество часов в дату
+
+	while((new Date()).getTime() < today.getTime())
+	{
+		for (var k = 0; k < VoltageArray.length; k++)
+		{
+			dev.w(128, VoltageArray[k]);
+			for (var i = 0; i < dvdt_RatePoint.length; i++)
+			{
+				sleep(1000);
+				dev.w(129, dvdt_RatePoint[i] * dvdt_DeviderRate)
+
+				if (random_test_dut)
+				{
+					random = Math.round(Math.random())
+					dev.w(150, random);
+					dev.c(117);
+					sleep(1000);
+					p("random = " + random);
+				}
+
+				dev.c(100);
+				sleep(1000);
+				while(_dVdt_Active()) sleep(50);
+				
+				print("dVdt set,  V/us: " + dvdt_RatePoint[i]);
+				print("Vset,         V: " + VoltageArray[k]);
+				if (dev.r(197) == 2)
+					print("Test Failed");
+				else if (dev.r(197) == 1)
+					print("Test OK");
+
+				if((random == 1 && dev.r(197) == 1) || (random == 0 && dev.r(197) == 2))
+					cntFailedVerify++;
+				
+				print("Кол-во неудачных тестов = " + cntFailedVerify);
+				cntDone++;
+				var left_time = new Date((today.getTime()) - ((new Date()).getTime()));
+				print("#" + cntDone + " Осталось " + (left_time.getHours()-3) + " ч и " + left_time.getMinutes() + " мин");
+
+				if (anykey())
+				{
+					print("Stopped from user!");
+					// Power disable
+					if (random_test_dut)
+					{
+						dev.w(150, 0);
+						dev.c(117);
+					}
+
+					dev.c(2);
+					return;
+				}
+			}
+		}
+	}
+
+	// Power disable
+	if (random_test_dut)
+	{
+		dev.w(150, 0);
+		dev.c(117);
+	}
+
+	dev.c(2);
 }
