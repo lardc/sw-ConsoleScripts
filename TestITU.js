@@ -1,10 +1,18 @@
 include("PrintStatus.js")
 
+// Совместимость: 0 - версия 1.0.0, 1 - версия 1.0
+compatibility = 0
+
 function ITU_Start(Voltage, Current, VReadyCallback, MutePrint)
 {
 	dev.w(128, Voltage)
-	dev.w(129, Math.floor(Current))
-	dev.w(130, Math.floor(Current % 1 * 1000))
+	if(compatibility)
+	{
+		dev.w(129, Math.floor(Current))
+		dev.w(130, Math.floor(Current % 1 * 1000))
+	}
+	else
+		dev.wf(129,Current)
 	dev.c(100)
 	var start_time = Date.now() / 1000
 	var time_div = 0
@@ -44,10 +52,28 @@ function ITU_Start(Voltage, Current, VReadyCallback, MutePrint)
 		{
 			var res = ITU_ReadResult()
 			
-			p('Voltage,      V: ' + res.v)
+			p('Voltage,      V: ' + res.v.toFixed(0))
 			p('Current,     mA: ' + res.i.toFixed(3))
+			if(!compatibility)
+			{
+				p('Current2,     mA: ' + res.i2.toFixed(3))
+				p('Current3,     mA: ' + res.i3.toFixed(3))
+				p('Current4,     mA: ' + res.i4.toFixed(3))	
+			}
 			p('Current act, mA: ' + res.i_act.toFixed(3))
+			if(!compatibility)
+			{
+				p('Current2 act, mA: ' + res.i2_act.toFixed(3))
+				p('Current3 act, mA: ' + res.i3_act.toFixed(3))
+				p('Current4 act, mA: ' + res.i4_act.toFixed(3))
+			}	
 			p('Cos Phi        : ' + res.cos_phi.toFixed(3))
+			if(!compatibility)
+			{
+				p('Cos Phi2        : ' + res.cos_phi2.toFixed(3))
+				p('Cos Phi3        : ' + res.cos_phi3.toFixed(3))
+				p('Cos Phi4        : ' + res.cos_phi4.toFixed(3))
+			}	
 			if(dev.r(195) == 1)
 				p('Output current saturation')
 		}
@@ -84,12 +110,36 @@ function ITU_Cycle(Count, Voltage, Current, Sleep)
 
 function ITU_ReadResult()
 {
-	var voltage 	= dev.r(200)
-	var current 	= dev.r(201) + dev.r(202) / 1000
-	var current_act = dev.r(203) + dev.r(204) / 1000
-	var cos_phi		= dev.rs(205) / 1000
+	var voltage 	= dev.rf(200)
 	
-	return {v : voltage, i : current, i_act : current_act, cos_phi : cos_phi}
+	if(compatibility)
+	{
+		var current 	= dev.r(201) + dev.r(202) / 1000
+		var current_act = dev.r(203) + dev.r(204) / 1000
+		var cos_phi		= dev.rs(205) / 1000
+	}
+	else
+	{	
+		var current 	= dev.rf(201)
+		var current2 	= dev.rf(204)
+		var current3 	= dev.rf(207)
+		var current4 	= dev.rf(210)	
+	
+		var current_act  = dev.rf(202)
+		var current2_act = dev.rf(205)
+		var current3_act = dev.rf(208)
+		var current4_act = dev.rf(211)
+	
+		var cos_phi		= dev.rf(203)
+		var cos_phi2	= dev.rf(206)
+		var cos_phi3	= dev.rf(209)
+		var cos_phi4	= dev.rf(212)
+	}	
+	if(compatibility)
+		return {v : voltage, i : current, i_act : current_act, cos_phi : cos_phi}
+	else
+		return {v : voltage, i : current, i2 : current2, i3 : current3, i4 :current4, i_act : current_act, i2_act : current2_act, i3_act : current3_act, 
+	i4_act : current4_act, cos_phi : cos_phi, cos_phi2 : cos_phi2, cos_phi3 : cos_phi3, cos_phi4 : cos_phi4}
 }
 
 function ITU_PlotFull()
@@ -135,6 +185,25 @@ function ITU_PlotFast()
 	plot(cosphi, time_scale, 0)
 	plot2(dev.rafs(4), irms, time_scale, 0)
 	plot2(dev.rafs(1), i_, time_scale, 0)
+}
+
+function ITU_PlotSaved(Prefix)
+{
+	var res = {}
+	res.v =			load(Prefix + '_v.txt')
+	res.i_ =		load(Prefix + '_i.txt')
+	res.vrms =		load(Prefix + '_vrms.txt')
+	res.irms = 		load(Prefix + '_irms.txt')
+	res.pwm = 		load(Prefix + '_pwm.txt')
+	res.cosphi = 	load(Prefix + '_cosphi.txt')
+	
+	var time_scale = 50e-6
+	plot(res.pwm, time_scale, 0);				sleep(200)
+	plot(res.cosphi, time_scale, 0);			sleep(200)
+	plot2(res.vrms, res.irms, time_scale, 0);	sleep(200)
+	plot2(res.v, res.i_, time_scale, 0)
+	
+	return res
 }
 
 function ITU_TestOptics()

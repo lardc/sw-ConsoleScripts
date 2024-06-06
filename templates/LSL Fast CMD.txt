@@ -45,6 +45,7 @@ clsl_CurrentRange = 0;
 clsl_UseAvg = 0;
 clsl_Iterations = 3;
 CLSL_Init_Tek(5,6,1,2,3);
+clsl_measuring_device = "TPS2000";
 
 CLSL_VerifyItm();
 
@@ -62,6 +63,7 @@ clsl_CurrentRange = 1;
 clsl_Iterations = 3;
 clsl_UseAvg = 0;
 CLSL_Init_Tek(5,6,1,2,3);
+clsl_measuring_device = "TPS2000";
 
 CLSL_VerifyItm();
 
@@ -78,6 +80,7 @@ clsl_Rshunt = 250; // мкОм
 clsl_Iterations = 3;
 clsl_UseAvg = 0;
 CLSL_Init_Tek(5,6,1,2,3);
+clsl_measuring_device = "TPS2000";
 
 CLSL_VerifyIset();
 
@@ -87,7 +90,7 @@ CLSL_CalibrateIset();
 / (Offset: 12) (K: 13)
 / [P0: 14] [P1: 15] [P2: 16]
 include("CalLSL.js");
-clsl_UtmMin = 500;
+clsl_UtmMin = 300;
 clsl_UtmMax = 5000;
 clsl_Points = 10;
 clsl_Rload = 0.22 / 63 * 1000000; // мкОм
@@ -115,6 +118,7 @@ clsl_Points = 10;
 clsl_Iterations = 3;
 clsl_UseAvg = 0;
 CLSL_Init_Tek(5,6,1,2,3);
+clsl_measuring_device = "TPS2000";
 
 CLSL_VerifyUg();
 
@@ -135,6 +139,7 @@ clsl_GateRshunt = 10531; // в мОм
 clsl_Iterations = 3;
 clsl_UseAvg = 0;
 CLSL_Init_Tek(5,6,1,2,3);
+clsl_measuring_device = "TPS2000";
 
 CLSL_VerifyIg();
 
@@ -148,7 +153,7 @@ CLSL_CalibrateIg();
 / [P0: 4] [P1: 5] [P2: 6]
 include("CalLSL.js");
 clsl_ItmMin = 50
-clsl_ItmMax = 990
+clsl_ItmMax = 1000
 clsl_Points = 10;
 clsl_Rshunt = 250; // в мкОм
 clsl_CurrentRange = 0;
@@ -156,8 +161,9 @@ clsl_Iterations = 3;
 clsl_UseAvg = 0;
 clsl_V_PulsePlate = 4000
 clsl_V_TriggerDelay = 3000e-6
-CLSL_Init_DMM(6);
 clsl_measuring_device = "DMM6000";
+CLSL_Init_DMM(8);
+dev.nid(9)
 
 CLSL_VerifyItm();
 
@@ -167,7 +173,7 @@ CLSL_CalibrateItm();
 / (Offset: 7) (K: 8)
 / [P0: 9] [P1: 10] [P2: 11]
 include("CalLSL.js");
-clsl_ItmMin = 1010
+clsl_ItmMin = 1001
 clsl_ItmMax = 6000
 clsl_Points = 10;
 clsl_Rshunt = 250; // в мкОм
@@ -176,8 +182,9 @@ clsl_Iterations = 3;
 clsl_UseAvg = 0;
 clsl_V_PulsePlate = 4000
 clsl_V_TriggerDelay = 3000e-6
-CLSL_Init_DMM(6);
 clsl_measuring_device = "DMM6000";
+CLSL_Init_DMM(8);
+dev.nid(9)
 
 CLSL_VerifyItm();
 
@@ -195,8 +202,9 @@ clsl_Iterations = 3;
 clsl_UseAvg = 0;
 clsl_V_PulsePlate = 4000
 clsl_V_TriggerDelay = 3000e-6
-CLSL_Init_DMM(6);
 clsl_measuring_device = "DMM6000";
+CLSL_Init_DMM(8);
+dev.nid(9)
 
 CLSL_VerifyIset();
 
@@ -206,7 +214,7 @@ CLSL_CalibrateIset();
 / (Offset: 12) (K: 13)
 / [P0: 14] [P1: 15] [P2: 16]
 include("CalLSL.js");
-clsl_UtmMin = 500;
+clsl_UtmMin = 300;
 clsl_UtmMax = 5000;
 clsl_Points = 10;
 clsl_Rload = 0.22 / 63 * 1000000; // в мкОм
@@ -214,9 +222,9 @@ clsl_Iterations = 3;
 clsl_UseAvg = 0;
 clsl_V_PulsePlate = 4000
 clsl_V_TriggerDelay = 3000e-6
-CLSL_Init_DMM(6);
 clsl_measuring_device = "DMM6000";
-
+CLSL_Init_DMM(8);
+dev.nid(9)
 CLSL_VerifyUtm();
 
 CLSL_CalibrateUtm();
@@ -236,8 +244,9 @@ clsl_Iterations = 3;
 clsl_UseAvg = 0;
 clsl_V_PulsePlate = 1000
 clsl_V_TriggerDelay = 0e-6
-CLSL_Init_DMM(6);
 clsl_measuring_device = "DMM6000";
+CLSL_Init_DMM(8);
+dev.nid(9)
 
 CLSL_VerifyUg();
 
@@ -259,8 +268,9 @@ clsl_Iterations = 3;
 clsl_UseAvg = 0;
 clsl_V_PulsePlate = 1000
 clsl_V_TriggerDelay = 0e-6
-CLSL_Init_DMM(6);
 clsl_measuring_device = "DMM6000";
+CLSL_Init_DMM(8);
+dev.nid(9)
 
 CLSL_VerifyIg();
 

@@ -210,3 +210,23 @@ function Derivative(InNameFile, OutNameFile)
 
 }
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
+// Максимальная амплиутуда для одного синуса
+function TEK_GD_Sinus_MAX(Data)
+{
+	var AverageValue = 0;
+
+	Data.sort(function (a, b)
+	{
+		return a - b;
+	});
+
+	var CoefBufferLengthForCalcAvg = Data.length / 1000;
+	var SamplingAvgNum = parseInt(15 * CoefBufferLengthForCalcAvg);
+	var MaxSamplesCutoffNum = parseInt(10 * CoefBufferLengthForCalcAvg);
+
+	for (var i = Data.length - SamplingAvgNum - MaxSamplesCutoffNum;
+			i < Data.length - MaxSamplesCutoffNum; ++i)
+		AverageValue += Data[i];
+
+	return (AverageValue / SamplingAvgNum);
+}

@@ -26,7 +26,7 @@ function SiC_GD_GetChannelCurve(Channel)
 	
 	// read curve
 	var data_input = TEK_Exec("curve?");
-	print("Channel " + Channel + " loaded");
+	//print("Channel " + Channel + " loaded");
 	
 	// validate data
 	if ((data_input[0] != "#") || (data_input[1] != 4) || (data_input[2] != 2) ||

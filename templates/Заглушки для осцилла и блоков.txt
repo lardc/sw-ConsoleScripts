@@ -1,0 +1,14 @@
+devTek = {}
+devTek.ss = function(arg) {}
+devTek.sswr = function(arg) { return [] }
+devTek.Connect = function(port) { p('tek co ' + port) }
+devTek.Disconnect = function() { p('tek dco') }
+dev = {}
+dev.r = function(reg) { var ret = (reg == 192) ? 3 : 0; p('r  ' + reg + ' > ' + ret); return ret }
+dev.w = function(reg, val) { p('w  ' + reg + ' = ' + val) }
+dev.c = function(act) { p('c  ' + act) }
+dev.co = function(port) { p('co ' + port) }
+dev.rs = function(reg) { var ret = 0; p('rs ' + reg + ' > ' + ret); return ret }
+dev.nid = function(nid) { p('n  ' + nid) }
+dev.Disconnect = function() { p('dco') }
+dev.Connect = dev.co

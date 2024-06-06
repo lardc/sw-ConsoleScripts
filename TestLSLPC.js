@@ -1,45 +1,69 @@
 include("PrintStatus.js")
 
-DS_None = 0,
-DS_Fault = 1,
-DS_Disabled = 2,
-DS_Ready = 3,
-DS_ConfigReady = 4,
-DS_InProcess = 5
+// Переменные совместимости
+cal_LSLPC_Compatibility = 0; // 0 - если прошивка блока на IAR, 1 - если прошивка на Atolic
+
+if (cal_LSLPC_Compatibility)
+{
+	REG_DEV_STATE = 192;
+	DS_None = 0;
+	DS_Fault = 1;
+	DS_Disabled = 2;
+	DS_Ready = 3;
+	DS_ConfigReady = 4;
+	DS_InProcess = 5;
+}
+else
+{
+	REG_DEV_STATE = 96;
+	DS_None = 0;
+	DS_Fault = 1;
+	DS_Disabled = 2;
+	DS_BatteryCharging = 3;
+	DS_Ready = 4;
+	DS_ConfigReady = 7;
+	DS_InProcess = 8;
+}
 
 function LSLPC_Start(Current)
 {
 	// Enable power
-	if(dev.r(192) == DS_None)
+	if(dev.r(REG_DEV_STATE) == DS_None)
 	{
 		dev.c(1);
-		while (dev.r(192) != DS_Ready)
+		while (dev.r(REG_DEV_STATE) != DS_Ready)
 		{
-			p("Напряжение на ячейках = " + dev.r(201) / 10 + " В");
-			sleep(1000);			
+			sleep(1000);
+			if(anykey())
+				return false;
 		}
-		p("Напряжение на ячейках = " + dev.r(201) / 10 + " В");
-	}	
-	else if (dev.r(192) == DS_Fault)	
-	{
-		dev.c(3);
-		dev.c(1);
-		while (dev.r(192) != DS_Ready)
-		{
-			p("Напряжение на ячейках = " + dev.r(201) / 10 + " В");
-			sleep(1000);			
-		}
-		p("Напряжение на ячейках = " + dev.r(201) / 10 + " В");
 	}
 
-	dev.w(128, Current * 10);
+	if (dev.r(REG_DEV_STATE) == DS_Fault)	
+	{
+		p("Fault");
+		return false;
+	}
+
+	if(dev.r(REG_DEV_STATE) == DS_BatteryCharging)
+	{
+		while (dev.r(REG_DEV_STATE) != DS_Ready)
+		{
+			sleep(1000);
+			if(anykey())
+				return false;
+		}
+	}
+
+
+	cal_LSLPC_Compatibility == 1 ? dev.w(128, Current * 10) : dev.w(64, Current);
 	dev.c(100);
 	
-	while(dev.r(192) != DS_ConfigReady)
+	while(dev.r(REG_DEV_STATE) != DS_ConfigReady)
 	{
 		sleep(50);
 		
-		if(dev.r(192) == DS_Fault)
+		if(dev.r(REG_DEV_STATE) == DS_Fault)
 		{
 			PrintStatus();
 			return false;
@@ -50,11 +74,11 @@ function LSLPC_Start(Current)
 	
 	sleep(20);
 	
-	while(dev.r(192) != DS_Ready)
+	while(dev.r(REG_DEV_STATE) != DS_Ready)
 	{
 		sleep(50);
 		
-		if(dev.r(192) == DS_Fault)
+		if(dev.r(REG_DEV_STATE) == DS_Fault)
 		{
 			PrintStatus();
 			return false;

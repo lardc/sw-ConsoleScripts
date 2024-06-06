@@ -4,19 +4,19 @@ BVT_StartPulse(N, Voltage, Current x10);
 BVT_ResourceTest(Voltage, Current x10);
 
 // Посмотреть версию прошивки
-i("PrintStatus.js");
+include("PrintStatus.js");
 PrintFWInfo();
 
 // Обновление прошивки
-i("FWUpdate.js");
+include("FWUpdate.js");
 FWU_BVT();
 
 // Скачать дамп регистров
-i("FWUpdate.js");
+include("FWUpdate.js");
 FWU_DumpBVT();
 
 // Загрузить дамп регистров
-i("FWUpdate.js");
+include("FWUpdate.js");
 FWU_RestoreBVT();
 
 // Отладка в комплексе
@@ -25,11 +25,12 @@ dev.nid(1)
 dev.c(113)
 dev.nid(4)
 dev.w(82,0)
-i("TestBVT.js");
-bvt_test_time = 1000;
+include("TestBVT.js");
+bvt_test_time = 300;
 BVT_StartPulse(1,8000,50);
 a = BVT_Plot();
 plot2(a.Voltage, a.Current, 1, 0);
+BVT_PlotXY()
 save('volt.csv', a.Voltage)
 save('curr.csv', a.Current)
 dev.w(82,1)
@@ -42,7 +43,7 @@ dev.w(82,1)
 
 //Ресурсный тест
 /AC
-i("TestBVT.js");
+include("TestBVT.js");
 bvt_pulse_sleep = 8000;
 bvt_test_time = 1000;
 bvt_resource_test = 8;
@@ -52,7 +53,7 @@ bvt_5hz_current = 50;
 BVT_ResourceTest(8000,3000);
 
 /DC
-i("TestBVT.js");
+include("TestBVT.js");
 bvt_pulse_sleep = 6000;
 bvt_resource_test = 7;
 BVT_ResourceTestDC(2000);
@@ -62,7 +63,7 @@ a = BVT_Plot();
 plot2(a.Voltage, a.Current, 1, 0);
 
 // Измерение AC
-i("TestBVT.js");
+include("TestBVT.js");
 BVT_StartPulse(1,500,50);
 // Измерение DC
 BVT_StartDC(1, 500, 100)
@@ -72,14 +73,14 @@ BVT_StartRes(1, 500)
 // Диапазон до 999 В (AC)
 / (Offset: -) (K: 28/29)
 / [P0: 114] [P1: 105] [P2: 104]
-i("CalBVT.js");
+include("CalBVT.js");
 cbvt_Iterations = 3;
 cbvt_RangeV = 1;
-cbvt_VminAC = 200;
+cbvt_VminAC = 100;
 cbvt_VmaxAC = 999;
 cbvt_Points = 10;
-CBVT_Init(11,5,1,2);
-//dev.nid(4);
+CBVT_Init(8,6,1,2);
+dev.nid(4);
 
 CBVT_VerifyV();
 
@@ -88,14 +89,14 @@ CBVT_CalibrateV();
 // Диапазон свыше 1000 В (AC)
 / (Offset: -) (K: 30/31)
 / [P0: 115] [P1: 107] [P2: 106]
-i("CalBVT.js");
+include("CalBVT.js");
 cbvt_Iterations = 3;
 cbvt_RangeV = 2;
 cbvt_VminAC = 1000;
-cbvt_VmaxAC = 8000;
+cbvt_VmaxAC = 6500;
 cbvt_Points = 10;
-CBVT_Init(11,5,1,2);
-//dev.nid(4);
+CBVT_Init(8,6,1,2);
+dev.nid(4);
 
 CBVT_VerifyV();
 
@@ -104,18 +105,20 @@ CBVT_CalibrateV();
 // Диапазон 0.5 - 5 мА (AC)
 / (Offset: -) (K: 37/38)
 / [P0: 118] [P1: 113] [P2: 112]
-i("CalBVT.js");
+include("CalBVT.js");
 cbvt_Iterations = 3;
 cbvt_RangeI = 0;
 cbvt_IminAC = 5;
 cbvt_ImaxAC = 50;
+cbvt_VminAC = 200;
+cbvt_VmaxAC = 4000;
 cbvt_Points = 10;
 cbvt_StartVLow = 100;
-cbvt_R = 1005600;
-cbvt_Shunt = 5600;
+cbvt_R = 220100;
+cbvt_Shunt = 100;
 bvt_test_time = 1000;
-CBVT_Init(11,5,1,2);
-//dev.nid(4);
+CBVT_Init(8,6,1,2);
+dev.nid(4);
 
 CBVT_VerifyI();
 
@@ -125,16 +128,18 @@ CBVT_CalibrateI();
 / (Offset: -) (K: 24/25)
 / [P0: 116] [P1: 97] [P2: 96]
 include("CalBVT.js");
-cbvt_Iterations = 1;
+cbvt_Iterations = 3;
 cbvt_RangeI = 1;
 cbvt_IminAC = 50;
 cbvt_ImaxAC = 300;
+cbvt_VminAC = 200;
+cbvt_VmaxAC = 4000;
 cbvt_Points = 10;
 cbvt_StartVLow = 100;
 cbvt_R = 220100;
 cbvt_Shunt = 100;
 bvt_test_time = 1000;
-CBVT_Init(4,6,1,2);
+CBVT_Init(8,6,1,2);
 dev.nid(4);
 
 CBVT_VerifyI();
@@ -144,17 +149,19 @@ CBVT_CalibrateI();
 // Диапазон 0.5 - 30мА (AC)
 / (Offset: -) (K: 24/25)
 / [P0: 116] [P1: 97] [P2: 96]
-i("CalBVT.js");
-cbvt_Iterations = 1;
+include("CalBVT.js");
+cbvt_Iterations = 3;
 cbvt_RangeI = 1;
 cbvt_IminAC = 5;
 cbvt_ImaxAC = 300;
+cbvt_VminAC = 200;
+cbvt_VmaxAC = 4000;
 cbvt_Points = 10;
 cbvt_StartVLow = 100;
 cbvt_R = 220100;
 cbvt_Shunt = 100;
 bvt_test_time = 1000;
-CBVT_Init(4,6,1,2);
+CBVT_Init(8,6,1,2);
 dev.nid(4);
 
 CBVT_VerifyI();
@@ -164,18 +171,20 @@ CBVT_CalibrateI();
 // Диапазон 30 - 300мА (AC)
 / (Offset: -) (K: 26/27)
 / [P0: 117] [P1: 99] [P2: 98]
-i("CalBVT.js");
-cbvt_Ilimit2 = 300;
-cbvt_Iterations = 1;
-cbvt_RangeI = 2;
+include("CalBVT.js");
+cbvt_Ilimit2 = 500;
+cbvt_Iterations = 3;
+cbvt_RangeI = 3;
 cbvt_IminAC = 300;
-cbvt_ImaxAC = 3000;
+cbvt_ImaxAC = 5000;
+cbvt_VminAC = 200;
+cbvt_VmaxAC = 4000;
 cbvt_Points = 10;
 cbvt_StartVLow = 100;
 cbvt_R = 12010;
 cbvt_Shunt = 10;
 bvt_test_time = 3000;
-CBVT_Init(4,6,1,2);
+CBVT_Init(8,6,1,2);
 dev.nid(4);
 
 CBVT_VerifyI();
@@ -185,7 +194,7 @@ CBVT_CalibrateI();
 
 БЛОК BVT HP DC. Функционал DC
 // Диапазон 500 - 2000В (DC)
-i("CalBVT.js");
+include("CalBVT.js");
 cbvt_Iterations = 3;
 cbvt_VminDC = 500;
 cbvt_VmaxDC	= 2000;
@@ -200,7 +209,7 @@ CBVT_VerifyVDC()
 / [P0: 118] [P1: 113] [P2: 112]
 
 // Нагрузка нагрузка R_HIGH (DC)
-i("CalBVT.js");
+include("CalBVT.js");
 cbvt_Iterations = 3;
 cbvt_DC_LowI = 1;
 cbvt_VminDC = 500;
@@ -212,7 +221,7 @@ CBVT_Init(4,5,1,2);
 CBVT_VerifyIDC()
 
 // Диапазон нагрузка R_MID (DC)
-i("CalBVT.js");
+include("CalBVT.js");
 cbvt_Iterations = 3;
 cbvt_DC_LowI = 1;
 cbvt_VminDC = 500;
@@ -228,7 +237,7 @@ CBVT_VerifyIDC()
 / [P0: 110] [P1: 109] [P2: 108]
 
 // Диапазон нагрузка R_MID (DC)
-i("CalBVT.js");
+include("CalBVT.js");
 cbvt_Iterations = 3;
 cbvt_DC_LowI = 0;
 cbvt_VminDC = 1500;
@@ -240,7 +249,7 @@ CBVT_Init(4,5,1,2);
 CBVT_VerifyIDC()
 
 // Диапазон нагрузка R_LOW (DC)
-i("CalBVT.js");
+include("CalBVT.js");
 cbvt_Iterations = 3;
 cbvt_DC_LowI = 0;
 cbvt_VminDC = 500;

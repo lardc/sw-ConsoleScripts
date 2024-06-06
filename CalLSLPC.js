@@ -1,6 +1,10 @@
 include("TestLSLPC.js")
 include("Tektronix.js")
 include("CalGeneral.js")
+include("TEK_GetData.js")
+
+// Переменные совместимости
+cal_LSLPC_Compatibility = 1; // 0 - если прошивка блока на IAR, 1 - если прошивка на Atolic
 
 // Calibration setup parameters
 cal_Rshunt = 750;	// in uOhms
@@ -31,6 +35,7 @@ cal_IdSc = [];
 
 // Relative error
 cal_IdErr = [];
+cal_IdUnitErr = [];
 
 // Correction
 cal_IdCorr = [];
@@ -99,8 +104,7 @@ function CAL_VerifyId()
 	CAL_TekInit();
 
 	// Reload values
-	var cal_IdStp = Math.round((cal_IdMax[cal_CurrentRange] - cal_IdMin[cal_CurrentRange]) / (cal_Points - 1));
-	var CurrentArray = CGEN_GetRange(cal_IdMin[cal_CurrentRange], cal_IdMax[cal_CurrentRange], cal_IdStp);
+	var CurrentArray = CGEN_GetRangeLogarithm(cal_IdMin[cal_CurrentRange], cal_IdMax[cal_CurrentRange], cal_Points);
 
 	if (CAL_CollectId(CurrentArray, cal_Iterations))
 	{
@@ -108,6 +112,7 @@ function CAL_VerifyId()
 
 		// Plot relative error distribution
 		scattern(cal_IdSc, cal_IdErr, "Current (in A)", "Error (in %)", "Current setpoint relative error");
+		scattern(cal_IdSc, cal_IdUnitErr, "Current (in A)", "Error (in %)", "Current unit relative error");
 	}
 }
 //--------------------
@@ -144,7 +149,8 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 			}
 			
 			// Unit data
-			var IdSet = dev.r(128) / 10;
+			var IdSet;
+			(cal_LSLPC_Compatibility == 1) ? IdSet = dev.r(128) / 10 : IdSet = dev.r(64);
 			cal_Id.push(IdSet);
 			print("Idset, A: " + IdSet);
 			// print("IdsetRaw, A: " + (dev.r(21) * Math.pow(IdSet, dev.r(20) / 1000)).toFixed(0)); // для грубой калибровки
@@ -155,7 +161,14 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 			print("Idtek, A: " + IdSc);
 
 			// Relative error
-			var IdErr = ((IdSet - IdSc) / IdSc * 100).toFixed(2);
+			Id_UnitArray = dev.rafs(1);
+			var IdUnit = TEK_GD_Sinus_MAX(Id_UnitArray)
+			IdUnitErr = ((IdUnit - IdSc) / IdSc * 100).toFixed(2);
+			cal_IdUnitErr.push(IdUnitErr);
+			print("Idunit, A: " + IdUnit);
+			print("IdunitErr, %: " + IdUnitErr);
+
+			var IdErr = ((IdSc - IdSet) / IdSet * 100).toFixed(2);
 			cal_IdErr.push(IdErr);
 			print("IdSetErr, %: " + IdErr);
 			print("--------------------");
@@ -185,7 +198,7 @@ function CAL_TekInit()
 {
 	TEK_ChannelInit(cal_chMeasureId, "1", "0.01");
 	TEK_TriggerPulseInit(cal_chMeasureId, "0.04");
-	TEK_Horizontal("0.5e-3", "-2e-3");
+	TEK_Horizontal("1e-3", "-2e-3");
 	TEK_Send("measurement:meas" + cal_chMeasureId + ":source ch" + cal_chMeasureId);
 	TEK_Send("measurement:meas" + cal_chMeasureId + ":type maximum");
 }
@@ -209,6 +222,7 @@ function CAL_ResetA()
 
 	// Relative error
 	cal_IdErr = [];
+	cal_IdUnitErr = [];
 
 	// Correction
 	cal_IdCorr = [];

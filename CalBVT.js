@@ -2,60 +2,54 @@ include("Tektronix.js")
 include("CalGeneral.js")
 include("Numeric.js")
 
-print("Scripts CalBVT.js initialize");
-
 // Global definitions
-cbvt_VmaxAC = 8000;		// in V
-cbvt_VminAC = 1000;		// in V
+cbvt_VmaxAC = 8000;			// in V
+cbvt_VminAC = 1000;			// in V
 //
-cbvt_ImaxAC = 300;		// in mA * 10
-cbvt_IminAC = 5;		// in mA * 10
+cbvt_ImaxAC = 300;			// in mA * 10
+cbvt_IminAC = 5;			// in mA * 10
 //
 cbvt_Points = 10;
 
-cbvt_VoltageProbeRatio = 1000;	// Коэффициент деление пробника напряжения
+cbvt_VoltageProbeRatio = 1000;	// Коэффициент деления пробника напряжения
 cbvt_StartVLow = 100;			// Стартовое напряжение для напряжений до 1000В (В)
 cbvt_StartVHigh = 500;			// Стартовое напряжение для напряжений от 1000В (В)
 //
-cbvt_Shunt	= 99.45;	// in Ohms
-cbvt_R		= 215930;	// in Ohms
+cbvt_Shunt	= 99.45;		// in Ohms
+cbvt_R		= 215930;		// in Ohms
 
 // Voltage range number
-cbvt_RangeV = 1;		// 1 = Range [ < 1000 V]; 2 = Range [ > 1000 V];
+cbvt_RangeV = 1;			// 1 = Range [ < 1000 V]; 2 = Range [ > 1000 V];
 
 // Current range number
-cbvt_RangeI = 1;		// 0 = Range [ < 5 mA]; 1 = Range [ < 30 mA]; 2 = Range [ < 30 - 300 mA]; 3 = Range [ > 300 mA]
+cbvt_RangeI = 1;			// 0 = Range [ < 5 mA]; 1 = Range [ < 30 mA]; 2 = Range [ > 30 mA]; 3 = Range [ < 5 mA] on Powerex BVT
 //
-cbvt_Ilimit0 = 5;		// in mA
-cbvt_Ilimit1 = 30;		// in mA
-cbvt_Ilimit2 = 300;		// in mA
-cbvt_Ilimit3 = 500;		// in mA
-//
-cbvt_Freq1 = 50;		// in Hz
-cbvt_Freq2 = 5;		// in Hz
+cbvt_Freq1 = 50;			// in Hz
+cbvt_Freq2 = 5;				// in Hz
 
 // DC mode
-cbvt_VmaxDC	= 2000;		// in V
-cbvt_VminDC	= 500;		// in V
+cbvt_VmaxDC = 2000;			// in V
+cbvt_VminDC = 500;			// in V
 //
-cbvt_ShuntDC = 51e3;	// in Ohms
-cbvt_RDC	 = 100e6;	// in Ohms
+cbvt_ShuntDC = 51e3;		// in Ohms
+cbvt_RDC = 100e6;			// in Ohms
 
 // Current DC range number
-cbvt_RangeIDC = 0;		// 0 = Range [ < 100 uA]; 1 = Range [ < 5000 uA];
+cbvt_RangeIDC = 0;			// 0 = Range [ < 100 uA]; 1 = Range [ < 5000 uA];
 //
 cbvt_IlimitDC0 = 100;		// in uA
 cbvt_IlimitDC1 = 5000;		// in uA
-//
-cbvt_UseRangeTuning = 1;
-cbvt_UseMicroAmps = 1;	// Use microamp precision for current
-//
-cbvt_Vmax	= 0;
-cbvt_Vmin	= 0;
-cbvt_Vstp	= 0;
 
+cbvt_UseRangeTuning = 1;
+cbvt_UseMicroAmps = 1;		// Use microamp precision for current
+//
+cbvt_Vmax = 0;
+cbvt_Vmin = 0;
+cbvt_Vstp = 0;
+//
 cbvt_test_time = 1000;
 cbvt_pulse_sleep = 1000;
+
 // Counters
 cbvt_cntTotal = 0;
 cbvt_cntDone = 0;
@@ -132,11 +126,13 @@ function CBVT_Init(portBVT, portTek, channelMeasureV, channelMeasureI)
 
 function CBVT_CalibrateV()
 {
-	cbvt_Vmin	= cbvt_VminAC;
-	cbvt_Vmax	= cbvt_VmaxAC;
+	cbvt_Vmin = cbvt_VminAC;
+	cbvt_Vmax = cbvt_VmaxAC;
 	cbvt_Vstp = Math.round((cbvt_Vmax - cbvt_Vmin) / (cbvt_Points - 1));
 	
-	CBVT_Prepare();
+	cbvt_VoltageValues = CGEN_GetRange(cbvt_Vmin, cbvt_Vmax, cbvt_Vstp);
+	CBVT_ResetA();
+
 	CBVT_ResetVCal();
 	
 	if (CBVT_Collect(cbvt_VoltageValues, cbvt_Iterations, 1))
@@ -165,11 +161,12 @@ function CBVT_CalibrateV()
 
 function CBVT_VerifyV()
 {
-	cbvt_Vmin	= cbvt_VminAC;
-	cbvt_Vmax	= cbvt_VmaxAC;
+	cbvt_Vmin = cbvt_VminAC;
+	cbvt_Vmax = cbvt_VmaxAC;
 	cbvt_Vstp = Math.round((cbvt_Vmax - cbvt_Vmin) / (cbvt_Points - 1));
 	
-	CBVT_Prepare();
+	cbvt_VoltageValues = CGEN_GetRange(cbvt_Vmin, cbvt_Vmax, cbvt_Vstp);
+	CBVT_ResetA();
 	
 	if (CBVT_Collect(cbvt_VoltageValues, cbvt_Iterations, 1))
 	{
@@ -187,11 +184,14 @@ function CBVT_VerifyV()
 function CBVT_CalibrateI()
 {
 	var Vmax = Math.round((cbvt_ImaxAC / 10) * cbvt_R * 0.95 / 1000);
-	cbvt_Vmin = Math.round((cbvt_IminAC / 10) * cbvt_R * 1.05 / 1000);
+	var Vmin = Math.round((cbvt_IminAC / 10) * cbvt_R * 1.05 / 1000);
 	cbvt_Vmax = (Vmax > cbvt_VmaxAC) ? cbvt_VmaxAC : Vmax;
+	cbvt_Vmin = (Vmin < cbvt_VminAC) ? cbvt_VminAC : Vmin;
 	cbvt_Vstp = Math.round((cbvt_Vmax - cbvt_Vmin) / (cbvt_Points - 1));
 	
-	CBVT_Prepare();
+	cbvt_VoltageValues = CGEN_GetRange(cbvt_Vmin, cbvt_Vmax, cbvt_Vstp);
+	CBVT_ResetA();
+
 	CBVT_ResetICal();
 	
 	if (CBVT_Collect(cbvt_VoltageValues, cbvt_Iterations, 2))
@@ -199,7 +199,7 @@ function CBVT_CalibrateI()
 		CBVT_SaveI("bvt_i");
 		
 		// Plot relative error distribution
-		scattern(cbvt_i_sc, cbvt_i_err, "Current (in mA)", "Error (in %)", "Irrm/Idrm relative error < " + CBVT_GetILim() + " mA");
+		scattern(cbvt_i_sc, cbvt_i_err, "Current (in mA)", "Error (in %)", "Irrm/Idrm relative error < " + cbvt_ImaxAC / 10 + " mA");
 		
 		if (CGEN_UseQuadraticCorrection())
 		{
@@ -221,32 +221,36 @@ function CBVT_CalibrateI()
 function CBVT_VerifyI()
 {
 	var Vmax = Math.round((cbvt_ImaxAC / 10) * cbvt_R * 0.95 / 1000);
-	cbvt_Vmin = Math.round((cbvt_IminAC / 10) * cbvt_R * 1.05 / 1000);
+	var Vmin = Math.round((cbvt_IminAC / 10) * cbvt_R * 1.05 / 1000);
 	cbvt_Vmax = (Vmax > cbvt_VmaxAC) ? cbvt_VmaxAC : Vmax;
+	cbvt_Vmin = (Vmin < cbvt_VminAC) ? cbvt_VminAC : Vmin;
 	cbvt_Vstp = Math.round((cbvt_Vmax - cbvt_Vmin) / (cbvt_Points - 1));
 
-	CBVT_Prepare();
+	cbvt_VoltageValues = CGEN_GetRange(cbvt_Vmin, cbvt_Vmax, cbvt_Vstp);
+	CBVT_ResetA();
 	
 	if (CBVT_Collect(cbvt_VoltageValues, cbvt_Iterations, 2))
 	{
 		CBVT_SaveI("bvt_i_fixed");
 		
 		// Plot relative error distribution
-		scattern(cbvt_i_sc, cbvt_i_err, "Current (in mA)", "Error (in %)", "Irrm/Idrm relative error < " + CBVT_GetILim() + " mA");
+		scattern(cbvt_i_sc, cbvt_i_err, "Current (in mA)", "Error (in %)", "Irrm/Idrm relative error < " + cbvt_ImaxAC / 10 + " mA");
 
 		// Plot relative error distribution
 		if (cbvt_EnableSumError)
-			scattern(cbvt_i_sc, cbvt_i_err_sum, "Current (in mA)", "Error (in %)", "Irrm/Idrm summary error < " + CBVT_GetILim() + " mA");
+			scattern(cbvt_i_sc, cbvt_i_err_sum, "Current (in mA)", "Error (in %)", "Irrm/Idrm summary error < " + cbvt_ImaxAC / 10 + " mA");
 	}
 }
 
 function CBVT_CalibrateVDC()
 {
-	cbvt_Vmin	= cbvt_VminDC;
-	cbvt_Vmax	= cbvt_VmaxDC;
+	cbvt_Vmin = cbvt_VminDC;
+	cbvt_Vmax = cbvt_VmaxDC;
 	cbvt_Vstp = Math.round((cbvt_Vmax - cbvt_Vmin) / (cbvt_Points - 1));
 	
-	CBVT_Prepare();
+	cbvt_VoltageValues = CGEN_GetRange(cbvt_Vmin, cbvt_Vmax, cbvt_Vstp);
+	CBVT_ResetA();
+
 	CBVT_ResetVCal();
 	
 	if (CBVT_CollectDC(cbvt_VoltageValues, cbvt_Iterations, 1))
@@ -275,11 +279,12 @@ function CBVT_CalibrateVDC()
 
 function CBVT_VerifyVDC()
 {
-	cbvt_Vmin	= cbvt_VminDC;
-	cbvt_Vmax	= cbvt_VmaxDC;
+	cbvt_Vmin = cbvt_VminDC;
+	cbvt_Vmax = cbvt_VmaxDC;
 	cbvt_Vstp = Math.round((cbvt_Vmax - cbvt_Vmin) / (cbvt_Points - 1));
 	
-	CBVT_Prepare();
+	cbvt_VoltageValues = CGEN_GetRange(cbvt_Vmin, cbvt_Vmax, cbvt_Vstp);
+	CBVT_ResetA();
 	
 	if (CBVT_CollectDC(cbvt_VoltageValues, cbvt_Iterations, 1))
 	{
@@ -297,7 +302,9 @@ function CBVT_CalibrateIDC()
 	cbvt_Vmax = (Vmax > cbvt_VmaxDC) ? cbvt_VmaxDC : Vmax;
 	cbvt_Vstp = Math.round((cbvt_Vmax - cbvt_Vmin) / (cbvt_Points - 1));
 	
-	CBVT_Prepare();
+	cbvt_VoltageValues = CGEN_GetRange(cbvt_Vmin, cbvt_Vmax, cbvt_Vstp);
+	CBVT_ResetA();
+
 	CBVT_ResetICalDC();
 	
 	if (CBVT_CollectDC(cbvt_VoltageValues, cbvt_Iterations, 2))
@@ -330,7 +337,8 @@ function CBVT_VerifyIDC()
 	cbvt_Vmax = cbvt_VmaxDC;
 	cbvt_Vstp = Math.round((cbvt_Vmax - cbvt_Vmin) / (cbvt_Points - 1));
 	
-	CBVT_Prepare();
+	cbvt_VoltageValues = CGEN_GetRange(cbvt_Vmin, cbvt_Vmax, cbvt_Vstp);
+	CBVT_ResetA();
 	
 	if (CBVT_CollectDC(cbvt_VoltageValues, cbvt_Iterations, 2))
 	{
@@ -381,10 +389,10 @@ function CBVT_Collect(VoltageValues, IterationsCount, PrintMode)
 	
 	// Global configuration
 	dev.w(128, 3);																// Test type - reverse pulse
-	dev.w(130, CBVT_GetILim() * 10);											// Current limit
+	dev.w(130, cbvt_ImaxAC);													// Current limit
 	dev.w(132, cbvt_test_time);													// Plate time
 	dev.w(133, 10);																// Rise rate
-	dev.w(136, Math.round(50 / ((cbvt_RangeI < 2) ? cbvt_Freq1 : cbvt_Freq2)));	// Frequency divisor
+	dev.w(136, Math.round(50 / (((cbvt_ImaxAC / 10) < 50) ? cbvt_Freq1 : cbvt_Freq2)));	// Frequency divisor
 	
 	CBVT_TekScale(cbvt_chMeasureV, cbvt_Vmax);
 	CBVT_TekScale(cbvt_chMeasureI, (cbvt_Vmax / cbvt_R * cbvt_Shunt));
@@ -566,13 +574,13 @@ function CBVT_Probe(PrintMode)
 		case 1:
 			print("V,     V: " + v);
 			print("Vtek,  V: " + f_v);
-			print("Погр,  %: " + ((v - f_v) / f_v * 100).toFixed(2));
+			print("Error, %: " + ((v - f_v) / f_v * 100).toFixed(2));
 			break;
 		
 		case 2:
 			print("I,    mA: " + i.toFixed(cbvt_UseMicroAmps ? 3 : 1));
 			print("Itek, mA: " + f_i.toFixed(3));
-			print("Погр,  %: " + ((i - f_i) / f_i * 100).toFixed(2));
+			print("Error, %: " + ((i - f_i) / f_i * 100).toFixed(2));
 			break;
 	}
 	
@@ -613,13 +621,13 @@ function CBVT_ProbeDC(PrintMode)
 		case 1:
 			print("V,     V: " + v);
 			print("Vtek,  V: " + f_v);
-			print("Погр,  %: " + ((v - f_v) / f_v * 100).toFixed(2));
+			print("Error, %: " + ((v - f_v) / f_v * 100).toFixed(2));
 			break;
 		
 		case 2:
 			print("I,    uA: " + i);
 			print("Itek, uA: " + f_i.toFixed(3));
-			print("Погр,  %: " + ((i - f_i) / f_i * 100).toFixed(2));
+			print("Error, %: " + ((i - f_i) / f_i * 100).toFixed(2));
 			break;
 	}
 	
@@ -644,18 +652,6 @@ function CBVT_UpdateVoltageProbeRatio(Channel, Ratio)
 	TEK_Send("ch" + Channel + ":probe " + Ratio);
 }
 
-function CBVT_GetILim()
-{
-	if (cbvt_RangeI == 0)
-		return cbvt_Ilimit0;
-	else if (cbvt_RangeI == 1)
-		return cbvt_Ilimit1;
-	else if (cbvt_RangeI == 2)
-		return cbvt_Ilimit2;
-	else if (cbvt_RangeI == 3)
-		return cbvt_Ilimit3;
-}
-
 function CBVT_GetILimDC()
 {
 	if (cbvt_RangeIDC == 0)
@@ -676,24 +672,6 @@ function CBVT_TekScale(Channel, Value)
 	// 8 - number of scope grids in full scale
 	var scale = (Value / (8 * 0.9));
 	TEK_Send("ch" + Channel + ":scale " + scale);
-}
-
-function CBVT_Prepare()
-{
-	// Reinit vars
-	cbvt_VoltageValues = CGEN_GetRange(cbvt_Vmin, cbvt_Vmax, cbvt_Vstp);
-	
-		// Collect data
-	CBVT_ResetA();
-
-	if (cbvt_RangeI == 0)
-		return cbvt_Ilimit0;
-	else if (cbvt_RangeI == 1)
-		return cbvt_Ilimit1;
-	else if (cbvt_RangeI == 2)
-		return cbvt_Ilimit2;
-	else if (cbvt_RangeI == 3)
-		return cbvt_Ilimit3;
 }
 
 // ResetArrays
@@ -863,33 +841,30 @@ function CBVT_PrintVCal()
 
 function CBVT_PrintICal()
 {
+	print("Range " + cbvt_RangeI + " [ " + cbvt_IminAC / 10 + "..." + cbvt_ImaxAC / 10 + " mA]");
 	if (CGEN_UseQuadraticCorrection())
 	{
 		switch (cbvt_RangeI)
 		{
 			case 0:
-				print("Range [ < 5 mA]");
-				print("I0 P2 x1e6:	" + dev.rs(108));
-				print("I0 P1 x1000:	" + dev.r(109));
-				print("I0 P0 x1000:	" + dev.rs(110));
+				print("I0 P2 x1e6:	" + dev.rs(112));
+				print("I0 P1 x1000:	" + dev.r(113));
+				print("I0 P0 x1000:	" + dev.rs(118));
 				break;
 			case 1:
-				print("Range [ < 30 mA]");
 				print("I1 P2 x1e6:	" + dev.rs(96));
 				print("I1 P1 x1000:	" + dev.r(97));
 				print("I1 P0 x1000:	" + dev.rs(116));
 				break;
 			case 2:
-				print("Range [30 - 300 mA]");
 				print("I2 P2 x1e6:	" + dev.rs(98));
 				print("I2 P1 x1000:	" + dev.r(99));
 				print("I2 P0 x1000:	" + dev.rs(117));
 				break;
 			case 3:
-				print("Range [ > 300 mA]");
-				print("I3 P2 x1e6:	" + dev.rs(112));
-				print("I3 P1 x1000:	" + dev.r(113));
-				print("I3 P0 x1000:	" + dev.rs(118));
+				print("I3 P2 x1e6:	" + dev.rs(108));
+				print("I3 P1 x1000:	" + dev.r(109));
+				print("I3 P0 x1000:	" + dev.rs(110));
 				break;
 			default:
 				print("Incorrect I range.");
@@ -901,17 +876,14 @@ function CBVT_PrintICal()
 		switch (cbvt_RangeI)
 		{
 			case 1:
-				print("Range [ < 30 mA]");
 				print("I1 K:		" + (dev.r(96) / dev.r(97)));
 				print("I1 Offset:	" + (dev.rs(116) / 1000));
 				break;
 			case 2:
-				print("Range [30 - 300 mA]");
 				print("I2 K:		" + (dev.r(98) / dev.r(99)));
 				print("I2 Offset:	" + (dev.rs(117) / 1000));
 				break;
 			case 3:
-				print("Range [ > 300 mA]");
 				print("I3 K:		" + (dev.r(112) / dev.r(113)));
 				print("I3 Offset:	" + (dev.rs(118) / 1000));
 				break;
@@ -994,28 +966,25 @@ function CBVT_ResetVCal()
 
 function CBVT_ResetICal()
 {
+	print("Range " + cbvt_RangeI + " [ " + cbvt_IminAC / 10 + "..." + cbvt_ImaxAC / 10 + " mA]");
 	if (CGEN_UseQuadraticCorrection())
 	{
 		switch (cbvt_RangeI)
 		{
 			case 0:
 				CBVT_Cal2IDC0(0, 1, 0);
-				print("Range [ < 5 mA]");
 				print("Current calibration reset done");
 				break;
 			case 1:
 				CBVT_Cal2I1(0, 1, 0);
-				print("Range [ < 30 mA]");
 				print("Current calibration reset done");
 				break;
 			case 2:
 				CBVT_Cal2I2(0, 1, 0);
-				print("Range [30 - 300 mA]");
 				print("Current calibration reset done");
 				break;
 			case 3:
-				CBVT_Cal2I3(0, 1, 0);
-				print("Range [ > 300 mA]");
+				CBVT_Cal2IDC1(0, 1, 0);
 				print("Current calibration reset done");
 				break;
 			default:
@@ -1029,17 +998,14 @@ function CBVT_ResetICal()
 		{
 			case 1:
 				CBVT_CalI1(1, 0);
-				print("Range [ < 30 mA]");
 				print("Current calibration reset done");
 				break;
 			case 2:
 				CBVT_CalI2(1, 0);
-				print("Range [30 - 300 mA]");
 				print("Current calibration reset done");
 				break;
 			case 3:
 				CBVT_CalI3(1, 0);
-				print("Range [ > 300 mA]");
 				print("Current calibration reset done");
 				break;
 			default:
@@ -1142,26 +1108,23 @@ function CBVT_CorrectI(K, Offset)
 
 function CBVT_Correct2I(P2, P1, P0)
 {
+	print("Range " + cbvt_RangeI + " [ " + cbvt_IminAC / 10 + "..." + cbvt_ImaxAC / 10 + " mA]");
 	switch (cbvt_RangeI)
 	{
 		case 0:
 			CBVT_Cal2IDC0(P2, P1, P0);
-			print("Range [ < 5 mA]");
 			print("Current calibration updated");
 			break;
 		case 1:
 			CBVT_Cal2I1(P2, P1, P0);
-			print("Range [ < 30 mA]");
 			print("Current calibration updated");
 			break;
 		case 2:
 			CBVT_Cal2I2(P2, P1, P0);
-			print("Range [30 - 300 mA]");
 			print("Current calibration updated");
 			break;
 		case 3:
-			CBVT_Cal2I3(P2, P1, P0);
-			print("Range [ > 300 mA]");
+			CBVT_Cal2IDC1(P2, P1, P0);
 			print("Current calibration updated");
 			break;
 		default:

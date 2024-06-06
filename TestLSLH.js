@@ -14,12 +14,19 @@ GatePulseDelay	= 0;		// uS
 //
 LSLH_Print = 1;
 
+// Переменные совместимости
+LSLH_Compatibility = 1; // 0 для LSLH, в которых отсуствует возможность программной настройки сигнала управления
+
 function LSLH_StartMeasure(Current)
 {
-	dev.w(150, GatePulseTime);
-	dev.w(151, GateVoltage);
-	dev.w(152, GateCurrent);
-	dev.w(153, GatePulseDelay);
+	if (LSLH_Compatibility)
+	{
+		dev.w(150, GatePulseTime);
+		dev.w(151, GateVoltage);
+		dev.w(152, GateCurrent);
+		dev.w(153, GatePulseDelay);
+	}
+	
 	dev.w(140, Current);
 	
 	var start = new Date();
@@ -28,8 +35,7 @@ function LSLH_StartMeasure(Current)
 		if (dev.r(192) == DS_Fault)
 		{
 			PrintStatus();
-			dev.c(3);
-			p("Сброшен Fault");
+			return 0;
 		}
 
 		if (dev.r(192) == DS_None || dev.r(192) == DS_Disabled)
@@ -39,6 +45,7 @@ function LSLH_StartMeasure(Current)
 		{
 			var end = new Date();
 			pinline('\rВремя заряда, с: ' + (end - start) / 1000);
+			if(anykey()) return 0;
 			sleep(100);
 		}
 		p("");
@@ -49,7 +56,14 @@ function LSLH_StartMeasure(Current)
 	if(dev.r(192) == DS_Ready)
 	{
 		dev.c(100);
-		while(dev.r(192) != DS_Ready){sleep(500);}
+
+		if (dev.r(192) == DS_Fault)
+		{
+			PrintStatus();
+			return 0;
+		}
+
+		while(dev.r(192) != DS_Ready) sleep(500);
 		
 		if(LSLH_Print)
 		{			

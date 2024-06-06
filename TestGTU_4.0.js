@@ -3,21 +3,22 @@ include("TestBVT.js")
 //
 cgtu_CompatibleMode = 1;
 //
-gtu_vg_lim	= 12000;
-gtu_vd_lim	= 12000;
-gtu_ig_lim 	= 1000;
-gtu_id_lim	= 1000;
+gtu_vg_lim = 12000;
+gtu_vd_lim = 12000;
+gtu_ig_lim = 1000;
+gtu_id_lim = 1000;
 
 gtu_diag = 1;
 gtu_plot = 0;
 
 gtu_resource_test = 8		// Продолжительность реусрного теста в часах
 
-gtu_igt = [];
-gtu_vgt = [];
-gtu_res = [];
-gtu_ih = [];
-gtu_il = [];
+gtu_kelvin	= [];
+gtu_igt		= [];
+gtu_vgt		= [];
+gtu_res		= [];
+gtu_ih		= [];
+gtu_il		= [];
 
 function GTU_Kelvin()
 {
@@ -46,9 +47,15 @@ function GTU_Kelvin()
 	if (gtu_diag) 
 	{
 		if ((dev.r(211) == 1) && (dev.r(212) == 0) && (dev.r(213) == 0) && (dev.r(214) == 1))
+		{
 			print("Test result: OK");
+			gtu_kelvin.push("OK");
+		}
 		else
+		{
 			print("Test result: FAILED");
+			gtu_kelvin.push("FAIL");
+		}
 	}
 }
 
@@ -107,6 +114,10 @@ function GTU_Holding()
 	dev.w(129 + (cgtu_CompatibleMode ? 3 : 0), gtu_id_lim);
 	dev.w(130 + (cgtu_CompatibleMode ? 3 : 0), gtu_vg_lim);
 	dev.w(131 + (cgtu_CompatibleMode ? 3 : 0), gtu_ig_lim);
+	
+	dev.w(130, 0);
+	dev.w(161, 0);
+	dev.w(129, 0);
 	
 	dev.c(102);
 	
@@ -333,8 +344,8 @@ function GTU_ResourceTest(Sleep)
 	gtu_igt		= [];
 	gtu_vgt		= [];
 	gtu_res		= [];
-	gtu_hold	= [];
-	gtu_latch	= [];
+	gtu_ih		= [];
+	gtu_il		= [];
 
 	var i = 0;
 	var today = new Date();								// Узнаем и сохраняем текущее время
@@ -362,16 +373,16 @@ function GTU_ResourceTest(Sleep)
 		gtu_res[i] = dev.r(203) / 10;
 		
 		GTU_Holding();
-		gtu_hold[i] = dev.r(201) + dev.r(231) / 1000;
+		gtu_ih[i] = dev.r(201) + dev.r(231) / 1000;
 		
 		GTU_Latching();
-		gtu_latch[i] = dev.r(202);
+		gtu_il[i] = dev.r(202);
 
 		var left_time = new Date((today.getTime()) - ((new Date()).getTime()));
 		print("#" + i + " Осталось " + (left_time.getHours()-3) + " ч и " + left_time.getMinutes() + " мин");
 		
 		csv_array.push((new Date()) + ";" + gtu_kelvin[i] + ";" + gtu_igt[i] + ";"
-					+ gtu_vgt[i] + ";" + gtu_res[i] + ";" + gtu_hold[i] + ";" + gtu_latch[i]);
+					+ gtu_vgt[i] + ";" + gtu_res[i] + ";" + gtu_ih[i] + ";" + gtu_il[i]);
 
 		save("data/GTU_ResourceTest" + today.getTime() + ".csv", csv_array);
 		i++;

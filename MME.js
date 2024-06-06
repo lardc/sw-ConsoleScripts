@@ -87,11 +87,14 @@ mme_GTU_Result_Ih  = 0;
 mme_GTU_Result_Il  = 0;
 mme_GTU_Result_Vgnt = 0;
 mme_GTU_Result_Ignt = 0;
+mme_GTU_Result_IhGOST  = 0;
 //
 mme_SL_Result_Utm = 0;
 //
 mme_BVT_Result_Idrm = 0;
 mme_BVT_Result_Irrm = 0;
+//
+mme_ATU_Result_Prsm = 0;
 //
 mme_CROVU_Result_dUdt = 0;
 //
@@ -493,6 +496,16 @@ function MME_GTU()
 	}
 }
 
+function MME_GTUIH()
+{
+	if (mme_use_GTU)
+	{
+		gtu_plot = mme_plot;
+		dev.nid(mme_Nid_GTU);
+		GTU_Holding();
+	}
+}
+
 function MME_GTUSL(Current)
 {
 	// activate gtu
@@ -515,17 +528,7 @@ function MME_GTUSL(Current)
 	if (dev.r(197) == 2)
 		print("problem: " + dev.r(196));
 
-	print("Ih,   mA: " + dev.r(201));
-	
-	// recommutate
-	MME_CU(111);
-	print("CU ok");
-	
-	// measure in ordinary way
-	dev.nid(mme_Nid_GTU);
-	dev.w(130, 0);
-	gtu_plot = mme_plot;
-	GTU_Holding();
+	print("IhGOST,   mA: " + (dev.r(201) + dev.r(231) / 1000));
 }
 
 function MME_SL(Current)
@@ -620,6 +623,7 @@ function MME_ResetA()
 function MME_Test(UnitArray, Counter, Pause)
 {
 	csv_array	= [];
+	var test_start_time = new Date();
 	csv_headrow	= "Current Time; ";
 
 	if (!MME_IsReady())
@@ -641,6 +645,9 @@ function MME_Test(UnitArray, Counter, Pause)
 			case mme_GTU:
 				csv_headrow += "Kelvin test; Vgt in mV; Igt in mA; Res in Ohm; Hold in mA; Latch in mA; ";
 				break;
+			case mme_GTUSL:
+				csv_headrow += "Hold GOST in mA; ";
+				break;
 			case mme_SL:
 				csv_headrow += "Utm/Ufm in mV; ";
 				break;
@@ -655,7 +662,7 @@ function MME_Test(UnitArray, Counter, Pause)
 			case mme_CSMAX:
 				break;
 			case mme_ATU:
-				// надо добавить
+				csv_headrow += "Prsm in kW; ";
 				break;
 			case mme_CROVU:
 				csv_headrow += "dVdt test; ";
@@ -665,9 +672,6 @@ function MME_Test(UnitArray, Counter, Pause)
 				break;
 			case mme_QRR_CROVU:
 				csv_headrow += "dVdt (qrr) test; ";
-				break;
-			case mme_GTUSL:
-				// надо добавить
 				break;
 			case mme_VGNT:
 				csv_headrow += "Vgnt in mV; Ignt in mA; ";
@@ -744,7 +748,7 @@ function MME_Test(UnitArray, Counter, Pause)
 					MME_CU(115);
 					MME_ATU();
 					MME_CU(110);
-					// MME_Collect добавить потом
+					MME_Collect(mme_ATU);
 					break;
 
 				case mme_CROVU:
@@ -779,8 +783,10 @@ function MME_Test(UnitArray, Counter, Pause)
 					MME_CU(116);
 					MME_CS(mme_cs_force);
 					MME_GTUSL(mme_sl_current_ih);
+					MME_Collect(mme_GTUSL);
+					MME_CU(111);
+					MME_GTUIH();
 					MME_CU(110);
-					// MME_Collect добавить потом
 					break;
 
 				case mme_VGNT:
@@ -816,7 +822,7 @@ function MME_Test(UnitArray, Counter, Pause)
 			print("Temp2, C: " + (dev.r(102) / 10));
 		}
 		
-		MME_PrintSummaryResult(UnitArray);
+		MME_PrintSummaryResult(UnitArray, test_start_time);
 	
 		print("Global counter: " + (++mme_counter));
 		print("-------------");
@@ -889,7 +895,11 @@ function MME_Collect(Unit)
 			mme_GTU_Result_Ih  = gtu_ih[gtu_ih.length - 1];
 			mme_GTU_Result_Il  = gtu_il[gtu_il.length - 1];
 			break;
-			
+		
+		case mme_GTUSL:
+			dev.nid(mme_Nid_GTU);
+			mme_GTU_Result_IhGOST = dev.r(201) + dev.r(231) / 1000;
+
 		case mme_SL:
 			dev.nid(mme_Nid_SL);
 			mme_SL_Result_Utm = dev.r(198);
@@ -911,9 +921,14 @@ function MME_Collect(Unit)
 			mme_GTU_Result_Ignt = dev.r(206);
 			break;
 
+		case mme_ATU:
+			dev.nid(mme_Nid_ATU);
+			mme_ATU_Result_Prsm = dev.r(112) / 100;
+			break;
+
 		case mme_CROVU:
 			dev.nid(mme_Nid_CROVU);
-			mme_CROVU_Result_dUdt = dev.r(197);
+			mme_CROVU_Result_dUdt = dev.r(198);
 			break;
 
 		case mme_QRR:
@@ -938,10 +953,9 @@ function MME_Collect(Unit)
 	}
 }
 
-function MME_PrintSummaryResult(UnitArray)
+function MME_PrintSummaryResult(UnitArray, TestStartTime)
 {
 	out_str = "";
-	//csv_array	= [];
 
 	print("");
 	print("Summary result:");
@@ -962,7 +976,12 @@ function MME_PrintSummaryResult(UnitArray)
 				out_str += mme_GTU_Result_Kelvin + ";" + mme_GTU_Result_Vgt + ";" + mme_GTU_Result_Igt + ";" +
 					mme_GTU_Result_Res + ";" +mme_GTU_Result_Ih + ";" + mme_GTU_Result_Il + ";";
 				break;
-			
+				
+			case mme_GTUSL:
+				print("IhGOST	= " + mme_GTU_Result_IhGOST);
+				out_str += mme_GTU_Result_IhGOST + ";";
+				break;
+				
 			case mme_SL:
 				print("Utm	= " + mme_SL_Result_Utm);
 				out_str += mme_SL_Result_Utm + ";";
@@ -984,6 +1003,11 @@ function MME_PrintSummaryResult(UnitArray)
 				out_str += mme_GTU_Result_Vgnt + ";" + mme_GTU_Result_Ignt + ";";
 				break;
 				
+			case mme_ATU:
+				print("Prsm	= " + mme_ATU_Result_Prsm);
+				out_str += mme_ATU_Result_Prsm + ";";
+				break;
+			
 			case mme_CROVU:
 				if (mme_CROVU_Result_dUdt == 1)
 				{
@@ -1028,7 +1052,7 @@ function MME_PrintSummaryResult(UnitArray)
 	}
 	
 	csv_array.push(out_str);
-	save("data/MME_Test.csv", csv_array);
+	save("data/MME_Test" + TestStartTime.getTime() + ".csv", csv_array);
 
 	print("\n" + out_str + "\n");
 }

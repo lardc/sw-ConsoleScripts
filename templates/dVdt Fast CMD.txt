@@ -23,11 +23,11 @@ FWU_CROVU();
 
 // Скачать дамп регистров
 i("FWUpdate.js");
-FWU_DumpCROVU();
+FWU_DumpCROVU(000);
 
 // Загрузить дамп регистров
 i("FWUpdate.js");
-FWU_RestoreCROVU();
+FWU_RestoreCROVU(000);
 
 // Подготовка блока
 dev.co(4); //  номер COM-порта блока pp()
@@ -42,106 +42,135 @@ include("TestdVdt.js");
 dVdt_CellPulse(1, 900, 2000, 0, 1);
 dVdt_StartPulse(400, 20);
 
-// Получение dVdt по точкам осциллографа
-include("SiC_Calc.js")
-TEK_PortInit(11)
-SiC_CALC_dVdt(SiC_GD_Filter(SiC_GD_GetChannelCurve(1)),10,53)
-
-
-// Ресурсный тест
-dev.co(4);
-dev.c(1);
-include(“CaldVdt.js”);
-cdvdt_DeviderRate = 10;
-cdvdt_RatePoint = [20, 50, 100, 200];
-cdvdt_Vmin = 500;
-cdvdt_Vmax = 4400;
-cdvdt_Vstp = 500;
-CdVdt_ResourceTest(1);
-
-// Предкалибровка диапазаона LOW всех ячеек
-include(“CaldVdt.js”);
-cdvdt_def_VGateMin = 1200;
-cdvdt_def_VGateMax = 5000;
-cdvdt_CalVoltage = 100;
-cdvdt_HVProbeScale = "100"
-cdvdt_SelectedRange = 0;
-cdvdt_def_UseAverage = cdvdt_AVERAGES_4;
-cdvdt_def_SetpointCount = 2;
-CdVdt_Init(10, 11, 1);
-CdVdt_CellCalibrateRateA([1]);
-
-// Предкалибровка диапазаона MID всех ячеек
-include(“CaldVdt.js”);
-cdvdt_def_VGateMin = 1700;
-cdvdt_def_VGateMax = 5000;
-cdvdt_CalVoltage = 900;
-cdvdt_HVProbeScale = "1000";
-cdvdt_SelectedRange = cdvdt_def_RANGE_MID;
-cdvdt_def_UseAverage = cdvdt_AVERAGES_4;
-CdVdt_Init(4, 5, 1);
-CdVdt_CellCalibrateRateA([1,2,3,4,5]);
-
-
-
-
-// Верификация скоростей 20, 50, 100 и 200 В/мкс
-/Скорость: Offset: 5,  k: 6/7
-/Напряжение: Offset: 2, k: 0/1
-include(“CaldVdt.js”);
-cdvdt_DeviderRate = 10;
-cdvdt_HVProbeScale = "1000";
-cdvdt_RatePoint = [100, 200, 320, 500, 1000, 1600, 2000];
-cdvdt_Vmin = 500;
-cdvdt_Vmax = 4500;
-cdvdt_Vstp = 500;
-cdvdt_def_UseHandMeasure = 0;
-cdvdt_def_UseSaveImage = 0;
-CdVdt_Init(8,9,1);
-
-CdVdt_CollectFixedRate(1);
-
-CdVdt_SaveA(“20_50_100_200V_us”);
-CdVdt_SaveA(“20_50_100_200V_usRes”);
-
-
-На старых CROVU (020  ниже, где нет физически несколько диапазонов скоростей)
-
-dVdt_CellPulse(1, 500, 5000, 3, 1)
-
-// Предкалибровка ячеек без диапазонов
-include(“CaldVdt.js”);
-cdvdt_def_VGateMin = 3190;
-cdvdt_def_VGateMax = 3950;
-cdvdt_CalVoltage = 500;
-cdvdt_HVProbeScale = "1000"
-cdvdt_SelectedRange = cdvdt_def_NO_RANGE;
-cdvdt_DeviderRate = 1;
-cdvdt_def_UseAverage = cdvdt_AVERAGES_4;
-CdVdt_Init(1,4,1);
-dev.nid(7);
-CdVdt_CellCalibrateRateA([1]);
-
-// Верификация скоростей 500, 1000, 1600 и 2500 В/мкс
-include(“CaldVdt.js”);
-cdvdt_SelectedRange = cdvdt_def_NO_RANGE;
-cdvdt_DeviderRate = 1;
-cdvdt_HVProbeScale = "1000";
-cdvdt_RatePoint = [500, 1000, 1600, 2000, 2500];
-cdvdt_Vmin = 500;
-cdvdt_Vmax = 4400;
-cdvdt_Vstp = 500;
-cdvdt_def_UseHandMeasure = 0;
-CdVdt_Init(1,4,1);
-dev.nid(7);
-
-CdVdt_CollectFixedRate(1); 
-CdVdt_SaveA(“dvdt_000”);
-
-
 // Отладка в комплексе
 dev.co(1)
 dev.nid(1)
 dev.c(115)
 dev.nid(7)
 
+// Получение dVdt по точкам осциллографа
+include("SiC_Calc.js")
+TEK_PortInit(5)
+p(SiC_CALC_dVdt(SiC_GD_GetChannelCurve(1),10,90))
+
+// Ресурсный тест
+dev.co(4);
+dev.c(1);
+include(“CaldVdt.js”);
+cdvdt_DeviderRate = 10;
+cdvdt_RatePoint = [100, 200, 320, 500, 1000, 1600, 2000];
+cdvdt_Vmin = 500;
+cdvdt_Vmax = 4500;
+cdvdt_Vstp = 500;
+CdVdt_ResourceTest(5000);
+
+// Предкалибровка диапазаона LOW всех ячеек
+include(“CaldVdt.js”);
+cdvdt_def_VGateMin = 1200;
+cdvdt_def_VGateMax = 5000;
+cdvdt_CalVoltage = 900;
+cdvdt_HVProbeScale = "1000";
+cdvdt_def_SetpointCount = 7;
+cdvdt_SelectedRange = cdvdt_def_RANGE_LOW; // cdvdt_def_RANGE_LOW, cdvdt_def_RANGE_MID, cdvdt_def_RANGE_HIGH
+cdvdt_def_UseAverage = cdvdt_NO_AVERAGES; // cdvdt_NO_AVERAGES, cdvdt_AVERAGES_4
+CdVdt_Init(1, 5, 1);
+CdVdt_CellCalibrateRateA([1,2]);
+
+// Предкалибровка диапазаона MID всех ячеек
+include(“CaldVdt.js”);
+cdvdt_def_VGateMin = 1200;
+cdvdt_def_VGateMax = 5000;
+cdvdt_CalVoltage = 900;
+cdvdt_HVProbeScale = "1000";
+cdvdt_def_SetpointCount = 7;
+cdvdt_SelectedRange = cdvdt_def_RANGE_MID; // cdvdt_def_RANGE_LOW, cdvdt_def_RANGE_MID, cdvdt_def_RANGE_HIGH
+cdvdt_def_UseAverage = cdvdt_NO_AVERAGES; // cdvdt_NO_AVERAGES, cdvdt_AVERAGES_4
+CdVdt_Init(1, 5, 1);
+CdVdt_CellCalibrateRateA([1,2]);
+
+// Предкалибровка диапазаона HIGH всех ячеек
+include(“CaldVdt.js”);
+cdvdt_def_VGateMin = 1200;
+cdvdt_def_VGateMax = 5000;
+cdvdt_CalVoltage = 900;
+cdvdt_HVProbeScale = "1000";
+cdvdt_def_SetpointCount = 7;
+cdvdt_SelectedRange = cdvdt_def_RANGE_HIGH; // cdvdt_def_RANGE_LOW, cdvdt_def_RANGE_MID, cdvdt_def_RANGE_HIGH
+cdvdt_def_UseAverage = cdvdt_NO_AVERAGES; // cdvdt_NO_AVERAGES, cdvdt_AVERAGES_4
+CdVdt_Init(1, 5, 1);
+CdVdt_CellCalibrateRateA([3,4,5]);
+
+// Верификация скоростей с 3-мя диапазонами на Tektronix
+/Скорость: Offset: 5,  k: 6/7
+/Напряжение: Offset: 2, k: 0/1
+dev.co(11)
+dev.nid(1)
+dev.c(1)
+dev.c(115)
+include(“CaldVdt.js”);
+cdvdt_DeviderRate = 10;
+cdvdt_HVProbeScale = 1000;
+cdvdt_RatePoint = [100, 200, 320, 500, 1000, 1600, 2000];
+cdvdt_Vmin = 500;
+cdvdt_Vmax = 4500;
+cdvdt_Points = 10;
+cdvdt_MeasureMethod = dVdt_AutoCursor; // dVdt_AutoCursor, dVdt_Approx
+cdvdt_def_UseSaveImage = 0;
+cdvdt_def_UseAverage = cdvdt_NO_AVERAGES
+CdVdt_Init(1,5,1);
+//dev.nid(7)
+CdVdt_CollectFixedRate(1);
+
+CdVdt_SaveA(“416”);
+
+
+На старых CROVU (020  ниже, где нет физически несколько диапазонов скоростей)
+dVdt_CellPulse(1, 100, 5000, 3, 0)
+
+// Предкалибровка ячеек без диапазонов
+include(“CaldVdt.js”);
+cdvdt_def_VGateMin = 2950;
+cdvdt_def_VGateMax = 5000;
+cdvdt_CalVoltage = 900;
+cdvdt_HVProbeScale = 1000
+cdvdt_SelectedRange = cdvdt_def_NO_RANGE;
+cdvdt_MeasureMethod = dVdt_Approx; // dVdt_AutoCursor, dVdt_Approx
+cdvdt_DeviderRate = 1;
+cdvdt_def_UseAverage = cdvdt_NO_AVERAGES;
+CdVdt_Init(1,5,1);
+//dev.nid(7);
+CdVdt_CellCalibrateRateA([4,5]);
+
+// Верификация скоростей 500, 1000, 1600 и 2500 В/мкс
+include(“CaldVdt.js”);
+cdvdt_SelectedRange = cdvdt_def_NO_RANGE;
+cdvdt_DeviderRate = 1;
+cdvdt_HVProbeScale = 1000;
+cdvdt_RatePoint = [500, 1000, 1600, 2000, 2500];
+cdvdt_Vmin = 500;
+cdvdt_Vmax = 4400;
+cdvdt_Vstp = 500;
+cdvdt_MeasureMethod = dVdt_AutoCursor; // dVdt_AutoCursor, dVdt_Approx
+cdvdt_def_UseAverage = cdvdt_NO_AVERAGES;
+CdVdt_Init(1,5,1);
+//dev.nid(7);
+CdVdt_CollectFixedRate(1);
+
+CdVdt_SaveA(“008”);
+
+// Ресурсный тест
+dev.co(1);
+include(“TestdVdt.js”);
+dvdt_DeviderRate = 1;
+dvdt_RatePoint = [500, 1000, 1600, 2000, 2500];
+dvdt_Vmin = 500;
+dvdt_Vmax = 4400;
+dvdt_Points = 10;
+dVdt_ResourceTest(1,0);
+
+
+// Тест детектора на КЗ и ХХ
+include(“TestdVdt.js”);
+dvdt_DeviderRate = 1; 		
+dvdt_RatePoint = [500, 1000, 1600, 2000, 2500];
+dVdt_IdleShortTestDetector()
