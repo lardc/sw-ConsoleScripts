@@ -45,15 +45,16 @@ function LSLPC_Start(Current)
 		return false;
 	}
 
-	if(dev.r(REG_DEV_STATE) == DS_BatteryCharging)
-	{
-		while (dev.r(REG_DEV_STATE) != DS_Ready)
+	if(cal_LSLPC_Compatibility == 0)
+		if(dev.r(REG_DEV_STATE) == DS_BatteryCharging)
 		{
-			sleep(1000);
-			if(anykey())
-				return false;
+			while (dev.r(REG_DEV_STATE) != DS_Ready)
+			{
+				sleep(1000);
+				if(anykey())
+					return false;
+			}
 		}
-	}
 
 
 	cal_LSLPC_Compatibility == 1 ? dev.w(128, Current * 10) : dev.w(64, Current);
@@ -61,7 +62,9 @@ function LSLPC_Start(Current)
 	
 	while(dev.r(REG_DEV_STATE) != DS_ConfigReady)
 	{
-		sleep(50);
+		sleep(1000);
+		if(anykey())
+			return false;
 		
 		if(dev.r(REG_DEV_STATE) == DS_Fault)
 		{
@@ -76,7 +79,7 @@ function LSLPC_Start(Current)
 	
 	while(dev.r(REG_DEV_STATE) != DS_Ready)
 	{
-		sleep(50);
+		sleep(100);
 		
 		if(dev.r(REG_DEV_STATE) == DS_Fault)
 		{
