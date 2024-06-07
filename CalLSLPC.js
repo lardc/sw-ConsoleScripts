@@ -29,6 +29,7 @@ cal_chMeasureId = 1;
 
 // Results storage
 cal_Id = [];
+cal_IdDAC = [];
 
 // Tektronix data
 cal_IdSc = [];
@@ -84,6 +85,7 @@ function CAL_CalibrateId()
 	if (CAL_CollectId(CurrentArray, cal_Iterations))
 	{
 		CAL_SaveId("LSLPC_Id");
+		CAL_SaveRawId("LSLPC_DAC_fixed");
 
 		// Plot relative error distribution
 		scattern(cal_IdSc, cal_IdErr, "Current (in A)", "Error (in %)", "Current setpoint relative error");
@@ -109,6 +111,7 @@ function CAL_VerifyId()
 	if (CAL_CollectId(CurrentArray, cal_Iterations))
 	{
 		CAL_SaveId("LSLPC_Id_fixed");
+		CAL_SaveRawId("LSLPC_DAC_fixed");
 
 		// Plot relative error distribution
 		scattern(cal_IdSc, cal_IdErr, "Current (in A)", "Error (in %)", "Current setpoint relative error");
@@ -152,25 +155,31 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 			var IdSet;
 			(cal_LSLPC_Compatibility == 1) ? IdSet = dev.r(128) / 10 : IdSet = dev.r(64);
 			cal_Id.push(IdSet);
-			print("Idset, A: " + IdSet);
+			print("Idset,     A: " + IdSet);
 			// print("IdsetRaw, A: " + (dev.r(21) * Math.pow(IdSet, dev.r(20) / 1000)).toFixed(0)); // для грубой калибровки
 
 			// Scope data
 			var IdSc = (CAL_Measure(cal_chMeasureId) / cal_Rshunt * 1000000).toFixed(2);
 			cal_IdSc.push(IdSc);
-			print("Idtek, A: " + IdSc);
+			print("Idtek,     A: " + IdSc);
+
+			// DAC data
+			Id_DACArray = dev.rafs(6);
+			var IdDAC = TEK_GD_MAX(Id_DACArray).Value;
+			cal_IdDAC.push(IdDAC);
+			print("DAC,      pt: " + IdDAC);
 
 			// Relative error
 			Id_UnitArray = dev.rafs(1);
 			var IdUnit = TEK_GD_Sinus_MAX(Id_UnitArray)
 			IdUnitErr = ((IdUnit - IdSc) / IdSc * 100).toFixed(2);
 			cal_IdUnitErr.push(IdUnitErr);
-			print("Idunit, A: " + IdUnit);
+			print("Idunit,    A: " + IdUnit);
 			print("IdunitErr, %: " + IdUnitErr);
 
 			var IdErr = ((IdSc - IdSet) / IdSet * 100).toFixed(2);
 			cal_IdErr.push(IdErr);
-			print("IdSetErr, %: " + IdErr);
+			print("IdSetErr,  %: " + IdErr);
 			print("--------------------");
 			
 			if (anykey()) return 0;
@@ -188,9 +197,9 @@ function CAL_TekScale(Channel, Value)
 	var scale = (Value / (8 * 0.9));
 	TEK_Send("ch" + Channel + ":scale " + scale);
 	
-	TEK_TriggerPulseInit(cal_chMeasureId, Value / 3);
-	while(TEK_Exec("TRIGger:STATE?") != "REA")
-		sleep(100);
+	TEK_TriggerPulseInit(cal_chMeasureId, Value / 5);
+	while(TEK_Exec("TRIGger:STATE?") != "REA") // закомментировать для TPS2014
+		sleep(500);
 }
 //--------------------
 
@@ -206,8 +215,8 @@ function CAL_TekInit()
 
 function CAL_Measure(Channel)
 {
-	while(TEK_Exec("TRIGger:STATE?") != "REA")
-		sleep(100);
+	while(TEK_Exec("TRIGger:STATE?") != "REA")  // закомментировать для TPS2014
+		sleep(500);
 	return TEK_Measure(Channel);
 }
 //--------------------
@@ -216,6 +225,7 @@ function CAL_ResetA()
 {	
 	// Results storage
 	cal_Id = [];
+	cal_IdDAC = [];
 
 	// Tektronix data
 	cal_IdSc = [];
@@ -232,6 +242,12 @@ function CAL_ResetA()
 function CAL_SaveId(NameId)
 {
 	CGEN_SaveArrays(NameId, cal_Id, cal_IdSc, cal_IdErr);
+}
+//--------------------
+
+function CAL_SaveRawId(NameId)
+{
+	CGEN_SaveArrays(NameId, cal_Id, cal_IdSc, cal_IdDAC);
 }
 //--------------------
 
