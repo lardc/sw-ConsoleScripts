@@ -230,3 +230,18 @@ function TEK_GD_Sinus_MAX(Data)
 
 	return (AverageValue / SamplingAvgNum);
 }
+
+function TEK_GD_MAX(Data)
+{
+	var value = Data[0];
+	var index;
+	
+	for (var i = 0; i < Data.length; ++i)
+		if (Data[i] > value)
+		{
+			value = Data[i];
+			index = i;
+		}
+	
+	return {Value : value, Index : index};
+}

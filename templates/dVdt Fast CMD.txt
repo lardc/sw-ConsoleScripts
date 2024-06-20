@@ -39,6 +39,7 @@ include("TestdVdt.js");
 dev.co(4);
 dev.c(1);
 include("TestdVdt.js");
+dvdt_DeviderRate = 1;
 dVdt_CellPulse(1, 900, 2000, 0, 1);
 dVdt_StartPulse(400, 20);
 
