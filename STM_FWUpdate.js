@@ -593,3 +593,20 @@ function FWU_RestoreSVTU()
 	FWU_RestoreCommon("SVTU", Num);
 }
 //------------------------
+
+// SAU
+function FWU_SAU()
+{
+	FWUpdateSTM("../../hw-SAUControlBoard/Firmware/Release/SAUControlBoard.binary");
+}
+
+function FWU_DumpSAU(Num)
+{
+	FWU_DumpCommon("SAU", Num, 126);
+}
+
+function FWU_RestoreSAU()
+{
+	FWU_RestoreCommon("SAU", Num);
+}
+//------------------------
