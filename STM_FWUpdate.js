@@ -610,3 +610,35 @@ function FWU_RestoreSAU()
 	FWU_RestoreCommon("SAU", Num);
 }
 //------------------------
+// ITU
+function FWU_ITU()
+{
+	FWUpdateSTM("../../hw-ITUControlBoard/Firmware/Release/ITUControlBoard.binary");
+}
+
+function FWU_DumpITU(Num)
+{
+	FWU_DumpCommon("ITU", Num, 126);
+}
+
+function FWU_RestoreITU()
+{
+	FWU_RestoreCommon("ITU", Num);
+}
+//------------------------
+// CSI
+function FWU_CSI()
+{
+	FWUpdateSTM("../../hw-CSControlBoardSTM32/Firmware/Release/CSControlBoardSTM32.binary");
+}
+
+function FWU_DumpCSI(Num)
+{
+	FWU_DumpCommon("CSI", Num, 126);
+}
+
+function FWU_RestoreCSI()
+{
+	FWU_RestoreCommon("CSI", Num);
+}
+//------------------------
