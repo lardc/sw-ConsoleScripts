@@ -1,6 +1,7 @@
 var REG_FLASH_WRITE_LEN		= 184;	// Длина записываемых данных во флеш
 var REG_FLASH_WRITE_DATA	= 185;	// Отладочный регистр для записи
 var REG_FLASH_SYMBOL		= 186;	// Регистр для хранения значения для флеш записи
+var REG_FLASH_WRITE_TYPE	= 187;	// Длина записываемых данных во флеш
 
 var ACT_FLASH_WRITE			= 332;	// Flash write
 var ACT_FLASH_WRITE_SYMBOL	= 333;	// Flash symbol write
@@ -10,8 +11,16 @@ var ACT_READ_SYMBOL			= 330;
 var ACT_SELECT_MEM_LABEL	= 331; 
 var REG_MEM_SYMBOL			= 299;
 
+// Data types
+var DT_Char		= 0;
+var DT_Int8U	= 1;
+var DT_Int8S	= 2;
+var DT_Int16U	= 3;
+var DT_Int16S	= 4;
+var DT_Int32U	= 5;
+var DT_Int32S	= 6;
+var DT_Float	= 7;
 
-// private
 function flash_shift()
 {
 	dev.c(ACT_READ_SYMBOL);
@@ -22,19 +31,46 @@ function flash_read()
 	return dev.r(REG_MEM_SYMBOL);
 }
 
+function TypeLength(Type)
+{
+	return ((Type == DT_Int32U || Type == DT_Int32S || Type == DT_Float) ? 2 : 1)
+}
 
-// public
-// Структура 1 блока: Length, DataType, Data
+// Структура блока: DataType, Length, Data
 
 /*
  * Data : any
  * Length : number
 */
-function FlashWrite(Data, Length)
+function FlashWrite(Type, Length, Data)
 {
-	dev.ws(REG_FLASH_WRITE_DATA, Data);
+	dev.w(REG_FLASH_WRITE_TYPE, Type);
 	dev.w(REG_FLASH_WRITE_LEN, Length);
-	dev.c(ACT_FLASH_WRITE);
+
+	if (typeof Data == "number")
+	{
+		if (Data < 0)
+			dev.Write32S(REG_FLASH_WRITE_DATA, Data);
+		else
+			dev.Write32(REG_FLASH_WRITE_DATA, Data);
+
+		dev.c(ACT_FLASH_WRITE);
+
+		return;
+	}
+	else if (typeof Data == "object")
+	{
+		for (var i = 0; i < Length; i++)
+		{
+			if (Data[i] < 0)
+				dev.Write32S(REG_FLASH_WRITE_DATA, Data);
+			else
+				dev.Write32(REG_FLASH_WRITE_DATA, Data);
+
+			dev.w(REG_FLASH_WRITE_LEN);
+			dev.c(ACT_FLASH_WRITE_SYMBOL);
+		}
+	}
 }
 
 /*
@@ -61,19 +97,19 @@ function FlashWriteArray(Data)
 function FlashReadAll()
 {
 	dev.c(ACT_SELECT_MEM_LABEL);
-	dev.c(ACT_READ_SYMBOL);
 
 	var tmpData = "";
 
 	var DataArray = [];
 
-	while (flash_read() != 65535)
+	while (flash_read() < 65535)
 	{
-		var tmpLength = flash_read();
-		tmpData += tmpLength + " ";
+		var tmpDataType = flash_read();
+		tmpData += tmpDataType + " ";
 		flash_shift();
 
-		tmpData += flash_read() + " ";
+		var tmpLength = flash_read();
+		tmpData += tmpLength + " ";
 		flash_shift();
 
 		for (var i = 0; i < tmpLength; i++)
