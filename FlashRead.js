@@ -1,15 +1,12 @@
 var REG_FLASH_WRITE_LEN		= 184;	// Длина записываемых данных во флеш
 var REG_FLASH_WRITE_DATA	= 185;	// Отладочный регистр для записи
-var REG_FLASH_SYMBOL		= 186;	// Регистр для хранения значения для флеш записи
-var REG_FLASH_WRITE_TYPE	= 187;	// Длина записываемых данных во флеш
+var REG_FLASH_WRITE_TYPE	= 186;	// Длина записываемых данных во флеш
 
 var ACT_FLASH_WRITE			= 332;	// Flash write
-var ACT_FLASH_WRITE_SYMBOL	= 333;	// Flash symbol write
 var ACT_FLASH_ERASE			= 334;	// Flash erase data sector
 
-var ACT_READ_SYMBOL			= 330;
-var ACT_SELECT_MEM_LABEL	= 331; 
-var REG_MEM_SYMBOL			= 299;
+var ACT_SELECT_MEM_LABEL	= 331;	// Flash read start position
+var REG_MEM_SYMBOL			= 299;	// Current data
 
 // Data types
 var DT_Char		= 0;
@@ -39,56 +36,25 @@ function TypeLength(Type)
 // Структура блока: DataType, Length, Data
 
 /*
- * Data : any
+ * Type: number 
  * Length : number
+ * Data : any
 */
 function FlashWrite(Type, Length, Data)
 {
+	var res = "";
 	dev.w(REG_FLASH_WRITE_TYPE, Type);
+	res += "t: " + dev.r(REG_FLASH_WRITE_TYPE);
 	dev.w(REG_FLASH_WRITE_LEN, Length);
+	res += " l: " + dev.r(REG_FLASH_WRITE_LEN);
 
-	if (typeof Data == "number")
-	{
-		if (Data < 0)
-			dev.Write32S(REG_FLASH_WRITE_DATA, Data);
-		else
-			dev.Write32(REG_FLASH_WRITE_DATA, Data);
+	dev.w(REG_FLASH_WRITE_DATA, Data);
 
-		dev.c(ACT_FLASH_WRITE);
+	res += " d: " + dev.r(REG_FLASH_WRITE_DATA);
 
-		return;
-	}
-	else if (typeof Data == "object")
-	{
-		for (var i = 0; i < Length; i++)
-		{
-			if (Data[i] < 0)
-				dev.Write32S(REG_FLASH_WRITE_DATA, Data);
-			else
-				dev.Write32(REG_FLASH_WRITE_DATA, Data);
+	dev.c(ACT_FLASH_WRITE);
 
-			dev.w(REG_FLASH_WRITE_LEN);
-			dev.c(ACT_FLASH_WRITE_SYMBOL);
-		}
-	}
-}
-
-/*
- * Data : Array<any>
-*/
-function FlashWriteArray(Data)
-{
-	dev.w(REG_FLASH_SYMBOL, Data.length);
-	dev.c(ACT_FLASH_WRITE_SYMBOL);
-
-	dev.w(REG_FLASH_SYMBOL, 1);
-	dev.c(ACT_FLASH_WRITE_SYMBOL);
-
-	for (var i = 0; i < Data.length; i++)
-	{
-		dev.w(REG_FLASH_SYMBOL, Data[i]);
-		dev.c(ACT_FLASH_WRITE_SYMBOL);
-	}
+	p(res);
 }
 
 /*
@@ -97,6 +63,7 @@ function FlashWriteArray(Data)
 function FlashReadAll()
 {
 	dev.c(ACT_SELECT_MEM_LABEL);
+	flash_shift()
 
 	var tmpData = "";
 
