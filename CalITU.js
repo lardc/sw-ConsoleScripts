@@ -4,8 +4,8 @@ include('CalGeneral.js')
 compatibility = 0
 
 // Доступные границы формирования напряжения (в В)
-citu_Vmin = 1000
-citu_Vmax = 10500
+citu_Vmin = 500
+citu_Vmax = 14000
 
 // Выбранный диапазон тока: 1 - старший, 2 - средний, 3 - младший
 citu_IRange = 3
