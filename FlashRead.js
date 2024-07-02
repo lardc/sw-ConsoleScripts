@@ -11,13 +11,10 @@ var REG_FLASH_WRITE_TYPE	= 185;	// Flash data type
 
 var REG_MEM_SYMBOL			= 299;	// Current data
 
-function flash_shift()
-{
-	dev.c(ACT_READ_SYMBOL);
-}
 
 function flash_read()
 {
+	dev.c(ACT_READ_SYMBOL);
 	return dev.r(REG_MEM_SYMBOL);
 }
 
@@ -50,26 +47,25 @@ function FlashWrite(Data)
 function FlashReadAll()
 {
 	dev.c(ACT_SELECT_MEM_LABEL);
-	flash_shift()
 
 	var tmpData = "";
 
 	var DataArray = [];
 
-	while (flash_read() < 65535)
+	for (var sp = 0x3D0000; sp < 0x3E0000; sp++)
 	{
 		var tmpDataType = flash_read();
 		tmpData += tmpDataType + " ";
-		flash_shift();
+
+		if (tmpDataType > 7)
+			break;
 
 		var tmpLength = flash_read();
 		tmpData += tmpLength + " ";
-		flash_shift();
 
 		for (var i = 0; i < tmpLength; i++)
 		{
 			tmpData += flash_read() + " ";
-			flash_shift();
 		}
 
 		DataArray.push(tmpData);
@@ -83,10 +79,9 @@ function FlashReadAll()
 function FlashRead(i)
 {
 	dev.c(ACT_SELECT_MEM_LABEL);
-	for (var v = 0; v < i; v++)
+	for (var j = 0; j < i; j++)
 	{
 		p(flash_read());
-		flash_shift();
 	}
 }
 
