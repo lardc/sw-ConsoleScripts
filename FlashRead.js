@@ -12,8 +12,7 @@ var REG_FLASH_WRITE_TYPE	= 185;	// Flash data type
 var REG_MEM_SYMBOL			= 299;	// Current data
 
 var FLASH_START				= 0x3D0000;
-var FLASH_END				= 0x3E0000;
-
+var FLASH_END				= 0x3E7FFF;
 
 function flash_read()
 {
@@ -26,23 +25,22 @@ function TypeLength(Type)
 	return (Type > 4 ? 2 : 1)
 }
 
-function FlashWrite(Data)
+function FlashWrite()
 {
 	dev.c(ACT_FLASH_WRITE);
 }
 
-function FlashReadAll()
+function FlashReadAll(PrintPlot)
 {
 	dev.c(ACT_SELECT_MEM_LABEL);
 
-	var Data = "";
+	var Data = [];
 
-	var DataArray = [];
+	var FileName = "";
 
 	for (var sp = FLASH_START; sp < FLASH_END; sp++)
 	{
 		var dataType = flash_read();
-		Data += dataType + " ";
 
 		if (dataType > 7)
 			break;
@@ -51,32 +49,35 @@ function FlashReadAll()
 		{
 			var Description = "";
 			var length = flash_read();
-			Description += length;
 
 			for (var i = 0; i < length; i++)
 			{
 				Description += String.fromCharCode(flash_read());
 			}
-
-			Data += Description + " ";
+			FileName += Description;
 		}
 		else
 		{
-			var tmpLength = flash_read();
-			Data += tmpLength + " ";
+			var length = flash_read();
 
-			for (var i = 0; i < tmpLength; i++)
+			for (var i = 0; i < length; i++)
 			{
-				Data += flash_read() + " ";
+				Data.push(flash_read());
 			}
+
+			if (Data.length > 1)
+			{
+				FileName += "_" + (new Date()).toISOString().slice(0, 19).replace(/[\-:]/g, "").replace("T", "_") + ".csv";
+				save(FileName, Data);
+
+				if (PrintPlot)
+					pl(Data);
+			}
+			FileName = "";
 		}
 
-		DataArray.push(Data);
-		p(Data);
-		Data = "";
+		Data = [];
 	}
-
-	return DataArray;
 }
 
 function FlashRead(i)
