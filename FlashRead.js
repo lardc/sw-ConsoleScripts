@@ -74,9 +74,8 @@ function FlashReadAll(PrintPlot)
 					pl(Data);
 			}
 			FileName = "";
+			Data = [];
 		}
-
-		Data = [];
 	}
 }
 
