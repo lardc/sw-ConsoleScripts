@@ -26,6 +26,8 @@ function FlashReadAll(PrintPlot)
 {
 	dev.c(ACT_SELECT_MEM_LABEL);
 
+	var FileName = "";
+
 	while (true)
 	{
 		var dataType = flash_read();
@@ -34,7 +36,6 @@ function FlashReadAll(PrintPlot)
 			break;
 
 		var Data = [];
-		var FileName = "";
 		var Message = "";
 
 		if (dataType == 0)
@@ -47,27 +48,30 @@ function FlashReadAll(PrintPlot)
 				Description += String.fromCharCode(flash_read());
 			}
 			FileName += Description;
-			Message += Description;
+			// Message += Description;
 		}
 		else
 		{
 			var length = flash_read();
-			Message += " (Type: Int16U, Length: " + length + ")\n";
+			Message += FileName + " (Type: Int16U, Length: " + length + ")\n";
 
 			for (var i = 0; i < length; i++)
 			{
 				Data.push(flash_read());
-				Message += Data[i];
+				Message += Data[i] + ", ";
 			}
+			Message = Message.slice(0, -2); 
 
 			if (Data.length > 1)
 			{
-				FileName += "_" + (new Date()).toISOString().slice(0, 19).replace(/[\-:]/g, "").replace("T", "_") + ".csv";
+				var date = new Date();
+				FileName += "_" + (new Date(date.getTime() - (date.getTimezoneOffset() * 60000))).toISOString().slice(0, 19).replace(/[\-:]/g, "").replace("T", "_") + ".csv";
 				save(FileName, Data);
 
 				if (PrintPlot)
 					pl(Data);
 			}
+			FileName = "";
 		}
 		p(Message);
 	}
