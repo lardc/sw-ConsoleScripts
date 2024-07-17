@@ -48,7 +48,6 @@ function FlashReadAll(PrintPlot)
 				Description += String.fromCharCode(flash_read());
 			}
 			FileName += Description;
-			// Message += Description;
 		}
 		else
 		{
@@ -77,12 +76,12 @@ function FlashReadAll(PrintPlot)
 	}
 }
 
-function FlashRead(i)
+function FlashRead(i, Char)
 {
 	dev.c(ACT_SELECT_MEM_LABEL);
 	for (var j = 0; j < i; j++)
 	{
-		p(flash_read());
+		p(Char ? String.fromCharCode(flash_read()) : flash_read());
 	}
 }
 
