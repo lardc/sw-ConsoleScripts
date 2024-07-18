@@ -1,5 +1,5 @@
 var ACT_FLASH_WRITE			= 332;	// Flash write
-var ACT_FLASH_ERASE			= 334;	// Flash erase data sector
+var ACT_FLASH_ERASE			= 333;	// Flash erase data sector
 
 var ACT_READ_SYMBOL			= 330;	// Flash read symbol and shift
 var ACT_SELECT_MEM_LABEL	= 331;	// Flash read start position
