@@ -21,7 +21,66 @@ function Firmware_Get(NodeID)
 
 function Firmware_Update(NodeID, FileName)
 {
-	dev.nid(NodeID)
+	// Базовая проверка имени файла
+	var InputData = FileName.replace(/\.[a-z]+$/, "").split("_")
+	if(!InputData || InputData.length < 3)
+	{
+		print("Filename with incorrect format")
+		return
+	}
+	
+	var FileProject = InputData[0]
+	var FileDate = new Date(InputData[1].replace(/\./g, "/") + "T" + InputData[2].replace(/\./g, ":") + ":00")
+	
+	// Получение и базовая проверка данных ЭМ
+	var BoardData = Firmware_Get(NodeID)
+	if(!BoardData || BoardData.length < 4)
+	{
+		print("Board firmware information incomplete")
+		return
+	}
+	
+	var BoardBranch = BoardData[0]
+	var BoardProject = BoardData[3]
+	var BoardDate = new Date(BoardData[2])
+	
+	// Проверка условий перепрошивки
+	if(BoardBranch !== "master")
+	{
+		print("Not master branch on board")
+		return
+	}
+	
+	if(BoardProject !== FileProject)
+	{
+		print("Project name missmatch")
+		return
+	}
+	
+	if(BoardDate >= FileProject)
+	{
+		print("Attemp to flash outdated firmware")
+		return
+	}
+	
+	// Определение типа прошивки и запуск процесса
+	var MCUType = Firmware_DetectMCUType(FileName)
+	if(MCUType === "STM32")
+		Firmware_STM32(FileName)
+	else if(MCUType === "TMS")
+		Firmware_TMS(FileName)
+	else
+		print("Unrecognizible firmware file")
+}
+
+function Firmware_DetectMCUType(FileName)
+{
+	var BinArray = loadbin(FileName)
+	
+	if(BinArray[0] == 0x00 && BinArray[1] == 0x80 && BinArray[2] == 0x00 && BinArray[3] == 0x20)
+		return "STM32"
+	else if(BinArray[0] == 0x02 && BinArray[BinArray.length - 1] == 0x03)
+		return "TMS"
 }
 
 function Firmware_LoadAnyFile(FileName)
