@@ -57,7 +57,7 @@ function Firmware_Update(NodeID, FileName)
 		return
 	}
 	
-	if(BoardDate >= FileProject)
+	if(BoardDate >= FileDate)
 	{
 		print("Attemp to flash outdated firmware")
 		return
@@ -66,9 +66,9 @@ function Firmware_Update(NodeID, FileName)
 	// Определение типа прошивки и запуск процесса
 	var MCUType = Firmware_DetectMCUType(FileName)
 	if(MCUType === "STM32")
-		Firmware_STM32(FileName)
+		return Firmware_STM32(FileName)
 	else if(MCUType === "TMS")
-		Firmware_TMS(FileName)
+		return Firmware_TMS(FileName)
 	else
 		print("Unrecognizible firmware file")
 }
