@@ -1174,7 +1174,7 @@ function CBVT_Initialize()
 	}
 }
 
-function CBVT_VerifyIdrm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+function CBVT_VerifyCurrent(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	cbvt_RangeI = rangeId;
 	cbvt_IminAC = rangeMin;
@@ -1182,14 +1182,14 @@ function CBVT_VerifyIdrm(rangeId, rangeMin, rangeMax, count, verificationCount, 
 	cbvt_Points = count;
 	cbvt_Iterations = verificationCount;
 	cbvt_Shunt = resistance;
-	cbvt_R = 22010;
+	cbvt_R = addedResistance;
 	cbvt_test_time = 2000;
 	CBVT_Initialize();
 	CBVT_VerifyI();
 	return [cbvt_v_set, cbvt_i, cbvt_i_sc, cbvt_i_err];
 }
 
-function CBVT_VerifyVdrm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+function CBVT_VerifyVoltage(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	cbvt_RangeV = rangeId;
 	cbvt_VminAC = rangeMin;
@@ -1201,29 +1201,3 @@ function CBVT_VerifyVdrm(rangeId, rangeMin, rangeMax, count, verificationCount, 
 	return [cbvt_v_set, cbvt_v, cbvt_v_sc, cbvt_v_err];
 }
 
-function CBVT_VerifyIrrm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
-{
-	cbvt_RangeI = rangeId;
-	cbvt_IminAC = rangeMin;
-	cbvt_ImaxAC = rangeMax;
-	cbvt_Points = count;
-	cbvt_Iterations = verificationCount;
-	cbvt_Shunt = resistance;
-	cbvt_R = 220100;
-	cbvt_test_time = 2000;
-	CBVT_Initialize();
-	CBVT_VerifyI();
-	return [cbvt_v_set, cbvt_i, cbvt_i_sc, cbvt_i_err];
-}
-
-function CBVT_VerifyVrrm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
-{
-	cbvt_RangeV = rangeId;
-	cbvt_VminAC = rangeMin;
-	cbvt_VmaxAC = rangeMax;
-	cbvt_Points = count;
-	cbvt_Iterations = verificationCount;
-	CBVT_Initialize();
-	CBVT_VerifyV();
-	return [cbvt_v_set, cbvt_v, cbvt_v_sc, cbvt_v_err];
-}
