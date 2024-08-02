@@ -7,7 +7,8 @@ var ACT_FLASH_DIAG_INIT_READ	= 331;	// Flash read start position
 var REG_MEM_SYMBOL				= 299;	// Current data
 
 var ACT_FLASH_COUNTER_INIT_READ	= 334;	// Перемещение указателя в область счетчиков
-var ACT_FLASH_COUNTER_SAVE		= 335;	// Сохранение наработки счетчиков во флеш
+var ACT_FLASH_COUNTER_READ_SYMBOL= 335;	// Сохранение наработки счетчиков во флеш
+var ACT_FLASH_COUNTER_SAVE		= 336
 
 var DT_Char		= 0;
 var DT_Int8U	= 1;
@@ -19,9 +20,9 @@ var DT_Int32S	= 6;
 var DT_Float	= 7;
 
 
-function flash_read()
+function flash_read(ActReadSymbol)
 {
-	dev.c(ACT_FLASH_DIAG_READ_SYMBOL);
+	dev.c(ActReadSymbol);
 	return dev.r(REG_MEM_SYMBOL);
 }
 
@@ -70,7 +71,8 @@ function ToInt32U(value1, value2)
 function ToInt32S(value1, value2)
 {
 	var value = (value1 << 16) | value2
-	return (value > 0x7FFFFFFF) ? value - 0x100000000 : value;}
+	return (value > 0x7FFFFFFF) ? value - 0x100000000 : value;
+}
 
 function ToFloat(value)
 {
@@ -95,7 +97,7 @@ function FlashWrite()
 	dev.c(ACT_FLASH_DIAG_SAVE);
 }
 
-function FlashReadAll(PrintPlot, ActMemLabel)
+function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 {
 	dev.c(ActMemLabel);
 
@@ -103,7 +105,7 @@ function FlashReadAll(PrintPlot, ActMemLabel)
 
 	while (true)
 	{
-		var dataType = flash_read();
+		var dataType = flash_read(ActReadSymbol);
 
 		if (dataType == 0xFFFF)
 		{
@@ -113,6 +115,7 @@ function FlashReadAll(PrintPlot, ActMemLabel)
 		if (dataType > 7)
 		{
 			p("ERROR: Invalid data type.");
+			p(dataType);
 			return;
 		}
 
@@ -125,17 +128,17 @@ function FlashReadAll(PrintPlot, ActMemLabel)
 		if (dataType == DT_Char)
 		{
 			var Description = "";
-			var length = flash_read();
+			var length = flash_read(ActReadSymbol);
 
 			for (var i = 0; i < length; i++)
 			{
-				Description += String.fromCharCode(flash_read());
+				Description += String.fromCharCode(flash_read(ActReadSymbol));
 			}
 			FileName += Description;
 		}
 		else
 		{
-			var length = flash_read();
+			var length = flash_read(ActReadSymbol);
 			Message += FileName + " (Type: " + DataTypeString(dataType) + ", Length: " + length + ")\n";
 
 			for (var i = 0; i < length; i++)
@@ -143,12 +146,12 @@ function FlashReadAll(PrintPlot, ActMemLabel)
 				var word = 0;
 				if (dataTypeLength == 2)
 				{
-					var value1 = flash_read();
-					var value2 = flash_read();
+					var value1 = flash_read(ActReadSymbol);
+					var value2 = flash_read(ActReadSymbol);
 					switch (dataType)
 					{
 						case DT_Int32U:
-							word = ToInt32U(value1, value2);
+							word = ToInt32U(value2, value1);
 							break;
 						case DT_Int32S:
 							word = ToInt32S(value1, value2);
@@ -160,7 +163,7 @@ function FlashReadAll(PrintPlot, ActMemLabel)
 				}
 				else
 				{
-					var value = flash_read();
+					var value = flash_read(ActReadSymbol);
 					switch (dataType)
 					{
 						case DT_Int8U:
@@ -205,7 +208,7 @@ function FlashRead(i, ActMemLabel)
 		dev.c(ACT_FLASH_DIAG_INIT_READ);
 		for (var j = 0; j < i; j++)
 		{
-			p(flash_read());
+			p(flash_read(ACT_FLASH_DIAG_READ_SYMBOL));
 		}
 	}
 
@@ -214,11 +217,8 @@ function FlashRead(i, ActMemLabel)
 		dev.c(ACT_FLASH_COUNTER_INIT_READ);
 		for (var j = 0; j < i; j++)
 		{
-			var Value = 0;
-			for (var k = 0; k < 2; k++)
-				Value += flash_read();
-
-			p(Value);
+			var Word1 = flash_read(ACT_FLASH_COUNTER_READ_SYMBOL);
+			p(Word1);
 		}
 	}
 }
