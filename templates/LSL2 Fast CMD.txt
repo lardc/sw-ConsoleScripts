@@ -1,0 +1,279 @@
+// Пояснения
+function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channelSyncTrigger)
+CLSL_Init_DMM(portDevice) // для мультиметра DMM6500
+LSLH_StartMeasure(Current) // in A
+
+// Посмотреть версию прошивки
+dev.co(1);
+dev.nid(0);
+PrintFWInfo();
+
+// Обновление прошивки LSLH
+FWU_LSLH();
+
+// Скачать дамп регистров
+FWU_DumpLSLH();
+
+// Загрузить дамп регистров
+FWU_RestoreLSLH();
+
+// Подготовка блока
+dev.co(1);
+dev.nid(0);
+dev.c(1);
+include("TestLSLH.js");
+
+// Формирование сигнала и измерение
+LSLH_StartMeasure(200);
+
+// Ресурсный тест
+include("TestLSLH.js");
+dev.co(6);
+LSLH_ResourceTest(6000, 4);
+
+////Калибровка с помощью Tektronix\\\\
+
+// Измерение тока Itm 0 диапазон Tektronix
+/ (Offset: 2) (K: 3)
+/ LSL:		[P0: 4] [P1: 5] [P2: 6]
+/ LSL_IAR:	[P0: 19] [P1: 18] [P2: 17]
+/ SL:		[P0: 38] [P1: 18] [P2: 17]
+include("CalLSL2.js");
+clsl_ItmMin = 50;
+clsl_ItmMax = 1000;
+clsl_Points = 10;
+clsl_Rshunt = 750; // мкОм
+clsl_CurrentRange = 0;
+clsl_UseAvg = 0;
+clsl_Iterations = 1;
+CLSL_Init(5,6,1,2,3);
+
+CLSL_VerifyItm();
+
+CLSL_CalibrateItm();
+
+// Измерение тока Itm 1 диапазон Tektronix
+/ (Offset: 7) (K: 8)
+/ LSL: [P0: 9] [P1: 10] [P2: 11]
+/ LSL_IAR: [P0: 22] [P1: 21] [P2: 20]
+include("CalLSL2.js");
+clsl_ItmMin = 1001;
+clsl_ItmMax = 4000;
+clsl_Points = 10;
+clsl_Rshunt = 250; // мкОм
+clsl_CurrentRange = 1;
+clsl_Iterations = 3;
+clsl_UseAvg = 0;
+CLSL_Init(5,6,1,2,3);
+
+CLSL_VerifyItm();
+
+CLSL_CalibrateItm();
+
+// Задание тока Itm Tektronix
+/ (Offset: ) (K: )
+/ LSL:		[P0: 41] [P1: 42] [P2: 43]
+/ LSL_IAR:	[P0: 13] [P1: 12] [P2: 10]
+/ SL:		[P0: 79] [P1: 78] [P2: 77]
+include("CalLSL2.js");
+clsl_ItmMin = 50;
+clsl_ItmMax = 6000;
+clsl_Points = 10;
+clsl_Rshunt = 250; // мкОм
+clsl_Iterations = 3;
+clsl_UseAvg = 0;
+CLSL_Init(5,6,1,2,3);
+
+CLSL_VerifyIset();
+
+CLSL_CalibrateIset();
+
+// Измерение напряжения Utm Tektronix
+/ (Offset: 12) (K: 13)
+/ LSL:		[P0: 14] [P1: 15] [P2: 16]
+/ LSL_IAR:	[P0: 16] [P1: 15] [P2: 14]
+/ SL:		[P0: 55] [P1: 40] [P2: 39]
+include("CalLSL2.js");
+clsl_UtmMin = 300;
+clsl_UtmMax = 5000;
+clsl_Points = 10;
+clsl_Rload = 0.22 / 63 * 1000000; // мкОм
+clsl_CurrentRange = 0;
+clsl_Iterations = 3;
+clsl_UseAvg = 0;
+CLSL_Init(5,6,1,2,3);
+clsl_measuring_device = "TPS2000";
+
+CLSL_VerifyUtm();
+
+CLSL_CalibrateUtm();
+
+/// Управление напряжения Ug Tektronix
+// Регистры измерения ADC
+/ (Offset: 22) (K: 23)
+/ [P0: 24] [P1: 25] [P2: 26]
+// Регистры задания DAC
+/ (Offset: 50) (K: 51)
+/ [P0: 52] [P1: 53] [P2: 54]
+include("CalLSL2.js");
+clsl_UgMin = 1000;
+clsl_UgMax = 10000;
+clsl_Points = 10;
+clsl_Iterations = 3;
+clsl_UseAvg = 0;
+CLSL_Init(5,6,1,2,3);
+
+CLSL_VerifyUg();
+
+CLSL_CalibrateUg();
+
+/// Управление током Ig Tektronix
+// Регистры измерения ADC
+/ (Offset: 17) (K: 18)
+/ [P0: 19] [P1: 20] [P2: 21]
+// Регистры задания DAC
+/ (Offset: 55) (K: 56)
+/ [P0: 57] [P1: 58] [P2: 59]
+include("CalLSL2.js");
+clsl_IgMin = 100;
+clsl_IgMax = 1000;
+clsl_Points = 10;
+clsl_GateRshunt = 10531; // в мОм
+clsl_Iterations = 1;
+clsl_UseAvg = 0;
+CLSL_Init(4,5,1,1,3);
+
+CLSL_VerifyIg();
+
+CLSL_CalibrateIg();
+
+
+////Калибровка с помощью DMM6500\\\\
+
+// Измерение тока Itm 0 диапазон DMM6500
+/ (Offset: 2) (K: 3)
+/ [P0: 4] [P1: 5] [P2: 6]
+include("CalLSL2.js");
+clsl_ItmMin = 50
+clsl_ItmMax = 1000
+clsl_Points = 10;
+clsl_Rshunt = 250; // в мкОм
+clsl_CurrentRange = 0;
+clsl_Iterations = 3;
+clsl_UseAvg = 0;
+clsl_V_PulsePlate = 4000
+clsl_V_TriggerDelay = 3000e-6
+clsl_measuring_device = "DMM6000";
+CLSL_Init_DMM(8);
+dev.nid(9)
+
+CLSL_VerifyItm();
+
+CLSL_CalibrateItm();
+
+// Измерение тока Itm 1 диапазон DMM6500
+/ (Offset: 7) (K: 8)
+/ [P0: 9] [P1: 10] [P2: 11]
+include("CalLSL2.js");
+clsl_ItmMin = 1001
+clsl_ItmMax = 6000
+clsl_Points = 10;
+clsl_Rshunt = 250; // в мкОм
+clsl_CurrentRange = 1;
+clsl_Iterations = 3;
+clsl_UseAvg = 0;
+clsl_V_PulsePlate = 4000
+clsl_V_TriggerDelay = 3000e-6
+clsl_measuring_device = "DMM6000";
+CLSL_Init_DMM(8);
+dev.nid(9)
+
+CLSL_VerifyItm();
+
+CLSL_CalibrateItm();
+
+// Задание тока Itm DMM6500
+/ (Offset: ) (K: )
+/ [P0: 41] [P1: 42] [P2: 43]
+include("CalLSL2.js");
+clsl_ItmMin = 50;
+clsl_ItmMax = 6000;
+clsl_Points = 10;
+clsl_Rshunt = 250; // мкОм
+clsl_Iterations = 3;
+clsl_UseAvg = 0;
+clsl_V_PulsePlate = 4000
+clsl_V_TriggerDelay = 3000e-6
+clsl_measuring_device = "DMM6000";
+CLSL_Init_DMM(8);
+dev.nid(9)
+
+CLSL_VerifyIset();
+
+CLSL_CalibrateIset();
+
+// Измерение напряжения Utm DMM6500
+/ (Offset: 12) (K: 13)
+/ [P0: 14] [P1: 15] [P2: 16]
+include("CalLSL2.js");
+clsl_UtmMin = 300;
+clsl_UtmMax = 5000;
+clsl_Points = 10;
+clsl_Rload = 0.22 / 63 * 1000000; // в мкОм
+clsl_Iterations = 3;
+clsl_UseAvg = 0;
+clsl_V_PulsePlate = 4000
+clsl_V_TriggerDelay = 3000e-6
+clsl_measuring_device = "DMM6000";
+CLSL_Init_DMM(8);
+dev.nid(9)
+CLSL_VerifyUtm();
+
+CLSL_CalibrateUtm();
+
+/// Управление напряжения Ug DMM6500
+// Регистры измерения ADC
+/ (Offset: 22) (K: 23)
+/ [P0: 24] [P1: 25] [P2: 26]
+// Регистры задания DAC
+/ (Offset: 50) (K: 51)
+/ [P0: 52] [P1: 53] [P2: 54]
+include("CalLSL2.js");
+clsl_UgMin = 1000;
+clsl_UgMax = 10000;
+clsl_Points = 10;
+clsl_Iterations = 3;
+clsl_UseAvg = 0;
+clsl_V_PulsePlate = 1000
+clsl_V_TriggerDelay = 0e-6
+clsl_measuring_device = "DMM6000";
+CLSL_Init_DMM(8);
+dev.nid(9)
+
+CLSL_VerifyUg();
+
+CLSL_CalibrateUg();
+
+/// Управление током Ig DMM6500
+// Регистры измерения ADC
+/ (Offset: 17) (K: 18)
+/ [P0: 19] [P1: 20] [P2: 21]
+// Регистры задания DAC
+/ (Offset: 55) (K: 56)
+/ [P0: 57] [P1: 58] [P2: 59]
+include("CalLSL2.js");
+clsl_IgMin = 100;
+clsl_IgMax = 1000;
+clsl_Points = 10;
+clsl_GateRshunt = 10531;  // в мОм
+clsl_Iterations = 3;
+clsl_UseAvg = 0;
+clsl_V_PulsePlate = 1000
+clsl_V_TriggerDelay = 0e-6
+clsl_measuring_device = "DMM6000";
+CLSL_Init_DMM(8);
+dev.nid(9)
+
+CLSL_VerifyIg();
+
+CLSL_CalibrateIg();

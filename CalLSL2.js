@@ -195,10 +195,10 @@ function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channe
 	
 	TEK_ChannelInit(clsl_chMeasureI, "1", "1");
 	TEK_ChannelInit(clsl_chMeasureU, "1", "1");
-	TEK_ChannelInit(clsl_chSyncTrigger, "1", clsl_PWM ? "0.5" : "1");
+	TEK_ChannelInit(clsl_chSync, "1", clsl_PWM ? "0.5" : "1");
 
 	if (!clsl_PWM)
-		CLSL_TriggerInit(clsl_chSyncTrigger);
+		CLSL_TriggerInit(clsl_chSync);
 	else
 	{
 		TEK_TriggerInit(channelSyncTrigger, "0.5");
@@ -702,7 +702,7 @@ function CLSL_Collect(CurrentValues, VoltageMode, IterationsCount)
 	}
 	sleep(500);
 	
-	CLSL_TekScale(clsl_chMeasureV, ((VoltageMode ? clsl_ImaxV : clsl_Imax) * clsl_DUTRes + clsl_DUTConst) / 1000);
+	CLSL_TekScale(clsl_chMeasureU, ((VoltageMode ? clsl_ImaxV : clsl_Imax) * clsl_DUTRes + clsl_DUTConst) / 1000);
 	CLSL_TekScale(clsl_chMeasureI, (VoltageMode ? clsl_ImaxV : clsl_Imax) * clsl_ShuntRes / 1000);
 	sleep(500);
 	
@@ -712,7 +712,7 @@ function CLSL_Collect(CurrentValues, VoltageMode, IterationsCount)
 		{
 			if (clsl_UseRangeTuning)
 			{
-				CLSL_TekScale(clsl_chMeasureV, (CurrentValues[j] * clsl_DUTRes + clsl_DUTConst) / 1000);
+				CLSL_TekScale(clsl_chMeasureU, (CurrentValues[j] * clsl_DUTRes + clsl_DUTConst) / 1000);
 				CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_ShuntRes / 1000);
 			}
 			sleep(1000);
@@ -739,7 +739,7 @@ function CLSL_Collect(CurrentValues, VoltageMode, IterationsCount)
 				print("I,     A: " + i_read);
 			
 			// Scope data
-			var v_sc = Math.round(CLSL_Measure(clsl_chMeasureV, 3) * 1000);
+			var v_sc = Math.round(CLSL_Measure(clsl_chMeasureU, 3) * 1000);
 			var i_sc = Math.round(CLSL_Measure(clsl_chMeasureI, 3) / (clsl_ShuntRes * 1e-3));
 			clsl_v_sc.push(v_sc);
 			clsl_i_sc.push(i_sc);
@@ -1684,6 +1684,12 @@ function CLSL_GateTekInit(Channel)
 	CLSL_TekMeasurement(Channel);
 }
 
+function CLSL_Measure(Channel)
+{
+	sleep(1000);
+	return TEK_Measure(Channel);
+}
+
 function CLSL_TekMeasurement(Channel)
 {
 	TEK_Send("measurement:meas" + Channel + ":source ch" + Channel);
@@ -1891,7 +1897,7 @@ function CLSL_Initialize()
 	CLSL_TriggerInit(clsl_chSync);
 }
 
-function CLSL_VerifyItm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+function CSL_VerifyItm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	clsl_CurrentRange = rangeId;
 	clsl_ItmMin = rangeMin;
@@ -1901,11 +1907,14 @@ function CLSL_VerifyItm(rangeId, rangeMin, rangeMax, count, verificationCount, r
 	clsl_Rshunt = resistance;
 	clsl_UseAvg = 0;
 	CLSL_Initialize();
-	CLSL_VerifyIset();
-	return [clsl_IsetSc, clsl_Iset, clsl_IsetSc, clsl_IsetErr];
+	CLSL_VerifyItm();
+	if (clsl_PWM)
+		return [clsl_i_sc, clsl_i, clsl_i_sc, clsl_i_err]
+	else
+		return [clsl_ItmSc, clsl_Itm, clsl_ItmSc, clsl_ItmErr];
 }
 
-function CLSL_VerifyVtm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+function CSL_VerifyVtm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	clsl_CurrentRange = rangeId;
 	clsl_UtmMin = rangeMin;
@@ -1915,6 +1924,14 @@ function CLSL_VerifyVtm(rangeId, rangeMin, rangeMax, count, verificationCount, r
 	clsl_Rload = resistance;
 	clsl_UseAvg = 0;
 	CLSL_Initialize();
-	CLSL_VerifyUtm();
-	return [clsl_UtmSc, clsl_Utm, clsl_UtmSc, clsl_UtmErr];
+	if (clsl_PWM)
+	{
+		CLSL_VerifyV()
+		return [clsl_v_sc, clsl_v, clsl_v_sc, clsl_v_err]
+	}
+	else
+	{
+		CLSL_VerifyUtm();
+		return [clsl_UtmSc, clsl_Utm, clsl_UtmSc, clsl_UtmErr];
+	}
 }
