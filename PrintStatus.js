@@ -54,6 +54,7 @@ function PrintFWInfo()
 		print("Git branch:	" + str_arr[2]);
 		print("Git commit:	" + str_arr[0]);
 		print("Commit date:	" + str_arr[1]);
+		print("Project:	" + str_arr[3])
 	}
 	catch(e)
 	{
