@@ -1,5 +1,5 @@
 // Пояснения
-function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channelSyncTrigger)
+function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channelSyncTrigger) // Tektronix
 CLSL_Init_DMM(portDevice) // для мультиметра DMM6500
 LSLH_StartMeasure(Current) // in A
 
@@ -37,9 +37,8 @@ LSLH_ResourceTest(6000, 4);
 / (Offset: 2) (K: 3)
 / LSL:		[P0: 4] [P1: 5] [P2: 6]
 / LSL_IAR:	[P0: 19] [P1: 18] [P2: 17]
-/ SL:		[P0: 38] [P1: 18] [P2: 17]
 include("CalLSL2.js");
-clsl_ItmMin = 50;
+clsl_ItmMin = 160;
 clsl_ItmMax = 1000;
 clsl_Points = 10;
 clsl_Rshunt = 750; // мкОм
@@ -74,7 +73,6 @@ CLSL_CalibrateItm();
 / (Offset: ) (K: )
 / LSL:		[P0: 41] [P1: 42] [P2: 43]
 / LSL_IAR:	[P0: 13] [P1: 12] [P2: 10]
-/ SL:		[P0: 79] [P1: 78] [P2: 77]
 include("CalLSL2.js");
 clsl_ItmMin = 50;
 clsl_ItmMax = 6000;
@@ -97,7 +95,7 @@ include("CalLSL2.js");
 clsl_UtmMin = 300;
 clsl_UtmMax = 5000;
 clsl_Points = 10;
-clsl_Rload = 0.22 / 63 * 1000000; // мкОм
+clsl_Rload = 0.001; // Ом
 clsl_CurrentRange = 0;
 clsl_Iterations = 3;
 clsl_UseAvg = 0;
@@ -277,3 +275,34 @@ dev.nid(9)
 CLSL_VerifyIg();
 
 CLSL_CalibrateIg();
+
+
+// Измерение тока I
+/ SL:		[P0: 38] [P1: 19] [P2: 18]
+include("CalLSL2.js");
+clsl_Imin = 400;
+clsl_Imax = 8000;
+clsl_Points = 10;
+clsl_Iterations = 1;
+clsl_ForceShuntRes = 0.25;	// мОм
+clsl_UseAvg = 1;
+CLSL_Init(4,5,1,2,3);
+
+CLSL_VerifyI();
+
+CLSL_CalibrateI();
+
+// Измерение Напряжения U
+/ SL:		[P0: 79] [P1: 78] [P2: 77]
+clsl_Imin = 500;
+clsl_Vmax = 4500;
+clsl_Points = 10;
+clsl_Iterations = 1;
+clsl_DUTRes = 1000;	 // мОм
+clsl_DUTConst = 0;
+clsl_UseAvg = 0;
+CLSL_Init(4,5,1,2,3);
+
+CLSL_VerifyV();
+
+CLSL_CalibrateV();

@@ -1,7 +1,9 @@
 include("CalGeneral.js")
-include("TestLSLH.js")
 include("TestSL.js")
 include("MeasurementInstruments.js")
+include("Tektronix.js")
+include("DMM6500.js")
+include("PrintStatus.js")
 include("Numeric.js")
 
 // variables
@@ -47,7 +49,7 @@ clsl_ShuntRes = 0;		// in mOhms (read from block)
 clsl_ForceShuntRes = 0;	// force shunt resistance (in mOhms)
 // DUT resistance
 clsl_DUTRes = 1;			// in mOhms
-clsl_DUTConst = 0;		// in mV
+clsl_DUTConst = 0;			// in mV
 //
 clsl_UseAvg = 1;
 clsl_UseRangeTuning = 1;
@@ -56,14 +58,14 @@ clsl_UseRangeTuning = 1;
 // Current ranges
 // 
 // Calibrate I 
-clsl_Imin = 300;			// in A
-clsl_Imax = 4000;		// in A
+clsl_Imin = 400;			// in A
+clsl_Imax = 8000;			// in A
 clsl_Istp = 250;			// in A
 
 clsl_ImaxV = 0;			// in A 
 
 // Calibrate V
-clsl_Vmax = 4000;
+clsl_Vmax = 4500;
 clsl_Vfsmax = 3500;
 
 // Counters
@@ -71,6 +73,9 @@ clsl_cntTotal = 0;
 clsl_cntDone = 0;
 
 // Arrays
+clsl_ItmNom = [];
+clsl_UtmNom = [];
+
 // Results storage
 clsl_Utm = [];
 clsl_Itm = [];
@@ -139,11 +144,8 @@ clsl_PWM = false;
 clsl_Linear_IAR = false;
 clsl_Linear = false;
 
-
-// general
-function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channelSyncTrigger)
+function CLSL_CheckVersion()
 {
-	// Version check
 	for (var i = 4; i <= 8; i++)
 	{
 		if (dev.r(i) !== 0)
@@ -171,6 +173,12 @@ function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channe
 	{
 		clsl_Linear = true;
 	}
+}
+
+// general
+function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channelSync)
+{
+	CLSL_CheckVersion();
 
 	if (channelMeasureU < 1 || channelMeasureU > 4 ||
 		channelMeasureI < 1 || channelMeasureI > 4)
@@ -186,9 +194,7 @@ function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channe
 	// Copy channel information
 	clsl_chMeasureU = channelMeasureU;
 	clsl_chMeasureI = channelMeasureI;
-
-	if (!clsl_PWM)
-		clsl_chSync = channelSyncTrigger;
+	clsl_chSync = channelSync;
 
 	// Init Tektronix port
 	TEK_PortInit(portTek);
@@ -197,14 +203,9 @@ function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channe
 	TEK_ChannelInit(clsl_chMeasureU, "1", "1");
 	TEK_ChannelInit(clsl_chSync, "1", clsl_PWM ? "0.5" : "1");
 
-	if (!clsl_PWM)
-		CLSL_TriggerInit(clsl_chSync);
-	else
-	{
-		TEK_TriggerInit(channelSyncTrigger, "0.5");
-		TEK_Send("trigger:main:edge:slope fall");
-		TEK_Horizontal("2.5e-3", "0");
-	}
+	TEK_TriggerInit(channelSync, clsl_PWM ? "0.15" : "0.5");
+	TEK_Send("trigger:main:edge:slope fall");
+	TEK_Horizontal("2.5e-3", "0");
 
 	// Tektronix init
 	for (var i = 1; i <= 4; i++)
@@ -225,6 +226,9 @@ function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channe
 
 function CLSL_ResetA()
 {
+	clsl_ItmNom = [];
+	clsl_UtmNom = [];
+
 	// Results storage
 	clsl_Utm = [];
 	clsl_Itm = [];
@@ -455,6 +459,7 @@ function CLSL_CalibrateI()
 	// Configure
 	dev.w(162, 1);
 	var CurrentArray = CGEN_GetRange(clsl_Imin, clsl_Imax, clsl_Istp);
+	clsl_ItmNom = CurrentArray;
 	
 	if (CLSL_Collect(CurrentArray, 0, clsl_Iterations))
 	{
@@ -498,6 +503,7 @@ function CLSL_CalibrateV()
 	
 	clsl_Istp = Math.round((clsl_ImaxV - clsl_Imin) / 10);
 	var CurrentArray = CGEN_GetRange(clsl_Imin, clsl_ImaxV, clsl_Istp);
+	clsl_UtmNom = CurrentArray;
 	
 	if (CLSL_Collect(CurrentArray, 1, clsl_Iterations))
 	{
@@ -541,6 +547,7 @@ function CLSL_CalibrateVfs()
 	
 	clsl_Istp = Math.round((clsl_ImaxV - clsl_Imin) / 10);
 	var CurrentArray = CGEN_GetRange(clsl_Imin, clsl_ImaxV, clsl_Istp);
+	clsl_UtmNom = CurrentArray;
 	
 	if (CLSL_Collect(CurrentArray, 1, clsl_Iterations))
 	{
@@ -575,7 +582,9 @@ function CLSL_VerifyI()
 	// Reload values
 	dev.w(162, 1);
 	var CurrentArray = CGEN_GetRange(clsl_Imin, clsl_Imax, clsl_Istp);
-	
+	clsl_ItmNom = CurrentArray;
+
+	clsl_Istp = Math.round((clsl_Imax - clsl_Imin) / clsl_Points);
 	if (CLSL_Collect(CurrentArray, 0, clsl_Iterations))
 	{
 		CLSL_SaveI("sl_i_fixed");
@@ -601,8 +610,9 @@ function CLSL_VerifyV()
 	else if (clsl_ImaxV < clsl_Imin)
 		clsl_ImaxV = clsl_Imin;
 	
-	clsl_Istp = Math.round((clsl_ImaxV - clsl_Imin) / 10);
+	clsl_Istp = Math.round((clsl_ImaxV - clsl_Imin) / clsl_Points);
 	var CurrentArray = CGEN_GetRange(clsl_Imin, clsl_ImaxV, clsl_Istp);
+	clsl_UtmNom = CurrentArray;
 	
 	if (CLSL_Collect(CurrentArray, 1, clsl_Iterations))
 	{
@@ -631,6 +641,7 @@ function CLSL_VerifyVfs()
 	
 	clsl_Istp = Math.round((clsl_ImaxV - clsl_Imin) / 10);
 	var CurrentArray = CGEN_GetRange(clsl_Imin, clsl_ImaxV, clsl_Istp);
+	clsl_UtmNom = CurrentArray;
 	
 	if (CLSL_Collect(CurrentArray, 1, clsl_Iterations))
 	{
@@ -702,8 +713,10 @@ function CLSL_Collect(CurrentValues, VoltageMode, IterationsCount)
 	}
 	sleep(500);
 	
-	CLSL_TekScale(clsl_chMeasureU, ((VoltageMode ? clsl_ImaxV : clsl_Imax) * clsl_DUTRes + clsl_DUTConst) / 1000);
-	CLSL_TekScale(clsl_chMeasureI, (VoltageMode ? clsl_ImaxV : clsl_Imax) * clsl_ShuntRes / 1000);
+	if (VoltageMode)
+		CLSL_TekScale(clsl_chMeasureU, ((VoltageMode ? clsl_ImaxV : clsl_Imax) * clsl_DUTRes + clsl_DUTConst));
+	else
+		CLSL_TekScale(clsl_chMeasureI, (VoltageMode ? clsl_ImaxV : clsl_Imax) * clsl_ShuntRes / 1000);
 	sleep(500);
 	
 	for (var i = 0; i < IterationsCount; i++)
@@ -712,12 +725,13 @@ function CLSL_Collect(CurrentValues, VoltageMode, IterationsCount)
 		{
 			if (clsl_UseRangeTuning)
 			{
-				CLSL_TekScale(clsl_chMeasureU, (CurrentValues[j] * clsl_DUTRes + clsl_DUTConst) / 1000);
-				CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_ShuntRes / 1000);
+				if (VoltageMode)
+					CLSL_TekScale(clsl_chMeasureU, (CurrentValues[j] * clsl_DUTRes + clsl_DUTConst) / 1000);
+				else
+					CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_ShuntRes / 1000);
 			}
 			sleep(1000);
 			clsl_i_set.push(CurrentValues[j]);
-			
 			
 			dev.w(160, 1);
 			sl_print = 0;
@@ -754,10 +768,10 @@ function CLSL_Collect(CurrentValues, VoltageMode, IterationsCount)
 			clsl_iset_err.push(((i_sc - CurrentValues[j]) / CurrentValues[j] * 100).toFixed(2));
 			
 			// Summary error
-			E0 = Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
-			clsl_v_err_sum.push(1.1 * Math.sqrt(Math.pow((v_read - v_sc) / v_sc * 100, 2) + Math.pow(E0, 2)));
-			clsl_i_err_sum.push(1.1 * Math.sqrt(Math.pow((i_read - i_sc) / i_sc * 100, 2) + Math.pow(E0, 2)));
-			clsl_iset_err_sum.push(1.1 * Math.sqrt(Math.pow((i_sc - CurrentValues[j]) / CurrentValues[j] * 100, 2) + Math.pow(E0, 2)));
+			clsl_E0 = Math.sqrt(Math.pow(clsl_EUosc, 2) + Math.pow(clsl_ER, 2));
+			clsl_v_err_sum.push(1.1 * Math.sqrt(Math.pow((v_read - v_sc) / v_sc * 100, 2) + Math.pow(clsl_E0, 2)));
+			clsl_i_err_sum.push(1.1 * Math.sqrt(Math.pow((i_read - i_sc) / i_sc * 100, 2) + Math.pow(clsl_E0, 2)));
+			clsl_iset_err_sum.push(1.1 * Math.sqrt(Math.pow((i_sc - CurrentValues[j]) / CurrentValues[j] * 100, 2) + Math.pow(clsl_E0, 2)));
 			
 			sleep(1000);
 			
@@ -992,6 +1006,7 @@ function CLSL_CalibrateUtm()
 	// Reload values
 	var clsl_UtmStp = Math.round((clsl_UtmMax - clsl_UtmMin) / (clsl_Points - 1));
 	var VoltageArray = CGEN_GetRange(clsl_UtmMin, clsl_UtmMax, clsl_UtmStp);
+	clsl_UtmNom = VoltageArray;
 	
 	if (CLSL_CollectUtm(VoltageArray, clsl_Iterations))
 	{
@@ -1027,6 +1042,7 @@ function CLSL_VerifyUtm()
 	// Reload values
 	var clsl_UtmStp = Math.round((clsl_UtmMax - clsl_UtmMin) / (clsl_Points - 1));
 	var VoltageArray = CGEN_GetRange(clsl_UtmMin, clsl_UtmMax, clsl_UtmStp);
+	clsl_UtmNom = VoltageArray;
 
 	if (CLSL_CollectUtm(VoltageArray, clsl_Iterations))
 	{
@@ -1058,6 +1074,7 @@ function CLSL_CalibrateItm()
 	// Reload values
 	var clsl_ItmStp = Math.round((clsl_ItmMax - clsl_ItmMin) / (clsl_Points - 1));
 	var CurrentArray = CGEN_GetRange(clsl_ItmMin, clsl_ItmMax, clsl_ItmStp);
+	clsl_ItmNom = CurrentArray;
 
 	if (CLSL_CollectItm(CurrentArray, clsl_Iterations))
 	{
@@ -1093,6 +1110,7 @@ function CLSL_VerifyItm()
 	// Reload values
 	var clsl_ItmStp = Math.round((clsl_ItmMax - clsl_ItmMin) / (clsl_Points - 1));
 	var CurrentArray = CGEN_GetRange(clsl_ItmMin, clsl_ItmMax, clsl_ItmStp);
+	clsl_ItmNom = CurrentArray;
 
 	if (CLSL_CollectItm(CurrentArray, clsl_Iterations))
 	{
@@ -1283,7 +1301,7 @@ function CLSL_CollectUtm(VoltageValues, IterationsCount)
 			
 			for (var k = 0; k < AvgNum; k++)
 			{
-				if (!LSLH_StartMeasure(VoltageValues[j] / clsl_Rload * 1000))
+				if (!LSLH_StartMeasure((VoltageValues[j] / 1000) / clsl_Rload))
 					return 0;
 			}
 			
@@ -1332,7 +1350,7 @@ function CLSL_CollectItm(CurrentValues, IterationsCount)
 			var AvgNum;
 			if(clsl_measuring_device == "TPS2000")
 			{
-				if (CurrentValues[j] * clsl_Rshunt / 1000000 < 0.3)
+				if (CurrentValues[j] * clsl_Rshunt < 0.3)
 				{
 					AvgNum = 4;
 					TEK_AcquireAvg(AvgNum);
@@ -1349,10 +1367,10 @@ function CLSL_CollectItm(CurrentValues, IterationsCount)
 			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
 			//
 			if(clsl_measuring_device == "TPS2000")
-				CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_Rshunt / 1000000);
+				CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_Rshunt);
 			else if (clsl_measuring_device == "DMM6000")
 			{
-				KEI_SetVoltageRange(CurrentValues[j] * clsl_Rshunt / 1000000);
+				KEI_SetVoltageRange(CurrentValues[j] * clsl_Rshunt);
 				KEI_ActivateTrigger();
 			}
 
@@ -1374,9 +1392,9 @@ function CLSL_CollectItm(CurrentValues, IterationsCount)
 
 			// Scope data
 			if(clsl_measuring_device == "TPS2000")
-				var ItmSc = (CLSL_Measure(clsl_chMeasureI) / clsl_Rshunt * 1000000).toFixed(2);
+				var ItmSc = (CLSL_Measure(clsl_chMeasureI) / clsl_Rshunt).toFixed(2);
 			else if (clsl_measuring_device == "DMM6000")
-				var ItmSc = (KEI_ReadArrayMaximum() / clsl_Rshunt * 1000000).toFixed(3);
+				var ItmSc = (KEI_ReadArrayMaximum() / clsl_Rshunt).toFixed(3);
 
 			clsl_ItmSc.push(ItmSc);
 
@@ -1684,10 +1702,23 @@ function CLSL_GateTekInit(Channel)
 	CLSL_TekMeasurement(Channel);
 }
 
-function CLSL_Measure(Channel)
+function CLSL_Measure(Channel, Resolution)
 {
-	sleep(1000);
-	return TEK_Measure(Channel);
+	if (clsl_PWM)
+	{
+		TEK_Send("cursor:select:source ch" + Channel);
+		sleep(500);
+
+		var f = TEK_Exec("cursor:vbars:hpos2?");
+		if (Math.abs(f) > 2e+4)
+			f = 0;
+		return parseFloat(f).toFixed(Resolution);
+	}
+	else
+	{
+		sleep(1000);
+		return TEK_Measure(Channel);
+	}
 }
 
 function CLSL_TekMeasurement(Channel)
@@ -1887,31 +1918,48 @@ function CLSL_Initialize()
 	clsl_chMeasureI = 1;
 	clsl_chMeasureU = 2;
 	clsl_chSync = 3;
+	CLSL_CheckVersion();
+
+	TEK_ChannelInit(clsl_chSync, "1", clsl_PWM ? "0.5" : "1");
+	TEK_ChannelInit(clsl_chMeasureI, "1", "1");
+	TEK_ChannelInit(clsl_chMeasureU, "1", "1");
+
 	for (var i = 1; i <= 4; i++) {
 		if ((i == clsl_chMeasureU) || (i == clsl_chMeasureI) || (i == clsl_chSync))
 			TEK_ChannelOn(i);
 		else
 			TEK_ChannelOff(i);
 	}
-	TEK_ChannelInit(clsl_chSync, "1", "1");
+
+	if (clsl_PWM)
+	{
+		// Init measurement
+		CLSL_TekCursor(clsl_chMeasureU);
+		CLSL_TekCursor(clsl_chMeasureI);
+	}
 	CLSL_TriggerInit(clsl_chSync);
 }
 
 function CSL_VerifyItm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	clsl_CurrentRange = rangeId;
-	clsl_ItmMin = rangeMin;
-	clsl_ItmMax = rangeMax;
+	clsl_ItmMin = clsl_Imin = rangeMin;
+	clsl_ItmMax = clsl_Imax = rangeMax;
 	clsl_Points = count;
 	clsl_Iterations = verificationCount;
 	clsl_Rshunt = resistance;
 	clsl_UseAvg = 0;
 	CLSL_Initialize();
-	CLSL_VerifyItm();
 	if (clsl_PWM)
-		return [clsl_i_sc, clsl_i, clsl_i_sc, clsl_i_err]
+	{
+		CLSL_VerifyI();
+		return [clsl_ItmNom, clsl_i, clsl_i_sc, clsl_i_err]
+	}
 	else
-		return [clsl_ItmSc, clsl_Itm, clsl_ItmSc, clsl_ItmErr];
+	{
+		CLSL_VerifyItm();
+		return [clsl_ItmNom, clsl_Itm, clsl_ItmSc, clsl_ItmErr];
+	}
 }
 
 function CSL_VerifyVtm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
@@ -1927,11 +1975,19 @@ function CSL_VerifyVtm(rangeId, rangeMin, rangeMax, count, verificationCount, re
 	if (clsl_PWM)
 	{
 		CLSL_VerifyV()
-		return [clsl_v_sc, clsl_v, clsl_v_sc, clsl_v_err]
+		return [clsl_UtmNom, clsl_v, clsl_v_sc, clsl_v_err]
 	}
 	else
 	{
 		CLSL_VerifyUtm();
-		return [clsl_UtmSc, clsl_Utm, clsl_UtmSc, clsl_UtmErr];
+		return [clsl_UtmNom, clsl_Utm, clsl_UtmSc, clsl_UtmErr];
 	}
+}
+
+function CSL_CallibrateItm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+{
+}
+
+function CSL_CallibrateItm(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+{
 }
