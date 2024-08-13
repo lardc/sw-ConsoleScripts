@@ -1,6 +1,8 @@
 include("Tektronix.js")
 include("CalGeneral.js")
 
+tek_measuring_device = "TPS2024";	// "TPS2014"
+
 // Channels
 UsePort = 1;
 
@@ -14,9 +16,18 @@ Use_Max = 0.9;
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
 function TEK_GD_Init(Port)
 {
+	if(tek_measuring_device == "TPS2014")
+	{
+		TEK_PortInit(Port);
+		TEK_Send("data:encdg srp");
+	}
+	else
+	{
 	TEK_PortInit(Port, 9600);
-	TEK_Send("data:width 1");
 	TEK_Send("data:encdg rpb");
+	}
+
+	TEK_Send("data:width 1");
 	TEK_Send("data:start 1");
 	TEK_Send("data:stop 2500");
 }
@@ -60,11 +71,23 @@ function GetChannelData(Channel)
 	print("Channel " + Channel + " loaded");
 
 	// validate data
-	if ((data_input[0] != "#") || (data_input[1] != 4) || (data_input[2] != 2) ||
-		(data_input[3] != 5) || (data_input[4] != 0) || (data_input[5] != 0))
+	if(tek_measuring_device == "TPS2014")
 	{
-		print("Invalid CH" + Channel + " data.");
-		return;
+		if ((data_input[0] != "#") || (data_input[1] != 4) || (data_input[2] != 5) ||
+			(data_input[3] != 0) || (data_input[4] != 0) || (data_input[5] != 0))
+		{
+			print("Invalid CH" + Channel + " data.");
+			return;
+		}
+	}
+	else
+	{
+		if ((data_input[0] != "#") || (data_input[1] != 4) || (data_input[2] != 2) ||
+			(data_input[3] != 5) || (data_input[4] != 0) || (data_input[5] != 0))
+		{
+			print("Invalid CH" + Channel + " data.");
+			return;
+		}
 	}
 
 	// adjust data
