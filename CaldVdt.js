@@ -123,7 +123,7 @@ function CdVdt_Init(portdVdt, portTek, channelMeasure)
 	}
 	
 	// Init cursor
-	//CdVdt_TekCursor(channelMeasure);
+	CdVdt_TekCursor(channelMeasure);
 	
 	// Init measurement
 	CdVdt_TekMeasurement(cdvdt_chMeasure);
@@ -224,10 +224,10 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 	{
 		TEK_Send("cursor:vbars:position1 "+ cursor_place1);
 		TEK_Send("cursor:vbars:position2 "+ cursor_place2);
-		cdvdt_u_hpos2 = parseFloat(TEK_Exec("cursor:vbars:hpos2?"));
-		cdvdt_u_hpos2.toFixed(1);
 		cdvdt_u_hpos1 = parseFloat(TEK_Exec("cursor:vbars:hpos1?"));
 		cdvdt_u_hpos1.toFixed(1);
+		cdvdt_u_hpos2 = parseFloat(TEK_Exec("cursor:vbars:hpos2?"));
+		cdvdt_u_hpos2.toFixed(1);		
 		if (anykey()) return 0;
 	} while(cdvdt_u_hpos1 > 10e+6 || cdvdt_u_hpos2 > 10e+6)
 
@@ -403,9 +403,9 @@ function CdVdt_CellCalibrateRate(CellNumber)
 				break;
 
 			case dVdt_AutoCursor:
-				rate = CdVdt_MeasureRate();
+				var rate = CdVdt_MeasureRate();
 				CdVdt_SwitchToCursor();
-				var rate = CdVdt_MeasureAutoCursor(v, rate, 10, 90).toFixed(1);
+				rate = CdVdt_MeasureAutoCursor(v, rate, 10, 90).toFixed(1);
 				CdVdt_TekMeasurement(cdvdt_chMeasure);
 				break;
 		}
@@ -576,10 +576,27 @@ function CdVdt_CollectFixedRate(Repeat)
 					while (_dVdt_Active())
 					{
 						if (anykey()){ print("Stopped from user!"); return};
-						sleep(300);
+						sleep(100);
 					}
 
 					dev.c(100);
+
+					while (_dVdt_Active())
+					{
+						if (anykey()){ print("Stopped from user!"); return};
+						sleep(100);
+					}
+
+					dev.c(100);
+					
+					while (_dVdt_Active())
+					{
+						if (anykey()){ print("Stopped from user!"); return};
+						sleep(100);
+					}
+
+					dev.c(100);
+
 					while(TEK_Exec("TRIGger:STATE?") == "REA") sleep(50);
 					//print("Impulse #" + (CounterAverages + 1))
 				}
@@ -610,7 +627,7 @@ function CdVdt_CollectFixedRate(Repeat)
 
 					case dVdt_AutoCursor:
 						CdVdt_SwitchToCursor();
-						var rate = CdVdt_MeasureAutoCursor(v, cdvdt_RatePoint[i], 10, 90).toFixed(1);
+						rate = CdVdt_MeasureAutoCursor(v, cdvdt_RatePoint[i], 10, 90).toFixed(1);
 						CdVdt_TekMeasurement(cdvdt_chMeasure);
 						break;
 				}
