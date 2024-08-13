@@ -39,6 +39,38 @@ GTU_PulseId(50);
 GTU_PulseVg(100);
 GTU_PulseIg(10);
 
+Data_Vg = dev.rafs(1)
+Data_Ig = dev.rafs(2)
+Data_Vd = dev.rafs(3)
+Data_Id = dev.rafs(4)
+
+Control_Vg = dev.rafs(5)
+Control_Ig = dev.rafs(6)
+Control_Vd = dev.rafs(7)
+Control_Id = dev.rafs(8)
+
+Target_Vg = dev.rafs(9)
+Target_Ig = dev.rafs(10)
+Target_Vd = dev.rafs(11)
+Target_Id = dev.rafs(12)
+
+save('Data_Vg.csv', Data_Vg)
+save('Data_Ig.csv', Data_Ig)
+save('Data_Vd.csv', Data_Vd)
+save('Data_Id.csv', Data_Id)
+
+save('Control_Vg.csv', Control_Vg)
+save('Control_Ig.csv', Control_Ig)
+save('Control_Vd.csv', Control_Vd)
+save('Control_Id.csv', Control_Id)
+
+save('Target_Vg.csv', Target_Vg)
+save('Target_Ig.csv', Target_Ig)
+save('Target_Vd.csv', Target_Vd)
+save('Target_Id.csv', Target_Id)
+
+
+
 // Ресурсный тест
 include("TestGTU_4.0.js");
 GTU_ResourceTest(3000);
