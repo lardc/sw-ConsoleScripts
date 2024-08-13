@@ -892,6 +892,7 @@ function CLSL_TekScale(Channel, Value)
 	// 8 - number of scope grids in full scale
 	var scale = (Value / (8 * 0.9));
 	TEK_Send("ch" + Channel + ":scale " + scale);
+	sleep(1000)
 }
 
 function CLSL_TekInit(Channel)
