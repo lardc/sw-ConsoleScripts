@@ -227,3 +227,16 @@ function FlashErase()
 {
 	dev.c(ACT_FLASH_DIAG_ERASE);
 }
+
+
+/** DEBUG MXU
+	* REG_CNT_NUMBER	300
+	* REG_CNT_VALUE		301
+	* ACT_SET_COUNTER	336
+*/
+function AssignPointer(Index, Value)
+{
+	dev.w(300, Index);
+	dev.w(301, Value);
+	dev.c(336);
+}
