@@ -63,14 +63,14 @@ function ToInt16S(value)
 	return (value > 0x7FFF) ? value - 0x10000 : value;
 }
 
-function ToInt32U(value1, value2)
+function ToInt32U(HIGH, LOW)
 {
-	return (value1 << 16) | value2;
+	return (HIGH << 16) | LOW;
 }
 
-function ToInt32S(value1, value2)
+function ToInt32S(HIGH, LOW)
 {
-	var value = (value1 << 16) | value2
+	var value = (HIGH << 16) | LOW
 	return (value > 0x7FFFFFFF) ? value - 0x100000000 : value;
 }
 
@@ -95,6 +95,16 @@ function ToFloat(value)
 function FlashWrite()
 {
 	dev.c(ACT_FLASH_DIAG_SAVE);
+}
+
+function FlashReadDiag(PrintPlot)
+{
+	FlashReadAll(ACT_FLASH_DIAG_INIT_READ, ACT_FLASH_DIAG_READ_SYMBOL, PrintPlot);
+}
+
+function FlashReadCounters()
+{
+	FlashReadAll(ACT_FLASH_COUNTER_INIT_READ, ACT_FLASH_COUNTER_READ_SYMBOL, false);
 }
 
 function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
@@ -146,18 +156,18 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 				var word = 0;
 				if (dataTypeLength == 2)
 				{
-					var value1 = flash_read(ActReadSymbol);
-					var value2 = flash_read(ActReadSymbol);
+					var LOW = flash_read(ActReadSymbol);
+					var HIGH = flash_read(ActReadSymbol);
 					switch (dataType)
 					{
 						case DT_Int32U:
-							word = ToInt32U(value2, value1);
+							word = ToInt32U(HIGH, LOW);
 							break;
 						case DT_Int32S:
-							word = ToInt32S(value1, value2);
+							word = ToInt32S(HIGH, LOW);
 							break;
 						case DT_Float:
-							word = ToFloat(ToInt32S(value1, value2));
+							word = ToFloat(ToInt32S(HIGH, LOW));
 							break;
 					}
 				}
@@ -198,6 +208,8 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 			FileName = "";
 		}
 		p(Message);
+
+		if (anykey()) return;
 	}
 }
 
@@ -230,13 +242,13 @@ function FlashErase()
 
 
 /** DEBUG MXU
-	* REG_CNT_NUMBER	300
-	* REG_CNT_VALUE		301
+	* REG_CNT_NUMBER	104
+	* REG_CNT_VALUE		105
 	* ACT_SET_COUNTER	336
 */
-function AssignPointer(Index, Value)
+function AssignCounter(Index, Value)
 {
-	dev.w(300, Index);
-	dev.w(301, Value);
+	dev.w(104, Index);
+	dev.w(105, Value);
 	dev.c(336);
 }
