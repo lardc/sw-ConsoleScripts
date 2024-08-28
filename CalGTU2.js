@@ -13,8 +13,10 @@ cgtu_Res = 10;  // in Ohms
 cgtu_ResPower = 10;  // in Ohms
 cgtu_CurrentValues = [];
 
-// Igt Current range number
-cgtu_RangeIgt = 1;    // 0 = Range [ < 50 mA]; 1 = Range [ > 50 mA] for measure & set
+// Range select
+// Границы диапазонов указаны для справки. Фактические значения хранятся в соответстующих регистрах
+cgtu_RangeIgt = 1;    // 0 = Range [ < 50 mA];  1 = Range [ > 50 mA] for measure & set
+cgtu_RangeVgt = 1;    // 0 = Range [ < 500 mV]; 1 = Range [ > 500 mV] for measure & set
 //
 cgtu_UseRangeTuning = 1;
 
@@ -554,9 +556,22 @@ function CGTU_CalVGT(P2, P1, P0)
 	}
 	else
 	{
-		dev.ws(28, Math.round(P2 * 1e6));
-		dev.w(29, Math.round(P1 * 1000));
-		dev.ws(30, Math.round(P0));
+		switch (cgtu_RangeVgt)
+		{
+			case 0:
+				dev.ws(102, Math.round(P2 * 1e6));
+				dev.w(103, Math.round(P1 * 1000));
+				dev.ws(104, Math.round(P0));
+				break;
+			case 1:
+				dev.ws(28, Math.round(P2 * 1e6));
+				dev.w(29, Math.round(P1 * 1000));
+				dev.ws(30, Math.round(P0));
+				break;
+			default:
+				print("Incorrect Vgt range.");
+				break;
+		}
 	}
 }
 
@@ -896,9 +911,22 @@ function CGTU_CalID_SET(P2, P1, P0)
 // Print
 function CGTU_PrintVGateCal()
 {
-	print("VGT P2 x1e6:	" + dev.rs(28));
-	print("VGT P1 x1000:	" + dev.r(29));
-	print("VGT P0:		" + dev.rs(30));
+	switch (cgtu_RangeVgt)
+	{
+		case 0:
+			print("VGT0 P2 x1e6:	" + dev.rs(102));
+			print("VGT0 P1 x1000:	" + dev.r(103));
+			print("VGT0 P0:	" + dev.rs(104));
+			break;
+		case 1:
+			print("VGT1 P2 x1e6:	" + dev.rs(28));
+			print("VGT1 P1 x1000:	" + dev.r(29));
+			print("VGT1 P0:	" + dev.rs(30));
+			break;
+		default:
+			print("Incorrect Vgt range.");
+			break;
+	}
 }
 
 function CGTU_PrintIGateCal()
@@ -1010,9 +1038,9 @@ function CGTU_Initialize()
 	CGTU_TekCursor(cgtu_chMeasure);
 }
 
-function CGTU_VerifyIgt(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+function CGTU_VerifyIgt(rangeI, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
-	cgtu_RangeIgt = rangeId;
+	cgtu_RangeIgt = rangeI;
 	cgtu_Imin = rangeMin;
 	cgtu_Imax = rangeMax;
 	cgtu_Points = count;
@@ -1024,8 +1052,9 @@ function CGTU_VerifyIgt(rangeId, rangeMin, rangeMax, count, verificationCount, r
 	return [cgtu_igt_set, cgtu_igt, cgtu_igt_sc, cgtu_igt_set_err];
 }
 
-function CGTU_VerifyVgt(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+function CGTU_VerifyVgt(rangeV, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
+	cgtu_RangeVgt = rangeV;
 	cgtu_Vmin = rangeMin;
 	cgtu_Vmax = rangeMax;
 	cgtu_Points = count;
