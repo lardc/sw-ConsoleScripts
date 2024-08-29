@@ -88,7 +88,7 @@ cbvt_UseAvg = true;
 EUosc = 3;
 ER = 1;
 E0 = 0;
-cbvt_EnableSumError = false;
+cbvt_EnableSumError = 1;
 
 function CBVT_Init(portBVT, portTek, channelMeasureV, channelMeasureI)
 {	
@@ -236,9 +236,9 @@ function CBVT_VerifyI()
 		// Plot relative error distribution
 		scattern(cbvt_i_sc, cbvt_i_err, "Current (in mA)", "Error (in %)", "Irrm/Idrm relative error < " + cbvt_ImaxAC / 10 + " mA");
 
-		// Plot relative error distribution
+		// Plot summary error distribution
 		if (cbvt_EnableSumError)
-			scattern(cbvt_i_sc, cbvt_i_err_sum, "Current (in mA)", "Error (in %)", "Irrm/Idrm summary error < " + cbvt_ImaxAC / 10 + " mA");
+		scattern(cbvt_i_sc, cbvt_i_err_sum, "Current (in mA)", "Error (in %)", "Irrm/Idrm summary error < " + cbvt_ImaxAC / 10 + " mA");
 	}
 }
 
@@ -561,26 +561,32 @@ function CBVT_Probe(PrintMode)
 	cbvt_i_sc.push(f_i.toFixed(3));
 
 	// Relative error
-	cbvt_v_err.push(((f_v - v) / v * 100).toFixed(2));
-	cbvt_i_err.push(((f_i - i) / i * 100).toFixed(2));
+	var v_err = ((f_v - v) / v * 100).toFixed(2);
+	var i_err = ((f_i - i) / i * 100).toFixed(2);
+	cbvt_v_err.push(v_err);
+	cbvt_i_err.push(i_err);
 	
 	// Summary error
-	E0 = Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
-	cbvt_v_err_sum.push(1.1 * Math.sqrt(Math.pow((v - f_v) / f_v * 100, 2) + Math.pow(E0, 2)));
-	cbvt_i_err_sum.push(1.1 * Math.sqrt(Math.pow((i - f_i) / f_i * 100, 2) + Math.pow(E0, 2)));
+	var E0 = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
+	var v_err_sum = (CBVT_sign(v_err) * (Math.abs(v_err) + EUosc)).toFixed(2);
+	var i_err_sum = (CBVT_sign(i_err) * (Math.abs(i_err) + E0)).toFixed(2);
+	cbvt_v_err_sum.push(v_err_sum);
+	cbvt_i_err_sum.push(i_err_sum);
 	
 	switch (PrintMode)
 	{
 		case 1:
 			print("V,     V: " + v);
 			print("Vtek,  V: " + f_v);
-			print("Error, %: " + ((v - f_v) / f_v * 100).toFixed(2));
+			print("Error, %: " + v_err);
+			print("Error_sum, %: " + v_err_sum);
 			break;
 		
 		case 2:
 			print("I,    mA: " + i.toFixed(cbvt_UseMicroAmps ? 3 : 1));
 			print("Itek, mA: " + f_i.toFixed(3));
-			print("Error, %: " + ((i - f_i) / f_i * 100).toFixed(2));
+			print("Error, %: " + i_err);
+			print("Error_sum, %: " + i_err_sum);
 			break;
 	}
 	
@@ -696,6 +702,19 @@ function CBVT_ResetA()
 	// Correction
 	cbvt_v_corr = [];
 	cbvt_i_corr = [];
+
+	// Summary error
+	cbvt_v_err_sum = [];
+	cbvt_i_err_sum = [];
+}
+
+//Error sign
+function CBVT_sign(a)
+{
+	if (a >= 0)
+		return 1
+	else
+		return -1
 }
 
 // Save
