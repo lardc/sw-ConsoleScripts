@@ -268,3 +268,10 @@ function TEK_GD_MAX(Data)
 	
 	return {Value : value, Index : index};
 }
+
+function TEK_PlotChannel(Channel)
+{
+	var Data = [];
+	Data = (GetChannelData(Channel));
+	plot(Data, 1,1);
+}
