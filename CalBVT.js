@@ -568,8 +568,8 @@ function CBVT_Probe(PrintMode)
 	
 	// Summary error
 	var E0 = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ER, 2));
-	var v_err_sum = (CBVT_sign(v_err) * (Math.abs(v_err) + EUosc)).toFixed(2);
-	var i_err_sum = (CBVT_sign(i_err) * (Math.abs(i_err) + E0)).toFixed(2);
+	var v_err_sum = (Math.sign_ma(v_err) * (Math.abs(v_err) + EUosc)).toFixed(2);
+	var i_err_sum = (Math.sign_ma(i_err) * (Math.abs(i_err) + E0)).toFixed(2);
 	cbvt_v_err_sum.push(v_err_sum);
 	cbvt_i_err_sum.push(i_err_sum);
 	
@@ -706,15 +706,6 @@ function CBVT_ResetA()
 	// Summary error
 	cbvt_v_err_sum = [];
 	cbvt_i_err_sum = [];
-}
-
-//Error sign
-function CBVT_sign(a)
-{
-	if (a >= 0)
-		return 1
-	else
-		return -1
 }
 
 // Save
