@@ -1015,7 +1015,7 @@ function CLSL_ResetA()
 // Save
 function CLSL_SaveUtm(NameUtm)
 {
-	CGEN_SaveArrays(NameUtm, clsl_Utm, clsl_UtmSc, clsl_UtmErr);
+	CGEN_SaveArrays(NameUtm, clsl_Utm, clsl_UtmSc, clsl_UtmErr, clsl_UtmErr_sum);
 }
 
 function CLSL_SaveItm(NameItm)
@@ -1025,7 +1025,7 @@ function CLSL_SaveItm(NameItm)
 
 function CLSL_SaveIset(NameIset)
 {
-	CGEN_SaveArrays(NameIset, clsl_IsetSc, clsl_Iset, clsl_IsetErr);
+	CGEN_SaveArrays(NameIset, clsl_IsetSc, clsl_Iset, clsl_IsetErr, clsl_IsetErr_sum);
 }
 
 function CLSL_SaveIg(NameIg, NameIgSet)
