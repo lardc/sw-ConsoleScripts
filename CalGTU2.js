@@ -279,14 +279,18 @@ function CGTU_Probe(ProbeCMD)
 	
 	var LetterSet = (cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire) ? "I" : Letter;
 	var UnitSet = (cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire) ? "A" : Unit;
+	var UseSetError = !((cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire) && ProbeCMD == 110)
 	
 	print(LetterSet + "set,       m" + UnitSet + ": " + val_set);
 	print(Letter + "tek,       m" + Unit + ": " + val_sc);
 	print(Letter + "unit,      m" + Unit + ": " + val);
 	print(Letter + "unit_err,   %: " + val_err);
 	print(Letter + "unit_err_s, %: " + val_err_sum);
-	print(Letter + "set_err,    %: " + val_set_err);
-	print(Letter + "set_err_s,  %: " + val_set_err_sum);
+	if(UseSetError)
+	{
+		print(Letter + "set_err,    %: " + val_set_err);
+		print(Letter + "set_err_s,  %: " + val_set_err_sum);
+	}
 
 	cgtu_cntDone++;
 	print("-- result " + cgtu_cntDone + " of " + cgtu_cntTotal + " --");
