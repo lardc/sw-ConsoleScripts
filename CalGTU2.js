@@ -813,6 +813,13 @@ function CGTU_CollectIGate(IterationsCount)
 
 function CGTU_CollectVPower(IterationsCount)
 {
+	CGTU_DefineUnitMode();
+	if(cgtu_Mode == cgtu_Mode2Wire || cgtu_Mode == cgtu_Mode4WireCompatible)
+	{
+		print("Not supported");
+		return;
+	}
+	
 	var cgtu_Vdstp = Math.round((cgtu_Vmax - cgtu_Vmin) / (cgtu_Points - 1));
 	var cgtu_VoltageValues = CGEN_GetRange(cgtu_Vmin, cgtu_Vmax, cgtu_Vdstp);
 
@@ -821,12 +828,12 @@ function CGTU_CollectVPower(IterationsCount)
 
 function CGTU_CollectIPower(IterationsCount)
 {
-	var cgtu_Istp = Math.round((cgtu_Imax - cgtu_Imin) / (cgtu_Points - 1));
-	var cgtu_CurrentValues = CGEN_GetRange(cgtu_Imin, cgtu_Imax, cgtu_Istp);
-
+	CGTU_DefineUnitMode();
+	
+	var Values = CGEN_GetRange(cgtu_Imin, cgtu_Imax, cgtu_Istp);
 	print("Power resistance set to " + cgtu_Res + " Ohms");
 	print("-----------");
-	return CGTU_Collect(113, cgtu_Res, cgtu_CurrentValues, IterationsCount);
+	return CGTU_Collect(113, cgtu_Res, Values, IterationsCount);
 }
 
 function CGTU_SetLimits()
