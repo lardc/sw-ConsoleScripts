@@ -12,9 +12,6 @@ cgtu_Mode = cgtu_Mode4WireСompatible;
 
 cgtu_Res = 10;  // in Ohms
 
-cgtu_ResPower = 10;  // in Ohms
-cgtu_CurrentValues = [];
-
 // Range select
 // Границы диапазонов указаны для справки. Фактические значения хранятся в соответстующих регистрах
 cgtu_RangeIgt = 1;    // 0 = Range [ < 50 mA];  1 = Range [ > 50 mA] for measure & set
@@ -512,28 +509,8 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 				}
 				else
 				{
-					var BaseReg;
-					var ScaleValue = cgtu_Values[j] / 1000;
-					switch (ProbeCMD)
-					{
-						case 110:	// VG
-							BaseReg = 130;
-							break;
-
-						case 111:	// IG
-							BaseReg = 131;
-							ScaleValue *= Resistance;
-							break;
-
-						case 112:	// VD
-							BaseReg = 128;
-							break;
-
-						case 113:	// ID
-							BaseReg = 129;
-							ScaleValue *= Resistance;
-							break;
-					}
+					var BaseReg = CGTU_GetBaseReg(ProbeCMD);
+					var ScaleValue = cgtu_Values[j] / 1000 * ((ProbeCMD == 110 || ProbeCMD == 112) ? 1 : Resistance);
 					
 					CGTU_TekScale(cgtu_chMeasure, ScaleValue);
 					sleep(2000);
@@ -1224,7 +1201,7 @@ function CGTU_VerifyPower()
 
 function CGTU_CollectGate(IterationsCount)
 {
-	cgtu_CurrentValues = CGEN_GetRange(cgtu_Imin, cgtu_Imax, cgtu_Istp);
+	var cgtu_CurrentValues = CGEN_GetRange(cgtu_Imin, cgtu_Imax, cgtu_Istp);
 
 	print("Gate resistance set to " + cgtu_Res + " Ohms");
 	print("-----------");
@@ -1233,16 +1210,16 @@ function CGTU_CollectGate(IterationsCount)
 
 function CGTU_CollectPower(IterationsCount)
 {
-	cgtu_CurrentValues = CGEN_GetRange(cgtu_Imin, cgtu_Imax, cgtu_Istp);
+	var cgtu_CurrentValues = CGEN_GetRange(cgtu_Imin, cgtu_Imax, cgtu_Istp);
 
-	print("Power resistance set to " + cgtu_ResPower + " Ohms");
+	print("Power resistance set to " + cgtu_Res + " Ohms");
 	print("-----------");
-	return CGTU_Collect(111, cgtu_ResPower, cgtu_CurrentValues, IterationsCount);
+	return CGTU_Collect(111, cgtu_Res, cgtu_CurrentValues, IterationsCount);
 }
 
 function CGTU_SaveGate(NameIGT, NameVGT)
 {
-	CGEN_SaveArrays(NameIGT, cgtu_igt, cgtu_igt_sc, cgtu_igt_err, cgtu_igt_err_sum);	
+	CGEN_SaveArrays(NameIGT, cgtu_igt, cgtu_igt_sc, cgtu_igt_err, cgtu_igt_err_sum);
 	CGEN_SaveArrays(NameVGT, cgtu_vgt, cgtu_vgt_sc, cgtu_vgt_err, cgtu_vgt_err_sum);
 }
 
