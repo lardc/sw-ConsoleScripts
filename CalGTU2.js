@@ -426,11 +426,15 @@ function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 		cgtu_chSync = channelSyncOrMeasurePower;
 
 	// Init GTU
-	dev.Disconnect();
-	dev.co(portGate);
+	if(!portGate)
+	{
+		dev.Disconnect();
+		dev.co(portGate);
+	}
 	
 	// Init Tektronix
-	TEK_PortInit(portTek);
+	if(!portTek)
+		TEK_PortInit(portTek);
 
 	// Tektronix init
 	// Init channels
@@ -1012,20 +1016,7 @@ function Measuring_Filter()
 
 function CGTU_Initialize()
 {
-	channelMeasure = 1;
-	channelSync = 3;
-	TEK_ChannelInit(cgtu_chMeasure, "1", "1");
-	TEK_ChannelInit(cgtu_chSync, "1", "1");
-	TEK_TriggerPulseInit(cgtu_chSync, "2.5");
-	CGTU_TriggerTune();
-	TEK_Horizontal("1e-3", "-4e-3");
-	for (var i = 1; i <= 4; i++) {
-		if (i == cgtu_chMeasure || i == cgtu_chSync)
-			TEK_ChannelOn(i);
-		else
-			TEK_ChannelOff(i);
-	}
-	CGTU_TekCursor(cgtu_chMeasure);
+	CGTU_Init(null, null, channelMeasure, channelSync);
 }
 
 function CGTU_VerifyIgt(rangeI, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
