@@ -21,7 +21,6 @@ cgtu_RangeVgt = 1;    // 0 = Range [ < 500 mV]; 1 = Range [ > 500 mV] for measur
 // Current limits
 cgtu_Imax = 1000;
 cgtu_Imin = 50;
-cgtu_Istp = 50;
 
 // Voltage limits
 cgtu_Vmax = 12000;    // in mV
@@ -492,7 +491,8 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 					CGTU_TekScale((ProbeCMD == 110) ? cgtu_chMeasure : cgtu_chMeasurePower, cgtu_Values[j] * Resistance / 1000);
 				else
 				{
-					var ScaleValue = cgtu_Values[j] / 1000 * ((ProbeCMD == 110 || ProbeCMD == 112) ? 1 : Resistance);
+					var ResMul = (cgtu_Mode == cgtu_Mode4WireСompatible || ProbeCMD == 111 || ProbeCMD == 113) ? Resistance : 1;
+					var ScaleValue = cgtu_Values[j] / 1000 * ResMul;
 					CGTU_TekScale(cgtu_chMeasure, ScaleValue);
 				}
 				sleep(2000);
@@ -796,7 +796,10 @@ function CGTU_CollectVGate(IterationsCount)
 	CGTU_DefineUnitMode();
 	
 	if(cgtu_Mode == cgtu_Mode2Wire || cgtu_Mode == cgtu_Mode4WireCompatible)
-		var Values = CGEN_GetRange(cgtu_Imin, cgtu_Imax, cgtu_Istp);
+	{
+		var Istp = Math.round((cgtu_Imax - cgtu_Imin) / (cgtu_Points - 1));
+		var Values = CGEN_GetRange(cgtu_Imin, cgtu_Imax, Istp);
+	}
 	else
 	{
 		var cgtu_Vgstp = Math.round((cgtu_Vmax - cgtu_Vmin) / (cgtu_Points - 1));
@@ -809,7 +812,8 @@ function CGTU_CollectIGate(IterationsCount)
 {
 	CGTU_DefineUnitMode();
 	
-	var Values = CGEN_GetRange(cgtu_Imin, cgtu_Imax, cgtu_Istp);
+	var Istp = Math.round((cgtu_Imax - cgtu_Imin) / (cgtu_Points - 1));
+	var Values = CGEN_GetRange(cgtu_Imin, cgtu_Imax, Istp);
 	print("Gate resistance set to " + cgtu_Res + " Ohms");
 	print("-----------");
 	return CGTU_Collect(111, cgtu_Res, Values, IterationsCount);
@@ -834,7 +838,8 @@ function CGTU_CollectIPower(IterationsCount)
 {
 	CGTU_DefineUnitMode();
 	
-	var Values = CGEN_GetRange(cgtu_Imin, cgtu_Imax, cgtu_Istp);
+	var Istp = Math.round((cgtu_Imax - cgtu_Imin) / (cgtu_Points - 1));
+	var Values = CGEN_GetRange(cgtu_Imin, cgtu_Imax, Istp);
 	print("Power resistance set to " + cgtu_Res + " Ohms");
 	print("-----------");
 	return CGTU_Collect(113, cgtu_Res, Values, IterationsCount);
@@ -1202,7 +1207,8 @@ function CGTU_VerifyPower()
 
 function CGTU_CollectGate(IterationsCount)
 {
-	var cgtu_CurrentValues = CGEN_GetRange(cgtu_Imin, cgtu_Imax, cgtu_Istp);
+	var Istp = Math.round((cgtu_Imax - cgtu_Imin) / (cgtu_Points - 1));
+	var cgtu_CurrentValues = CGEN_GetRange(cgtu_Imin, cgtu_Imax, Istp);
 
 	print("Gate resistance set to " + cgtu_Res + " Ohms");
 	print("-----------");
@@ -1211,7 +1217,8 @@ function CGTU_CollectGate(IterationsCount)
 
 function CGTU_CollectPower(IterationsCount)
 {
-	var cgtu_CurrentValues = CGEN_GetRange(cgtu_Imin, cgtu_Imax, cgtu_Istp);
+	var Istp = Math.round((cgtu_Imax - cgtu_Imin) / (cgtu_Points - 1));
+	var cgtu_CurrentValues = CGEN_GetRange(cgtu_Imin, cgtu_Imax, Istp);
 
 	print("Power resistance set to " + cgtu_Res + " Ohms");
 	print("-----------");
