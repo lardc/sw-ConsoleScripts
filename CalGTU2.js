@@ -8,6 +8,7 @@ cgtu_Mode2Wire = 0;					// Старые двухпроводные блоки
 cgtu_Mode4WirePEX = 1;				// Четырёхпроводные блоки для Powerex
 cgtu_Mode4WireIncompatible = 2;		// Четырёхпроводные блоки, комбинированный режим (неактивная ветка)
 cgtu_Mode4WireСompatible = 3;		// Четырёхпроводные блоки, совместимые по управлению с двухпроводными (основная ветка)
+// Выбор режима автоматически выполняется в CGTU_Init()
 cgtu_Mode = cgtu_Mode4WireСompatible;
 
 cgtu_Res = 10;  // in Ohms
