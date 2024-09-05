@@ -2,11 +2,13 @@ include("TestGTU.js")
 include("Tektronix.js")
 include("CalGeneral.js")
 
-// Version check
-cgtu_2Wire = false;
-
 // Global definitions
-cgtu_CompatibleMode = 1; // GTU with SL = 1; for other GTU = 0
+// Конфигурация режима блока
+cgtu_Mode2Wire = 0;					// Старые двухпроводные блоки
+cgtu_Mode4WirePEX = 1;				// Четырёхпроводные блоки для Powerex
+cgtu_Mode4WireIncompatible = 2;		// Четырёхпроводные блоки, комбинированный режим (неактивная ветка)
+cgtu_Mode4WireСompatible = 3;		// Четырёхпроводные блоки, совместимые по управлению с двухпроводными (основная ветка)
+cgtu_Mode = cgtu_Mode4WireСompatible;
 
 cgtu_Res = 10;  // in Ohms
 
@@ -21,13 +23,15 @@ cgtu_RangeVgt = 1;    // 0 = Range [ < 500 mV]; 1 = Range [ > 500 mV] for measur
 cgtu_UseRangeTuning = 1;
 
 // Current limits
-cgtu_Imax = cgtu_2Wire ? 700 : 1000;
+cgtu_Imax2Wire = 700;
+cgtu_Imax4Wire = 1000;
+cgtu_Imax = cgtu_Mode == cgtu_Mode2Wire ? cgtu_Imax2Wire : cgtu_Imax4Wire;
 cgtu_Imin = 50;
 cgtu_Istp = 50;
 
 // Voltage limits
 cgtu_Vmax = 12000;    // in mV
-cgtu_Vmin = 2000;    // in mV
+cgtu_Vmin = 2000;     // in mV
 
 // Counters
 cgtu_cntTotal = 0;
@@ -93,7 +97,9 @@ cgtu_Iterations = 1;
 
 // Measurement errors
 cgtu_EUosc = 3;
-cgtu_ER = 1;		// совместимость для двухпроводной схемы
+cgtu_ER2Wire = 1;
+cgtu_ER4Wire = 0.1;
+cgtu_ER = cgtu_Mode == cgtu_Mode2Wire ? cgtu_ER2Wire : cgtu_ER4Wire;
 
 // Функция знака с учётом формул МА
 Math.sign_ma = function(x)
@@ -104,10 +110,26 @@ Math.sign_ma = function(x)
 		return 1;
 }
 
-// General functions
+function CGTU_GetBaseReg(ProbeCMD)
+{
+	switch (ProbeCMD)
+	{
+		case 110:	// VG
+			return 130;
+
+		case 111:	// IG
+			return 131;
+
+		case 112:	// VD
+			return 128;
+
+		case 113:	// ID
+			return 129;
+	}
+}
+
 function CGTU_Probe(ProbeCMD)
 {
-	var f
 	// Acquire mode
 	var AvgNum;
 	if (cgtu_UseAvg)
@@ -128,177 +150,153 @@ function CGTU_Probe(ProbeCMD)
 		while (dev.r(192) != 0) sleep(50);
 		sleep(500);
 	}
-	
 	sleep(1000);
 	
-	if (ProbeCMD == 110)
+	// Для двухпроводных блоков и блоков в режиме совместиомсти одна команда используется для Vgt и Igt
+	if(cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire)
 	{
-		if (cgtu_2Wire)
+		// Данные из блока и СИ
+		var igt = dev.r(204) + dev.r(233) / 1000;
+		var vgt = dev.r(205) + dev.r(234) / 1000;
+		var vgt_sc = CGTU_Measure(cgtu_chMeasure);
+		var igt_sc = vgt_sc / cgtu_Res;
+		
+		// Расчёт погрешности
+		var igt_err = (igt - igt_sc) / igt_sc * 100;
+		var vgt_err = (vgt - vgt_sc) / vgt_sc * 100;
+		var igt_err_sum;
+		var vgt_err_sum;
+		if(cgtu_Mode == cgtu_Mode2Wire)
 		{
-			f = CGTU_Measure(cgtu_chMeasure);
-			var igt = dev.r(204);
-			var vgt = dev.r(205);
-			var igt_sc = (f / cgtu_Res).toFixed(1);
-			var vgt_sc = f;
-
-			// gtu data
-			cgtu_igt.push(igt);
-			cgtu_vgt.push(vgt);
-			// tektronix data
-			cgtu_igt_sc.push(igt_sc);
-			cgtu_vgt_sc.push(vgt_sc);
-			// relative error
-			cgtu_igt_err.push(((igt - igt_sc) / igt_sc * 100).toFixed(2))
-			cgtu_vgt_err.push(((vgt - vgt_sc) / vgt_sc * 100).toFixed(2))
-			// summary error
-			var cgtu_E0 = Math.sqrt(Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2));
-			cgtu_igt_err_sum.push(1.1 * Math.sqrt(Math.pow((igt - igt_sc) / igt_sc * 100, 2) + Math.pow(cgtu_E0, 2)));
-			cgtu_vgt_err_sum.push(1.1 * Math.sqrt(Math.pow((vgt - vgt_sc) / vgt_sc * 100, 2) + Math.pow(cgtu_E0, 2)));
+			igt_err_sum = 1.1 * Math.sqrt(Math.pow(igt_err, 2) + Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2));
+			vgt_err_sum = 1.1 * Math.sqrt(Math.pow(vgt_err, 2) + Math.pow(cgtu_EUosc, 2));
 		}
 		else
 		{
-			f = CGTU_Measure(cgtu_chMeasure);
-			var vgt = (dev.r(204) + dev.r(233) / 1000).toFixed(2);
-			var vgt_sc = f.toFixed(2);
-			var vgt_set = dev.r(130 + (cgtu_CompatibleMode ? 3 : 0));
-
-			// gtu data
-			cgtu_vgt.push(vgt);
-			cgtu_vgt_set.push(vgt_set);
-			// tektronix data
-			cgtu_vgt_sc.push(vgt_sc);
-			// relative error
-			var vgt_err = (vgt - vgt_sc) / vgt_sc * 100;
+			igt_err_sum = Math.sign_ma(igt_err) * (Math.abs(igt_err) + 1.1 * Math.sqrt(Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2)));
+			vgt_err_sum = Math.sign_ma(vgt_err) * (Math.abs(vgt_err) + cgtu_EUosc);
+		}
+		
+		// Вывод и сохранение
+		print("Iset,      mA: " + dev.r(140));
+		print("Vtek,      mV: " + vgt_sc.toFixed(2));
+		
+		if(ProbeCMD == 110)
+		{
+			cgtu_vgt.push(vgt.toFixed(2));
+			cgtu_vgt_sc.push(vgt_sc.toFixed(2));
 			cgtu_vgt_err.push(vgt_err.toFixed(2));
-			// set error
-			var vgt_set_err = (vgt_sc - vgt_set) / vgt_set * 100;
-			cgtu_vgt_set_err.push(vgt_set_err.toFixed(2));
-			// summary error
-			cgtu_vgt_err_sum.push(Math.sign_ma(vgt_err) * (Math.abs(vgt_err) + cgtu_EUosc));
-			cgtu_vgt_set_err_sum.push(Math.sign_ma(vgt_set_err) * (Math.abs(vgt_set_err) + cgtu_EUosc));
+			cgtu_vgt_err_sum.push(vgt_err_sum.toFixed(2));
 			
-			print("Vset,    mV: " + vgt_set);
-			print("Vgt,     mV: " + vgt);
-			print("Tek,     mV: " + vgt_sc);
-			print("Vset err, %: " + vgt_set_err.toFixed(2));
-			print("Vgt err,  %: " + vgt_err.toFixed(2));
-		}
-	}
-	if (ProbeCMD != 110 && cgtu_2Wire)
-	{
-		f = CGTU_Measure(cgtu_chMeasurePower);
-		var ih = dev.r(204);
-		var ih_sc = (f / cgtu_ResPower).toFixed(1);
-		
-		cgtu_id.push(ih);
-		cgtu_id_sc.push(ih_sc);
-		cgtu_id_err.push(((ih_sc - ih) / ih_sc * 100).toFixed(2));
-		
-		// Summary error
-		var cgtu_E0 = Math.sqrt(Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2));
-		cgtu_id_err_sum.push(1.1 * Math.sqrt(Math.pow(((ih_sc - ih) / ih_sc).toFixed(2) * 100, 2) + Math.pow(cgtu_E0, 2)));
-	}
-	
-	if (!cgtu_2Wire)
-	{
-		if (ProbeCMD == 111)
-		{
-			f = CGTU_Measure(cgtu_chMeasure);
-			var igt = (dev.r(204) + dev.r(233) / 1000).toFixed(2);
-			var igt_sc = (f / cgtu_Res).toFixed(2);
-			var igt_set = dev.r(131 + (cgtu_CompatibleMode ? 3 : 0));
-			
-			// gtu data
-			cgtu_igt.push(igt);
-			cgtu_igt_set.push(igt_set);
-			// tektronix data
-			cgtu_igt_sc.push(igt_sc);
-			// relative error
-			var igt_err = (igt - igt_sc) / igt_sc * 100;
-			cgtu_igt_err.push(igt_err.toFixed(2));
-			// Set error
-			var igt_set_err = (igt_sc - igt_set) / igt_set * 100;
-			cgtu_igt_set_err.push(igt_set_err.toFixed(2));
-			// summary error
-			cgtu_igt_err_sum.push(Math.sign_ma(igt_err) * (Math.abs(igt_err) + cgtu_EUosc));
-			cgtu_igt_set_err_sum.push(Math.sign_ma(igt_set_err) * (Math.abs(igt_set_err) + cgtu_EUosc));
-			
-			print("Iset,    mA: " + igt_set);
-			print("Igt,     mA: " + igt);
-			print("Tek,     mA: " + igt_sc);
-			print("Iset err, %: " + igt_set_err.toFixed(2));
-			print("Igt err,  %: " + igt_err.toFixed(2));
-		}
-		
-		if (ProbeCMD == 112)
-		{
-			f = CGTU_Measure(cgtu_chMeasure);
-			var vd = (dev.r(204) + dev.r(233) / 1000).toFixed(2);
-			var vd_sc = f;
-			var vd_set = dev.r(128 + (cgtu_CompatibleMode ? 3 : 0));
-			
-			// gtu data
-			cgtu_vd.push(vd);
-			// tektronix data
-			cgtu_vd_sc.push(vd_sc);
-			// relative error
-			var vd_err = (vd - vd_sc) / vd_sc * 100;
-			cgtu_vd_err.push(vd_err.toFixed(2));
-			// set error
-			var vd_set_err = (vd_sc - vd_set) / vd_set * 100;
-			cgtu_vd_set_err.push(vd_set_err.toFixed(2));
-			// summary error
-			cgtu_vd_err_sum.push(Math.sign_ma(vd_err) * (Math.abs(vd_err) + cgtu_EUosc));
-			cgtu_vd_set_err_sum.push(Math.sign_ma(vd_set_err) * (Math.abs(vd_set_err) + cgtu_EUosc));
-			
-			print("Vset,    mV: " + vd_set);
-			print("Vd,      mV: " + vd);
-			print("Tek,     mV: " + vd_sc);
-			print("Vset err, %: " + vd_set_err.toFixed(2));
-			print("Vd  err,  %: " + vd_err.toFixed(2));
-		}
-		
-		if (ProbeCMD == 113)
-		{
-			f = CGTU_Measure(cgtu_chMeasure);
-			var id = (dev.r(204) + dev.r(233) / 1000).toFixed(2);
-			var id_sc = (f / cgtu_Res).toFixed(2);
-			var id_set = dev.r(129 + (cgtu_CompatibleMode ? 3 : 0));
-			
-			// gtu data
-			cgtu_id.push(id);
-			cgtu_id_set.push(id_set);
-			// tektronix data
-			cgtu_id_sc.push(id_sc);
-			// relative error
-			var id_err = (id - id_sc) / id_sc * 100;
-			cgtu_id_err.push(id_err.toFixed(2));
-			// set error
-			var id_set_err = (id_sc - id_set) / id_set * 100;
-			cgtu_id_set_err.push(id_set_err.toFixed(2));
-			// summary error
-			cgtu_id_err_sum.push(Math.sign_ma(id_err) * (Math.abs(id_err) + cgtu_EUosc));
-			cgtu_id_set_err_sum.push(Math.sign_ma(id_set_err) * (Math.abs(id_set_err) + cgtu_EUosc));
-			
-			print("Iset,    mA: " + id_set);
-			print("Id,      mA: " + id);
-			print("Tek,     mA: " + id_sc);
-			print("Iset err, %: " + id_set_err.toFixed(2));
-			print("Id  err,  %: " + id_err.toFixed(2));
-		}
-	}
-
-	if (cgtu_2Wire)
-	{
-		print("Iset, mA: " + dev.r(140));
-		if (ProbeCMD == 110)
-		{
-			print("Igt,  mA: " + dev.r(204));
-			print("Vgt,  mV: " + dev.r(205));
+			print("Vgt,       mV: " + vgt.toFixed(2));
+			print("Vgt_err,    %: " + vgt_err.toFixed(2));
+			print("Vgt_err_s,  %: " + vgt_err_sum.toFixed(2));
 		}
 		else
-			print("Ih,   mA: " + dev.r(204));
-		print("Tek,  mV: " + f);
+		{
+			cgtu_igt.push(igt.toFixed(2));
+			cgtu_igt_sc.push(igt_sc.toFixed(2));
+			cgtu_igt_err.push(igt_err.toFixed(2));
+			cgtu_igt_err_sum.push(igt_err_sum.toFixed(2));
+			
+			print("Igt,       mV: " + igt.toFixed(2));
+			print("Igt_err,    %: " + igt_err.toFixed(2));
+			print("Igt_err_s,  %: " + igt_err_sum.toFixed(2));
+		}
+	}
+	// Режим для несовместимых четырёхпроводных блоков
+	else
+	{
+		// Данные из блока и СИ
+		var val = dev.r(204) + dev.r(233) / 1000;
+		var val_sc = CGTU_Measure(cgtu_chMeasure) / ((ProbeCMD == 110 || ProbeCMD == 112) ? 1 : cgtu_Res);
+		var val_set = dev.r(CGTU_GetBaseReg(ProbeCMD) + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0));
+		
+		// Расчёт погрешности
+		var val_err = (val - val_sc) / val_sc * 100;
+		var val_set_err = (val_sc - val_set) / val_set * 100;
+		
+		var ext_err;
+		if(ProbeCMD == 110 || ProbeCMD == 112)
+			ext_err = cgtu_EUosc;
+		else
+			ext_err = 1.1 * Math.sqrt(Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2));
+		
+		var val_err_sum = Math.sign_ma(val_err) * (Math.abs(val_err) + ext_err);
+		var val_set_err_sum = Math.sign_ma(val_set_err) * (Math.abs(val_set_err) + ext_err);
+
+		// Сохранение
+		val = val.toFixed(2);
+		val_sc = val_sc.toFixed(2);
+		val_set = val_set.toFixed(2);
+		
+		val_err = val_err.toFixed(2);
+		val_err_sum = val_err_sum.toFixed(2);
+		val_set_err = val_set_err.toFixed(2);
+		val_set_err_sum = val_set_err_sum.toFixed(2);
+		
+		switch(ProbeCMD)
+		{
+			case 110:
+				cgtu_vgt.push(val);
+				cgtu_vgt_sc.push(val_sc);
+				cgtu_vgt_set.push(val_set);
+				
+				cgtu_vgt_err.push(val_err);
+				cgtu_vgt_err_sum.push(val_err_sum);
+				
+				cgtu_vgt_set_err.push(val_set_err);
+				cgtu_vgt_set_err_sum.push(val_set_err_sum)
+				break;
+			
+			case 111:
+				cgtu_igt.push(val);
+				cgtu_igt_sc.push(val_sc);
+				cgtu_igt_set.push(val_set);
+				
+				cgtu_igt_err.push(val_err);
+				cgtu_igt_err_sum.push(val_err_sum);
+				
+				cgtu_igt_set_err.push(val_set_err);
+				cgtu_igt_set_err_sum.push(val_set_err_sum)
+				break;
+			
+			case 112:
+				cgtu_vd.push(val);
+				cgtu_vd_sc.push(val_sc);
+				cgtu_vd_set.push(val_set);
+				
+				cgtu_vd_err.push(val_err);
+				cgtu_vd_err_sum.push(val_err_sum);
+				
+				cgtu_vd_set_err.push(val_set_err);
+				cgtu_vd_set_err_sum.push(val_set_err_sum)
+				break;
+			
+			case 113:
+				cgtu_id.push(val);
+				cgtu_id_sc.push(val_sc);
+				cgtu_id_set.push(val_set);
+				
+				cgtu_id_err.push(val_err);
+				cgtu_id_err_sum.push(val_err_sum);
+				
+				cgtu_id_set_err.push(val_set_err);
+				cgtu_id_set_err_sum.push(val_set_err_sum)
+				break;
+		}
+		
+		// Вывод
+		var Letter = (ProbeCMD == 110 || ProbeCMD == 112) ? "V" : "I";
+		var Unit = (ProbeCMD == 110 || ProbeCMD == 112) ? "V" : "A";
+		
+		print(Letter + "set,       m" + Unit + ": " + val_set);
+		print(Letter + "tek,       m" + Unit + ": " + val_sc);
+		print(Letter + "unit,      m" + Unit + ": " + val);
+		print(Letter + "unit_err,   %: " + val_err);
+		print(Letter + "unit_err_s, %: " + val_err_sum);
+		print(Letter + "set_err,    %: " + val_set_err);
+		print(Letter + "set_err_s,  %: " + val_set_err_sum);
 	}
 
 	cgtu_cntDone++;
@@ -399,18 +397,23 @@ function CGTU_ResetA()
 
 function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 {
-	// Version check
+	// Определение рабочего режима по регистрам блока
+	var ZeroRegs = true
 	for (var i = 0; i < 5; i++)
-	{
-		if (dev.r(i) !== 0)
-		{
-			cgtu_2Wire = false;
-			break;
-		}
-		cgtu_2Wire = true;
-	}
-	cgtu_Imax = cgtu_2Wire ? 700 : 1000;
-	cgtu_ER = cgtu_2Wire ? 1 : 0.5;
+		ZeroRegs = ZeroRegs && (dev.r(i) == 0);
+	
+	if(ZeroRegs)
+		cgtu_Mode = cgtu_Mode2Wire;
+	else if(dev.r(140) == 0)
+		cgtu_Mode = cgtu_Mode4WirePEX;
+	else if(dev.r(120) == 0)
+		cgtu_Mode = cgtu_Mode4WireIncompatible;
+	else
+		cgtu_Mode = cgtu_Mode4WireCompatible;
+	
+	// Выбор максимального тока
+	cgtu_Imax = cgtu_Mode == cgtu_Mode2Wire ? cgtu_Imax2Wire : cgtu_Imax4Wire;
+	cgtu_ER = cgtu_Mode == cgtu_Mode2Wire ? cgtu_ER2Wire : cgtu_ER4Wire;
 
 	if (channelMeasure < 1 || channelMeasure > 4 ||
 		channelSyncOrMeasurePower < 1 || channelSyncOrMeasurePower > 4)
@@ -461,7 +464,7 @@ function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 }
 
 function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
-{	
+{
 	cgtu_cntTotal = IterationsCount * cgtu_Values.length;
 	cgtu_cntDone = 0;
 
@@ -535,7 +538,7 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 					CGTU_TekScale(cgtu_chMeasure, ScaleValue);
 					sleep(2000);
 					// Configure GTU
-					dev.w(BaseReg + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Values[j]);
+					dev.w(BaseReg + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0) , cgtu_Values[j]);
 					CGTU_Probe(ProbeCMD);
 				}
 			}
@@ -849,10 +852,10 @@ function CGTU_CollectIPower(IterationsCount)
 function CGTU_SetLimits()
 {
 	// Set limits
-	dev.w(128 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Vmax);
-	dev.w(129 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Imax);
-	dev.w(130 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Vmax);
-	dev.w(131 + (cgtu_CompatibleMode ? 3 : 0) , cgtu_Imax);
+	dev.w(128 + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0) , cgtu_Vmax);
+	dev.w(129 + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0) , cgtu_Imax);
+	dev.w(130 + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0) , cgtu_Vmax);
+	dev.w(131 + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0) , cgtu_Imax);
 }
 
 // Save
