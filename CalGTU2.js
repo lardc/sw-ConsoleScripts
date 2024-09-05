@@ -20,9 +20,7 @@ cgtu_RangeVgt = 1;    // 0 = Range [ < 500 mV]; 1 = Range [ > 500 mV] for measur
 cgtu_UseRangeTuning = 1;
 
 // Current limits
-cgtu_Imax2Wire = 700;
-cgtu_Imax4Wire = 1000;
-cgtu_Imax = cgtu_Mode == cgtu_Mode2Wire ? cgtu_Imax2Wire : cgtu_Imax4Wire;
+cgtu_Imax = 1000;
 cgtu_Imin = 50;
 cgtu_Istp = 50;
 
@@ -96,7 +94,7 @@ cgtu_Iterations = 1;
 cgtu_EUosc = 3;
 cgtu_ER2Wire = 1;
 cgtu_ER4Wire = 0.1;
-cgtu_ER = cgtu_Mode == cgtu_Mode2Wire ? cgtu_ER2Wire : cgtu_ER4Wire;
+cgtu_ER = (cgtu_Mode == cgtu_Mode2Wire) ? cgtu_ER2Wire : cgtu_ER4Wire;
 
 // Функция знака с учётом формул МА
 Math.sign_ma = function(x)
@@ -305,20 +303,20 @@ function CGTU_Probe(ProbeCMD)
 function CGTU_TriggerTune()
 {
 	TEK_Send("trigger:main:pulse:width:polarity negative");
-	TEK_Send("trigger:main:pulse:width:width" + (cgtu_2Wire ? "50e-3" : "5e-3"));
+	TEK_Send("trigger:main:pulse:width:width" + (cgtu_Mode == cgtu_Mode2Wire ? "50e-3" : "5e-3"));
 }
 
 function CGTU_TekCursor(Channel)
 {
 	TEK_Send("cursor:select:source ch" + Channel);
 	TEK_Send("cursor:function vbars");
-	TEK_Send("cursor:vbars:position1" + (cgtu_2Wire ? "-60e-3" : "-6e-3"));
+	TEK_Send("cursor:vbars:position1" + (cgtu_Mode == cgtu_Mode2Wire ? "-60e-3" : "-6e-3"));
 	TEK_Send("cursor:vbars:position2 0");
 }
 
 function CGTU_TekScale(Channel, Value)
 {
-	if (cgtu_2Wire)
+	if (cgtu_Mode == cgtu_Mode2Wire)
 	{
 		TEK_ChannelScale(Channel, Value);
 	}
@@ -409,8 +407,8 @@ function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 		cgtu_Mode = cgtu_Mode4WireCompatible;
 	
 	// Выбор максимального тока
-	cgtu_Imax = cgtu_Mode == cgtu_Mode2Wire ? cgtu_Imax2Wire : cgtu_Imax4Wire;
-	cgtu_ER = cgtu_Mode == cgtu_Mode2Wire ? cgtu_ER2Wire : cgtu_ER4Wire;
+	cgtu_Imax = (cgtu_Mode == cgtu_Mode2Wire) ? cgtu_Imax2Wire : cgtu_Imax4Wire;
+	cgtu_ER = (cgtu_Mode == cgtu_Mode2Wire) ? cgtu_ER2Wire : cgtu_ER4Wire;
 
 	if (channelMeasure < 1 || channelMeasure > 4 ||
 		channelSyncOrMeasurePower < 1 || channelSyncOrMeasurePower > 4)
@@ -422,7 +420,7 @@ function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 	cgtu_chMeasure = channelMeasure;
 
 	// Copy channel information
-	if (cgtu_2Wire)
+	if (cgtu_Mode == cgtu_Mode2Wire)
 		cgtu_chMeasurePower = channelSyncOrMeasurePower;
 	else
 		cgtu_chSync = channelSyncOrMeasurePower;
@@ -438,12 +436,12 @@ function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 	// Init channels
 	TEK_ChannelInit(cgtu_chMeasure, "1", "1");
 	
-	TEK_ChannelInit(cgtu_2Wire ? cgtu_chMeasurePower : cgtu_chSync, "1", "1");
+	TEK_ChannelInit(cgtu_Mode == cgtu_Mode2Wire ? cgtu_chMeasurePower : cgtu_chSync, "1", "1");
 	// Init trigger
-	TEK_TriggerPulseInit(cgtu_2Wire ? cgtu_chMeasure : cgtu_chSync, cgtu_2Wire ? "1" : "2.5");
+	TEK_TriggerPulseInit(cgtu_Mode == cgtu_Mode2Wire ? cgtu_chMeasure : cgtu_chSync, cgtu_Mode == cgtu_Mode2Wire ? "1" : "2.5");
 	CGTU_TriggerTune();
 	// Horizontal settings
-	TEK_Horizontal(cgtu_2Wire ? "10e-3" : "1e-3", cgtu_2Wire ? "-40e-3" : "-4e-3");
+	TEK_Horizontal(cgtu_Mode == cgtu_Mode2Wire ? "10e-3" : "1e-3", cgtu_Mode == cgtu_Mode2Wire ? "-40e-3" : "-4e-3");
 	
 	// Display channels
 	for (var i = 1; i <= 4; i++)
@@ -456,7 +454,7 @@ function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 
 	// Init measurement
 	CGTU_TekCursor(cgtu_chMeasure);
-	if (cgtu_2Wire)
+	if (cgtu_Mode == cgtu_Mode2Wire)
 		CGTU_TekCursor(cgtu_chMeasurePower);
 }
 
@@ -465,7 +463,7 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 	cgtu_cntTotal = IterationsCount * cgtu_Values.length;
 	cgtu_cntDone = 0;
 
-	if (cgtu_2Wire)
+	if (cgtu_Mode == cgtu_Mode2Wire)
 	{
 		TEK_TriggerPulseInit((ProbeCMD == 110) ? cgtu_chMeasure : cgtu_chMeasurePower, "1");
 		CGTU_TriggerTune();
@@ -503,7 +501,7 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 		{
 			if (cgtu_UseRangeTuning)
 			{
-				if (cgtu_2Wire)
+				if (cgtu_Mode == cgtu_Mode2Wire)
 				{
 					CGTU_TekScale((ProbeCMD == 110) ? cgtu_chMeasure : cgtu_chMeasurePower, cgtu_Values[j] * Resistance / 1000);
 				}
@@ -520,7 +518,7 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 				}
 			}
 
-			if (cgtu_2Wire)
+			if (cgtu_Mode == cgtu_Mode2Wire)
 			{
 				// Configure trigger
 				TEK_TriggerLevelF(cgtu_Values[j] * Resistance / (1000 * 2));
@@ -540,7 +538,7 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 
 function CGTU_CalVGT(P2, P1, P0)
 {
-	if (cgtu_2Wire && P2 == null)
+	if (cgtu_Mode == cgtu_Mode2Wire && P2 == null)
 	{
 		dev.w(52, Math.round(P1 * 1000));
 		dev.w(53, 1000);
@@ -569,7 +567,7 @@ function CGTU_CalVGT(P2, P1, P0)
 
 function CGTU_CalIGT(P2, P1, P0)
 {
-	if (cgtu_2Wire && P2 == null)
+	if (cgtu_Mode == cgtu_Mode2Wire && P2 == null)
 	{
 		dev.w(50, Math.round(P1 * 1000));
 		dev.w(51, 1000);
