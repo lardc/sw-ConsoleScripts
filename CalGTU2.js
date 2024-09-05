@@ -16,8 +16,6 @@ cgtu_Res = 10;  // in Ohms
 // Границы диапазонов указаны для справки. Фактические значения хранятся в соответстующих регистрах
 cgtu_RangeIgt = 1;    // 0 = Range [ < 50 mA];  1 = Range [ > 50 mA] for measure & set
 cgtu_RangeVgt = 1;    // 0 = Range [ < 500 mV]; 1 = Range [ > 500 mV] for measure & set
-//
-cgtu_UseRangeTuning = 1;
 
 // Current limits
 cgtu_Imax = 1000;
@@ -138,161 +136,156 @@ function CGTU_Probe(ProbeCMD)
 		TEK_AcquireSample();
 	}
 	sleep(500);
-
+	
+	// Переопределение команд для режимо совместиомсти
+	var AlterProbeCMD = ProbeCMD;
+	if(cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire)
+	{
+		if(ProbeCMD == 111)
+			AlterProbeCMD = 110;
+		else if(ProbeCMD == 113)
+			AlterProbeCMD = 111;
+	}
 	for (var i = 0; i < (cgtu_UseAvg ? (AvgNum + 1) : 1); i++)
 	{
-		dev.c(ProbeCMD);
+		dev.c(AlterProbeCMD);
 		while (dev.r(192) != 0) sleep(50);
 		sleep(500);
 	}
 	sleep(1000);
 	
-	// Для двухпроводных блоков и блоков в режиме совместиомсти одна команда используется для Vgt и Igt
-	if(cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire)
+	// Вспомогательные функции
+	// Измеренное значение из блока
+	function GetMeasuredVal()
 	{
-		// Данные из блока и СИ
-		var igt = dev.r(204) + dev.r(233) / 1000;
-		var vgt = dev.r(205) + dev.r(234) / 1000;
-		var vgt_sc = CGTU_Measure(cgtu_chMeasure);
-		var igt_sc = vgt_sc / cgtu_Res;
-		
-		// Расчёт погрешности
-		var igt_err = (igt - igt_sc) / igt_sc * 100;
-		var vgt_err = (vgt - vgt_sc) / vgt_sc * 100;
-		var igt_err_sum;
-		var vgt_err_sum;
+		if((cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire) && ProbeCMD == 110)
+			return dev.r(205) + dev.r(234) / 1000;
+		else
+			return dev.r(204) + dev.r(233) / 1000;
+	}
+	// Измеренное значение осциллографом
+	function GetScopeVal()
+	{
+		return CGTU_Measure(cgtu_chMeasure) / ((ProbeCMD == 110 || ProbeCMD == 112) ? 1 : cgtu_Res);
+	}
+	// Задание
+	function GetSetVal()
+	{
+		if(cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire)
+			return dev.r(140);
+		else
+			return dev.r(CGTU_GetBaseReg(ProbeCMD) + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0));
+	}
+	// Рассчёт суммарной погрешности
+	function CalculateSumError(rel_error)
+	{
 		if(cgtu_Mode == cgtu_Mode2Wire)
 		{
-			igt_err_sum = 1.1 * Math.sqrt(Math.pow(igt_err, 2) + Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2));
-			vgt_err_sum = 1.1 * Math.sqrt(Math.pow(vgt_err, 2) + Math.pow(cgtu_EUosc, 2));
+			if(ProbeCMD == 110 || ProbeCMD == 112)
+				// Группа погрешностей по напряжению
+				return 1.1 * Math.sqrt(Math.pow(rel_error, 2) + Math.pow(cgtu_EUosc, 2));
+			else
+				// Группа погрешностей по току
+				return 1.1 * Math.sqrt(Math.pow(rel_error, 2) + Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2));
 		}
 		else
 		{
-			igt_err_sum = Math.sign_ma(igt_err) * (Math.abs(igt_err) + 1.1 * Math.sqrt(Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2)));
-			vgt_err_sum = Math.sign_ma(vgt_err) * (Math.abs(vgt_err) + cgtu_EUosc);
-		}
-		
-		// Вывод и сохранение
-		print("Iset,      mA: " + dev.r(140));
-		print("Vtek,      mV: " + vgt_sc.toFixed(2));
-		
-		if(ProbeCMD == 110)
-		{
-			cgtu_vgt.push(vgt.toFixed(2));
-			cgtu_vgt_sc.push(vgt_sc.toFixed(2));
-			cgtu_vgt_err.push(vgt_err.toFixed(2));
-			cgtu_vgt_err_sum.push(vgt_err_sum.toFixed(2));
-			
-			print("Vgt,       mV: " + vgt.toFixed(2));
-			print("Vgt_err,    %: " + vgt_err.toFixed(2));
-			print("Vgt_err_s,  %: " + vgt_err_sum.toFixed(2));
-		}
-		else
-		{
-			cgtu_igt.push(igt.toFixed(2));
-			cgtu_igt_sc.push(igt_sc.toFixed(2));
-			cgtu_igt_err.push(igt_err.toFixed(2));
-			cgtu_igt_err_sum.push(igt_err_sum.toFixed(2));
-			
-			print("Igt,       mV: " + igt.toFixed(2));
-			print("Igt_err,    %: " + igt_err.toFixed(2));
-			print("Igt_err_s,  %: " + igt_err_sum.toFixed(2));
+			if(ProbeCMD == 110 || ProbeCMD == 112)
+				// Группа погрешностей по напряжению
+				return Math.sign_ma(rel_error) * (Math.abs(rel_error) + cgtu_EUosc);
+			else
+				// Группа погрешностей по току
+				return Math.sign_ma(rel_error) * (Math.abs(rel_error) + 1.1 * Math.sqrt(Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2)));
 		}
 	}
-	// Режим для несовместимых четырёхпроводных блоков
-	else
-	{
-		// Данные из блока и СИ
-		var val = dev.r(204) + dev.r(233) / 1000;
-		var val_sc = CGTU_Measure(cgtu_chMeasure) / ((ProbeCMD == 110 || ProbeCMD == 112) ? 1 : cgtu_Res);
-		var val_set = dev.r(CGTU_GetBaseReg(ProbeCMD) + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0));
-		
-		// Расчёт погрешности
-		var val_err = (val - val_sc) / val_sc * 100;
-		var val_set_err = (val_sc - val_set) / val_set * 100;
-		
-		var ext_err;
-		if(ProbeCMD == 110 || ProbeCMD == 112)
-			ext_err = cgtu_EUosc;
-		else
-			ext_err = 1.1 * Math.sqrt(Math.pow(cgtu_EUosc, 2) + Math.pow(cgtu_ER, 2));
-		
-		var val_err_sum = Math.sign_ma(val_err) * (Math.abs(val_err) + ext_err);
-		var val_set_err_sum = Math.sign_ma(val_set_err) * (Math.abs(val_set_err) + ext_err);
+	
+	// Данные из блока и СИ
+	var val = GetMeasuredVal();
+	var val_sc = GetScopeVal();
+	var val_set = GetSetVal();
+	
+	// Расчёт погрешности
+	var val_err = (val - val_sc) / val_sc * 100;
+	var val_set_err = (val_sc - val_set) / val_set * 100;
+	
+	var val_err_sum = CalculateSumError(val_err);
+	var val_set_err_sum = CalculateSumError(val_set_err);
 
-		// Сохранение
-		val = val.toFixed(2);
-		val_sc = val_sc.toFixed(2);
-		val_set = val_set.toFixed(2);
-		
-		val_err = val_err.toFixed(2);
-		val_err_sum = val_err_sum.toFixed(2);
-		val_set_err = val_set_err.toFixed(2);
-		val_set_err_sum = val_set_err_sum.toFixed(2);
-		
-		switch(ProbeCMD)
-		{
-			case 110:
-				cgtu_vgt.push(val);
-				cgtu_vgt_sc.push(val_sc);
-				cgtu_vgt_set.push(val_set);
-				
-				cgtu_vgt_err.push(val_err);
-				cgtu_vgt_err_sum.push(val_err_sum);
-				
-				cgtu_vgt_set_err.push(val_set_err);
-				cgtu_vgt_set_err_sum.push(val_set_err_sum)
-				break;
+	// Сохранение
+	val = val.toFixed(2);
+	val_sc = val_sc.toFixed(2);
+	val_set = val_set.toFixed(2);
+	
+	val_err = val_err.toFixed(2);
+	val_err_sum = val_err_sum.toFixed(2);
+	val_set_err = val_set_err.toFixed(2);
+	val_set_err_sum = val_set_err_sum.toFixed(2);
+	
+	switch(ProbeCMD)
+	{
+		case 110:
+			cgtu_vgt.push(val);
+			cgtu_vgt_sc.push(val_sc);
+			cgtu_vgt_set.push(val_set);
 			
-			case 111:
-				cgtu_igt.push(val);
-				cgtu_igt_sc.push(val_sc);
-				cgtu_igt_set.push(val_set);
-				
-				cgtu_igt_err.push(val_err);
-				cgtu_igt_err_sum.push(val_err_sum);
-				
-				cgtu_igt_set_err.push(val_set_err);
-				cgtu_igt_set_err_sum.push(val_set_err_sum)
-				break;
+			cgtu_vgt_err.push(val_err);
+			cgtu_vgt_err_sum.push(val_err_sum);
 			
-			case 112:
-				cgtu_vd.push(val);
-				cgtu_vd_sc.push(val_sc);
-				cgtu_vd_set.push(val_set);
-				
-				cgtu_vd_err.push(val_err);
-				cgtu_vd_err_sum.push(val_err_sum);
-				
-				cgtu_vd_set_err.push(val_set_err);
-				cgtu_vd_set_err_sum.push(val_set_err_sum)
-				break;
+			cgtu_vgt_set_err.push(val_set_err);
+			cgtu_vgt_set_err_sum.push(val_set_err_sum)
+			break;
+		
+		case 111:
+			cgtu_igt.push(val);
+			cgtu_igt_sc.push(val_sc);
+			cgtu_igt_set.push(val_set);
 			
-			case 113:
-				cgtu_id.push(val);
-				cgtu_id_sc.push(val_sc);
-				cgtu_id_set.push(val_set);
-				
-				cgtu_id_err.push(val_err);
-				cgtu_id_err_sum.push(val_err_sum);
-				
-				cgtu_id_set_err.push(val_set_err);
-				cgtu_id_set_err_sum.push(val_set_err_sum)
-				break;
-		}
+			cgtu_igt_err.push(val_err);
+			cgtu_igt_err_sum.push(val_err_sum);
+			
+			cgtu_igt_set_err.push(val_set_err);
+			cgtu_igt_set_err_sum.push(val_set_err_sum)
+			break;
 		
-		// Вывод
-		var Letter = (ProbeCMD == 110 || ProbeCMD == 112) ? "V" : "I";
-		var Unit = (ProbeCMD == 110 || ProbeCMD == 112) ? "V" : "A";
+		case 112:
+			cgtu_vd.push(val);
+			cgtu_vd_sc.push(val_sc);
+			cgtu_vd_set.push(val_set);
+			
+			cgtu_vd_err.push(val_err);
+			cgtu_vd_err_sum.push(val_err_sum);
+			
+			cgtu_vd_set_err.push(val_set_err);
+			cgtu_vd_set_err_sum.push(val_set_err_sum)
+			break;
 		
-		print(Letter + "set,       m" + Unit + ": " + val_set);
-		print(Letter + "tek,       m" + Unit + ": " + val_sc);
-		print(Letter + "unit,      m" + Unit + ": " + val);
-		print(Letter + "unit_err,   %: " + val_err);
-		print(Letter + "unit_err_s, %: " + val_err_sum);
-		print(Letter + "set_err,    %: " + val_set_err);
-		print(Letter + "set_err_s,  %: " + val_set_err_sum);
+		case 113:
+			cgtu_id.push(val);
+			cgtu_id_sc.push(val_sc);
+			cgtu_id_set.push(val_set);
+			
+			cgtu_id_err.push(val_err);
+			cgtu_id_err_sum.push(val_err_sum);
+			
+			cgtu_id_set_err.push(val_set_err);
+			cgtu_id_set_err_sum.push(val_set_err_sum)
+			break;
 	}
+	
+	// Вывод
+	var Letter = (ProbeCMD == 110 || ProbeCMD == 112) ? "V" : "I";
+	var Unit = (ProbeCMD == 110 || ProbeCMD == 112) ? "V" : "A";
+	
+	var LetterSet = (cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire) ? "I" : Letter;
+	var UnitSet = (cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire) ? "A" : Unit;
+	
+	print(LetterSet + "set,       m" + UnitSet + ": " + val_set);
+	print(Letter + "tek,       m" + Unit + ": " + val_sc);
+	print(Letter + "unit,      m" + Unit + ": " + val);
+	print(Letter + "unit_err,   %: " + val_err);
+	print(Letter + "unit_err_s, %: " + val_err_sum);
+	print(Letter + "set_err,    %: " + val_set_err);
+	print(Letter + "set_err_s,  %: " + val_set_err_sum);
 
 	cgtu_cntDone++;
 	print("-- result " + cgtu_cntDone + " of " + cgtu_cntTotal + " --");
@@ -620,7 +613,7 @@ function CGTU_CalibrateIGate()
 		CGTU_CalIGT(cgtu_igt_corr[0], cgtu_igt_corr[1], cgtu_igt_corr[2]);
 
 		cgtu_igt_set_corr = CGEN_GetCorrection2("gtu_igt_set");
-		CGTU_CalIGT_SET(cgtu_igt_set_corr[0], cgtu_igt_set_corr[1], cgtu_igt_set_corr[2]);
+		CGTU_CalSetIGT(cgtu_igt_set_corr[0], cgtu_igt_set_corr[1], cgtu_igt_set_corr[2]);
 
 		// Print correction
 		CGTU_PrintIGateCal();
@@ -670,7 +663,7 @@ function CGTU_CalibrateIPower()
 		CGTU_CalID(cgtu_id_corr[0], cgtu_id_corr[1], cgtu_id_corr[2]);
 		
 		cgtu_id_set_corr = CGEN_GetCorrection2("gtu_id_set");
-		CGTU_CalID_SET(cgtu_id_set_corr[0], cgtu_id_set_corr[1], cgtu_id_set_corr[2]);
+		CGTU_CalSetID(cgtu_id_set_corr[0], cgtu_id_set_corr[1], cgtu_id_set_corr[2]);
 		
 		// Print correction
 		CGTU_PrintIPowerCal();
@@ -861,7 +854,7 @@ function CGTU_SaveIPower(NameId, NameId_Set)
 }
 
 // Cal
-function CGTU_CalIGT_SET(P2, P1, P0)
+function CGTU_CalSetIGT(P2, P1, P0)
 {
 	switch (cgtu_RangeIgt)
 	{
@@ -895,7 +888,7 @@ function CGTU_CalID(P2, P1, P0)
 	dev.ws(25, Math.round(P0));
 }
 
-function CGTU_CalID_SET(P2, P1, P0)
+function CGTU_CalSetID(P2, P1, P0)
 {
 	dev.ws(40, Math.round(P2 * 1e6));
 	dev.w(41, Math.round(P1 * 1000));
@@ -993,7 +986,7 @@ function CGTU_ResetVGateCal()
 function CGTU_ResetIGateCal()
 {
 	CGTU_CalIGT(0, 1, 0);
-	CGTU_CalIGT_SET(0, 1, 0);
+	CGTU_CalSetIGT(0, 1, 0);
 }
 
 function CGTU_ResetVPowerCal()
@@ -1004,7 +997,7 @@ function CGTU_ResetVPowerCal()
 function CGTU_ResetIPowerCal()
 {
 	CGTU_CalID(0, 1, 0);
-	CGTU_CalID_SET(0, 1, 0);
+	CGTU_CalSetID(0, 1, 0);
 }
 
 // HMIU calibration
