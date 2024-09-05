@@ -98,7 +98,7 @@ cgtu_ER = (cgtu_Mode == cgtu_Mode2Wire) ? cgtu_ER2Wire : cgtu_ER4Wire;
 // Функция знака с учётом формул МА
 Math.sign_ma = function(x)
 {
-	if (a < 0)
+	if (x < 0)
 		return -1;
 	else
 		return 1;
@@ -386,20 +386,6 @@ function CGTU_ResetA()
 
 function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 {
-	// Определение рабочего режима по регистрам блока
-	var ZeroRegs = true
-	for (var i = 0; i < 5; i++)
-		ZeroRegs = ZeroRegs && (dev.r(i) == 0);
-	
-	if(ZeroRegs)
-		cgtu_Mode = cgtu_Mode2Wire;
-	else if(dev.r(140) == 0)
-		cgtu_Mode = cgtu_Mode4WirePEX;
-	else if(dev.r(120) == 0)
-		cgtu_Mode = cgtu_Mode4WireIncompatible;
-	else
-		cgtu_Mode = cgtu_Mode4WireCompatible;
-	
 	// Выбор максимального тока
 	cgtu_ER = (cgtu_Mode == cgtu_Mode2Wire) ? cgtu_ER2Wire : cgtu_ER4Wire;
 
@@ -467,7 +453,7 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 
 		CGTU_TekScale((ProbeCMD == 110) ? cgtu_chMeasure : cgtu_chMeasurePower, cgtu_Imax * Resistance / 1000);
 	}
-	else
+	else if (!cgtu_UseRangeTuning)
 	{
 		// Configure scale
 		switch (ProbeCMD)
@@ -489,7 +475,6 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 				break;
 		}
 	}
-
 	sleep(500);
 
 	for (var i = 0; i < IterationsCount; i++)
@@ -785,22 +770,45 @@ function CGTU_VerifyVPower()
 	}
 }
 
+function CGTU_DefineUnitMode()
+{
+	// Определение рабочего режима по регистрам блока
+	var ZeroRegs = true
+	for (var i = 0; i < 5; i++)
+		ZeroRegs = ZeroRegs && (dev.r(i) == 0);
+	
+	if(ZeroRegs)
+		cgtu_Mode = cgtu_Mode2Wire;
+	else if(dev.r(140) == 0)
+		cgtu_Mode = cgtu_Mode4WirePEX;
+	else if(dev.r(120) == 0)
+		cgtu_Mode = cgtu_Mode4WireIncompatible;
+	else
+		cgtu_Mode = cgtu_Mode4WireCompatible;
+}
+
 function CGTU_CollectVGate(IterationsCount)
 {
-	var cgtu_Vgstp = Math.round((cgtu_Vmax - cgtu_Vmin) / (cgtu_Points - 1));
-	var cgtu_VoltageValues = CGEN_GetRange(cgtu_Vmin, cgtu_Vmax, cgtu_Vgstp);
-
-	return CGTU_Collect(110, cgtu_Res, cgtu_VoltageValues, IterationsCount);
+	CGTU_DefineUnitMode();
+	
+	if(cgtu_Mode == cgtu_Mode2Wire || cgtu_Mode == cgtu_Mode4WireCompatible)
+		var Values = CGEN_GetRange(cgtu_Imin, cgtu_Imax, cgtu_Istp);
+	else
+	{
+		var cgtu_Vgstp = Math.round((cgtu_Vmax - cgtu_Vmin) / (cgtu_Points - 1));
+		var Values = CGEN_GetRange(cgtu_Vmin, cgtu_Vmax, cgtu_Vgstp);
+	}
+	return CGTU_Collect(110, cgtu_Res, Values, IterationsCount);
 }
 
 function CGTU_CollectIGate(IterationsCount)
 {
-	var cgtu_Istp = Math.round((cgtu_Imax - cgtu_Imin) / (cgtu_Points - 1));
-	var cgtu_CurrentValues = CGEN_GetRange(cgtu_Imin, cgtu_Imax, cgtu_Istp);
-
+	CGTU_DefineUnitMode();
+	
+	var Values = CGEN_GetRange(cgtu_Imin, cgtu_Imax, cgtu_Istp);
 	print("Gate resistance set to " + cgtu_Res + " Ohms");
 	print("-----------");
-	return CGTU_Collect(111, cgtu_Res, cgtu_CurrentValues, IterationsCount);
+	return CGTU_Collect(111, cgtu_Res, Values, IterationsCount);
 }
 
 function CGTU_CollectVPower(IterationsCount)
