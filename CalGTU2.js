@@ -401,7 +401,6 @@ function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 		cgtu_Mode = cgtu_Mode4WireCompatible;
 	
 	// Выбор максимального тока
-	cgtu_Imax = (cgtu_Mode == cgtu_Mode2Wire) ? cgtu_Imax2Wire : cgtu_Imax4Wire;
 	cgtu_ER = (cgtu_Mode == cgtu_Mode2Wire) ? cgtu_ER2Wire : cgtu_ER4Wire;
 
 	if (channelMeasure < 1 || channelMeasure > 4 ||
@@ -497,36 +496,36 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 	{
 		for (var j = 0; j < cgtu_Values.length; j++)
 		{
+			// При активной подстройке масштаба
 			if (cgtu_UseRangeTuning)
 			{
 				if (cgtu_Mode == cgtu_Mode2Wire)
-				{
 					CGTU_TekScale((ProbeCMD == 110) ? cgtu_chMeasure : cgtu_chMeasurePower, cgtu_Values[j] * Resistance / 1000);
-				}
 				else
 				{
-					var BaseReg = CGTU_GetBaseReg(ProbeCMD);
 					var ScaleValue = cgtu_Values[j] / 1000 * ((ProbeCMD == 110 || ProbeCMD == 112) ? 1 : Resistance);
-					
 					CGTU_TekScale(cgtu_chMeasure, ScaleValue);
-					sleep(2000);
-					// Configure GTU
-					dev.w(BaseReg + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0) , cgtu_Values[j]);
-					CGTU_Probe(ProbeCMD);
 				}
+				sleep(2000);
 			}
-
+			
+			// Подстройка триггера в двухпроводном режиме
 			if (cgtu_Mode == cgtu_Mode2Wire)
 			{
-				// Configure trigger
 				TEK_TriggerLevelF(cgtu_Values[j] * Resistance / (1000 * 2));
 				sleep(1000);
-
-				// Configure GTU
-				dev.w(140, cgtu_Values[j]);
-				CGTU_Probe(ProbeCMD);
 			}
-
+			
+			// Запись задания
+			if(cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire)
+				dev.w(140, cgtu_Values[j]);
+			else
+			{
+				var BaseReg = CGTU_GetBaseReg(ProbeCMD);
+				dev.w(BaseReg + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0) , cgtu_Values[j]);
+			}
+			
+			CGTU_Probe(ProbeCMD);
 			if (anykey()) return 0;
 		}
 	}
