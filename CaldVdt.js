@@ -461,11 +461,59 @@ function CdVdt_CellCalibrateRate(CellNumber)
 	scattern(GateSetpointV, cdvdt_rate_sc, "Gate voltage (in mV)", "Rate voltage (in V/us)", "Cell #" +
 			CellNumber + " range: " + cdvdt_SelectedRange + "; Vd = " + cdvdt_CalVoltage + " V; " +
 			cdvdt_rate_sc[0] + ".." + cdvdt_rate_sc[cdvdt_rate_sc.length - 1] +" V/us");
+
+	CdVdt_NonlinearityCell(GateSetpointV, cdvdt_rate_sc, CellNumber, cdvdt_SelectedRange);
+
 	// Power disable cell
 	sleep(3000);
 	dVdt_CellCall(CellNumber, 2);
 	return 0;
 }
+
+// Вывод графика оценки нелинейности, относительно апроксимационной прямой
+function CdVdt_NonlinearityCell(X, Y, CellNumber, cdvdt_SelectedRange)
+{
+	var y_err_array = [];
+
+	var y_linear = 0;
+	var y_err_max = 0;
+
+	var sumx = 0;
+	var sumy = 0;
+	var sumx2 = 0;
+	var sumxy = 0;
+	var k = 0;
+	var b = 0;
+
+	// рассчет апроксимационной прямой
+	for (var i = 0; i < X.length; i++)
+	{
+		sumx += X[i];
+		sumy += Y[i];
+		sumx2 += X[i] * X[i];
+		sumxy += X[i] * Y[i];
+	}
+
+	k = (X.length * sumxy - (sumx * sumy)) / (X.length * sumx2 - sumx * sumx);
+	b = (sumy - k * sumx) / X.length;
+
+	// относительная оценка отклонения скорости нарастания от прямой
+	for (var i = 0; i < X.length; i++)
+	{
+		y_linear = k * X[i] + b
+		y_err = ((Y[i] - y_linear) / y_linear * 100).toFixed(2);
+		y_err_array.push(y_err);
+		p(X[i] + " mV, y_err, % = " + y_err);
+		
+		// поиск макисмальной погрешности отклонения
+		if (Math.abs(y_err) > y_err_max)
+			y_err_max = y_err;
+	}
+
+	scattern(X, y_err_array, "Gate voltage (in mV)", "Error relative Nonlinearity (in %)", "Cell #" + CellNumber + " range: " + cdvdt_SelectedRange)
+	p("y_err_max, % = " + y_err_max);
+}
+
 
 function CdVdt_Collect(Iterations)
 {
@@ -558,7 +606,7 @@ function CdVdt_CollectFixedRate(Repeat)
 			sleep(100);
 	}
 	
-	var VoltageArray = CGEN_GetRangeLogarithm(cdvdt_Vmin, cdvdt_Vmax, cdvdt_Points);
+	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, (cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Points - 1));
 	
 	var cntDone = 0;
 	var cntTotal = VoltageArray.length * cdvdt_RatePoint.length * Repeat;
@@ -643,6 +691,7 @@ function CdVdt_CollectFixedRate(Repeat)
 					case dVdt_AutoCursor:
 						var rate = CdVdt_MeasureRate();
 						CdVdt_SwitchToCursor();
+						sleep(500);
 						var rateObject = CdVdt_MeasureAutoCursor(v, rate, 10, 90);
 						rate = rateObject.Rate.toFixed(1);
 						CdVdt_TekMeasurement(cdvdt_chMeasure);
@@ -654,6 +703,7 @@ function CdVdt_CollectFixedRate(Repeat)
 				dVdt_err = (rate - cdvdt_RatePoint[i]) / cdvdt_RatePoint[i] * 100;
 				dVdt_err = Math.abs(dVdt_err) < 0.1 ? parseFloat(0).toFixed(1) : dVdt_err.toFixed(1)
 				V_err = ((v - VoltageArray[k]) / VoltageArray[k] * 100).toFixed(1)
+				V_err = Math.abs(V_err) < 0.1 ? parseFloat(0).toFixed(1) : V_err.toFixed(1)
 
 				if(cdvdt_MeasureMethod == dVdt_AutoCursor)
 					var ETosc = rateObject.TimeErr;
@@ -718,22 +768,20 @@ function CdVdt_CollectFixedRate(Repeat)
 
 	// Plot relative error distribution
 	scattern(cdvdt_rate_sc, cdvdt_rate_err, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt relative error " + cdvdt_RatePoint.join(", ") + " V/us");
-	scattern(cdvdt_v_sc, cdvdt_rate_err, "Voltage / Time (in V/us)", "Error relative Voltage (in %)", "dVdt relative error " + cdvdt_RatePoint.join(", ") + " V/us");
+	scattern(cdvdt_v_sc, cdvdt_rate_err, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt relative error " + cdvdt_RatePoint.join(", ") + " V/us");
 	scattern(cdvdt_v_sc, cdvdt_v_err, "Voltage (in V)", "Error relative Voltage (in %)", "Ud relative error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
 	
 	scattern(cdvdt_rate_sc, cdvdt_rate_err_sum, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
-	scattern(cdvdt_v_sc, cdvdt_rate_err_sum, "Voltage / Time (in V/us)", "Error relative Voltage (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
+	scattern(cdvdt_v_sc, cdvdt_rate_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
 	scattern(cdvdt_v_sc, cdvdt_v_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "Ud summary error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
 }
 
 function CdVdt_sign(a)
 {
-	if (a > 0)
+	if (a >= 0)
 		return 1
 	else if (a < 0)
 		return -1
-	else
-		return 0
 }
 
 // Save
