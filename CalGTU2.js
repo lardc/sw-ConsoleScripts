@@ -853,11 +853,13 @@ function CGTU_CollectIPower(IterationsCount)
 
 function CGTU_SetLimits()
 {
-	// Set limits
-	dev.w(128 + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0) , cgtu_Vmax);
-	dev.w(129 + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0) , cgtu_Imax);
-	dev.w(130 + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0) , cgtu_Vmax);
-	dev.w(131 + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0) , cgtu_Imax);
+	if(cgtu_Mode == cgtu_Mode4WirePEX || cgtu_Mode == cgtu_Mode4WireIncompatible)
+	{
+		dev.w(128 + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0) , cgtu_Vmax);
+		dev.w(129 + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0) , cgtu_Imax);
+		dev.w(130 + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0) , cgtu_Vmax);
+		dev.w(131 + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0) , cgtu_Imax);
+	}
 }
 
 // Save
