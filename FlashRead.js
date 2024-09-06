@@ -107,6 +107,21 @@ function FlashReadCounters()
 	FlashReadAll(ACT_FLASH_COUNTER_INIT_READ, ACT_FLASH_COUNTER_READ_SYMBOL, false);
 }
 
+function FlashReadDiagRaw(i)
+{
+	FlashRead(i, ACT_FLASH_DIAG_INIT_READ);
+}
+
+function FlashEraseDiag()
+{
+	dev.c(333);
+}
+
+function FlashEraseCounters()
+{
+	dev.c(338);
+}
+
 function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 {
 	dev.c(ActMemLabel);

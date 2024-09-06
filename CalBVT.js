@@ -711,12 +711,12 @@ function CBVT_ResetA()
 // Save
 function CBVT_SaveV(NameV)
 {
-	CGEN_SaveArrays(NameV, cbvt_v, cbvt_v_sc, cbvt_v_err);
+	CGEN_SaveArrays(NameV, cbvt_v, cbvt_v_sc, cbvt_v_err, cbvt_v_err_sum);
 }
 
 function CBVT_SaveI(NameI)
 {
-	CGEN_SaveArrays(NameI, cbvt_i, cbvt_i_sc, cbvt_i_err);
+	CGEN_SaveArrays(NameI, cbvt_i, cbvt_i_sc, cbvt_i_err, cbvt_i_err_sum);
 }
 
 // Cal
