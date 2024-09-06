@@ -7,9 +7,9 @@ include("CalGeneral.js")
 cgtu_Mode2Wire = 0;					// Старые двухпроводные блоки
 cgtu_Mode4WirePEX = 1;				// Четырёхпроводные блоки для Powerex
 cgtu_Mode4WireIncompatible = 2;		// Четырёхпроводные блоки, комбинированный режим (неактивная ветка)
-cgtu_Mode4WireСompatible = 3;		// Четырёхпроводные блоки, совместимые по управлению с двухпроводными (основная ветка)
+cgtu_Mode4WireCompatible = 3;		// Четырёхпроводные блоки, совместимые по управлению с двухпроводными (основная ветка)
 // Выбор режима автоматически выполняется в CGTU_Init()
-cgtu_Mode = cgtu_Mode4WireСompatible;
+cgtu_Mode = cgtu_Mode4WireCompatible;
 
 cgtu_Res = 10;  // in Ohms
 
@@ -139,7 +139,7 @@ function CGTU_Probe(ProbeCMD)
 	
 	// Переопределение команд для режимо совместиомсти
 	var AlterProbeCMD = ProbeCMD;
-	if(cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire)
+	if(cgtu_Mode == cgtu_Mode4WireCompatible || cgtu_Mode == cgtu_Mode2Wire)
 	{
 		if(ProbeCMD == 111)
 			AlterProbeCMD = 110;
@@ -158,7 +158,7 @@ function CGTU_Probe(ProbeCMD)
 	// Измеренное значение из блока
 	function GetMeasuredVal()
 	{
-		if((cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire) && ProbeCMD == 110)
+		if((cgtu_Mode == cgtu_Mode4WireCompatible || cgtu_Mode == cgtu_Mode2Wire) && ProbeCMD == 110)
 			return dev.r(205) + dev.r(234) / 1000;
 		else
 			return dev.r(204) + dev.r(233) / 1000;
@@ -171,7 +171,7 @@ function CGTU_Probe(ProbeCMD)
 	// Задание
 	function GetSetVal()
 	{
-		if(cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire)
+		if(cgtu_Mode == cgtu_Mode4WireCompatible || cgtu_Mode == cgtu_Mode2Wire)
 			return dev.r(140);
 		else
 			return dev.r(CGTU_GetBaseReg(ProbeCMD) + (cgtu_Mode == cgtu_Mode4WireIncompatible ? 3 : 0));
@@ -276,9 +276,9 @@ function CGTU_Probe(ProbeCMD)
 	var Letter = (ProbeCMD == 110 || ProbeCMD == 112) ? "V" : "I";
 	var Unit = (ProbeCMD == 110 || ProbeCMD == 112) ? "V" : "A";
 	
-	var LetterSet = (cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire) ? "I" : Letter;
-	var UnitSet = (cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire) ? "A" : Unit;
-	var UseSetError = !((cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire) && ProbeCMD == 110)
+	var LetterSet = (cgtu_Mode == cgtu_Mode4WireCompatible || cgtu_Mode == cgtu_Mode2Wire) ? "I" : Letter;
+	var UnitSet = (cgtu_Mode == cgtu_Mode4WireCompatible || cgtu_Mode == cgtu_Mode2Wire) ? "A" : Unit;
+	var UseSetError = !((cgtu_Mode == cgtu_Mode4WireCompatible || cgtu_Mode == cgtu_Mode2Wire) && ProbeCMD == 110)
 	
 	print(LetterSet + "set,       m" + UnitSet + ": " + val_set);
 	print(Letter + "tek,       m" + Unit + ": " + val_sc);
@@ -408,14 +408,14 @@ function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 		cgtu_chSync = channelSyncOrMeasurePower;
 
 	// Init GTU
-	if(!portGate)
+	if(portGate)
 	{
 		dev.Disconnect();
 		dev.co(portGate);
 	}
 	
 	// Init Tektronix
-	if(!portTek)
+	if(portTek)
 		TEK_PortInit(portTek);
 
 	// Tektronix init
@@ -491,7 +491,7 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 					CGTU_TekScale((ProbeCMD == 110) ? cgtu_chMeasure : cgtu_chMeasurePower, cgtu_Values[j] * Resistance / 1000);
 				else
 				{
-					var ResMul = (cgtu_Mode == cgtu_Mode4WireСompatible || ProbeCMD == 111 || ProbeCMD == 113) ? Resistance : 1;
+					var ResMul = (cgtu_Mode == cgtu_Mode4WireCompatible || ProbeCMD == 111 || ProbeCMD == 113) ? Resistance : 1;
 					var ScaleValue = cgtu_Values[j] / 1000 * ResMul;
 					CGTU_TekScale(cgtu_chMeasure, ScaleValue);
 				}
@@ -506,7 +506,7 @@ function CGTU_Collect(ProbeCMD, Resistance, cgtu_Values, IterationsCount)
 			}
 			
 			// Запись задания
-			if(cgtu_Mode == cgtu_Mode4WireСompatible || cgtu_Mode == cgtu_Mode2Wire)
+			if(cgtu_Mode == cgtu_Mode4WireCompatible || cgtu_Mode == cgtu_Mode2Wire)
 				dev.w(140, cgtu_Values[j]);
 			else
 			{
