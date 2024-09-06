@@ -221,6 +221,7 @@ function CGTU_Probe(ProbeCMD)
 	val_set_err = val_set_err.toFixed(2);
 	val_set_err_sum = val_set_err_sum.toFixed(2);
 	
+	var UseSetError = !((cgtu_Mode == cgtu_Mode4WireCompatible || cgtu_Mode == cgtu_Mode2Wire) && ProbeCMD == 110);
 	switch(ProbeCMD)
 	{
 		case 110:
@@ -231,8 +232,11 @@ function CGTU_Probe(ProbeCMD)
 			cgtu_vgt_err.push(val_err);
 			cgtu_vgt_err_sum.push(val_err_sum);
 			
-			cgtu_vgt_set_err.push(val_set_err);
-			cgtu_vgt_set_err_sum.push(val_set_err_sum)
+			if(UseSetError)
+			{
+				cgtu_vgt_set_err.push(val_set_err);
+				cgtu_vgt_set_err_sum.push(val_set_err_sum)
+			}
 			break;
 		
 		case 111:
@@ -278,7 +282,6 @@ function CGTU_Probe(ProbeCMD)
 	
 	var LetterSet = (cgtu_Mode == cgtu_Mode4WireCompatible || cgtu_Mode == cgtu_Mode2Wire) ? "I" : Letter;
 	var UnitSet = (cgtu_Mode == cgtu_Mode4WireCompatible || cgtu_Mode == cgtu_Mode2Wire) ? "A" : Unit;
-	var UseSetError = !((cgtu_Mode == cgtu_Mode4WireCompatible || cgtu_Mode == cgtu_Mode2Wire) && ProbeCMD == 110)
 	
 	print(LetterSet + "set,       m" + UnitSet + ": " + val_set);
 	print(Letter + "tek,       m" + Unit + ": " + val_sc);
@@ -695,7 +698,8 @@ function CGTU_CalibrateVGate()
 		
 		// Plot relative error distribution
 		scattern(cgtu_vgt_sc, cgtu_vgt_err, "Vgt (in mV)", "Error (in %)", "Vgt relative error");
-		scattern(cgtu_vgt_sc, cgtu_vgt_set_err, "Vgt (in mV)", "Error (in %)", "Vgt set relative error");
+		if(cgtu_vgt_set_err.length)
+			scattern(cgtu_vgt_sc, cgtu_vgt_set_err, "Vgt (in mV)", "Error (in %)", "Vgt set relative error");
 		
 		// Calculate correction			
 		cgtu_vgt_corr = CGEN_GetCorrection2("gtu_vgt");
@@ -717,13 +721,15 @@ function CGTU_VerifyVGate()
 		
 		// Plot relative error distribution
 		scattern(cgtu_vgt_sc, cgtu_vgt_err, "Vgt (in mV)", "Error (in %)", "Vgt relative error"); sleep(200);
-		scattern(cgtu_vgt_sc, cgtu_vgt_set_err, "Vgt (in mV)", "Error (in %)", "Vgt set relative error"); sleep(200);
+		if(cgtu_vgt_set_err.length)
+			scattern(cgtu_vgt_sc, cgtu_vgt_set_err, "Vgt (in mV)", "Error (in %)", "Vgt set relative error"); sleep(200);
 		
 		// Plot summary error distribution
 		if (cgtu_PlotSummaryError)
 		{
 			scattern(cgtu_vgt_sc, cgtu_vgt_err_sum, "Vgt (in mV)", "Error (in %)", "Vgt summary error");sleep(200);
-			scattern(cgtu_vgt_sc, cgtu_vgt_set_err_sum, "Vgt (in mV)", "Error (in %)", "Vgt set summary error");
+			if(cgtu_vgt_set_err_sum.length)
+				scattern(cgtu_vgt_sc, cgtu_vgt_set_err_sum, "Vgt (in mV)", "Error (in %)", "Vgt set summary error");
 		}
 	}
 }
