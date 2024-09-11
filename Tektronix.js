@@ -1,4 +1,4 @@
-
+tek_measuring_device = "TPS2024";	// "TPS2014" "TPS2024"
 
 function TEK_PortInit(PortNumber, BaudeRate)
 {
@@ -167,9 +167,7 @@ function TEK_ChannelOff(ChannelID)
 
 function TEK_PlotChannel(Channel)
 {
-	var Data = [];
-	Data = (GetChannelData(Channel));
-	plot(Data, 1,1);
+	plot(GetChannelData(Channel), 1,1);
 }
 
 function GetChannelData(Channel) 
