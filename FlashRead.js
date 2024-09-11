@@ -134,7 +134,7 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 
 		if (dataType == 0xFFFF)
 		{
-			p("ERROR: No data.")
+			p("[End of data]")
 			return;
 		}
 		if (dataType > 7)
@@ -249,12 +249,6 @@ function FlashRead(i, ActMemLabel)
 		}
 	}
 }
-
-function FlashErase()
-{
-	dev.c(ACT_FLASH_DIAG_ERASE);
-}
-
 
 /** DEBUG MXU
 	* REG_CNT_NUMBER	104
