@@ -69,6 +69,15 @@ clsl_IgSetErr = [];
 clsl_UgErr = [];
 clsl_UgSetErr = [];
 
+// Summary error
+clsl_IsetErr_sum = [];
+clsl_UtmErr_sum = [];
+
+// Measurement errors
+EUosc = 3;
+ERshunt = 0.5;
+E0 = 0;
+
 // Correction
 clsl_UtmCorr = [];
 clsl_ItmCorr = [];
@@ -184,6 +193,9 @@ function CLSL_VerifyUtm()
 
 		// Plot relative error distribution
 		scattern(clsl_UtmSc, clsl_UtmErr, "Voltage (in mV)", "Error (in %)", "Utm relative error " + clsl_UtmMin + " ... " + clsl_UtmMax + " mV");
+
+		// Plot summary error distribution
+		scattern(clsl_UtmSc, clsl_UtmErr_sum, "Voltage (in mV)", "Error (in %)", "Utm summary error " + clsl_UtmMin + " ... " + clsl_UtmMax + " mV");
 	}
 	
 	OverShootCurrentRestore();
@@ -316,6 +328,9 @@ function CLSL_VerifyIset()
 
 		// Plot relative error distribution
 		scattern(clsl_IsetSc, clsl_IsetErr, "Current (in A)", "Error (in %)", "Itm set relative error " + clsl_ItmMin + " ... " + clsl_ItmMax + " A");
+	
+		// Plot summary error distribution
+		scattern(clsl_IsetSc, clsl_IsetErr_sum, "Current (in A)", "Error (in %)", "Itm summary error " + clsl_ItmMin + " ... " + clsl_ItmMax + " A");
 	}
 	
 	OverShootCurrentRestore();
@@ -526,7 +541,13 @@ function CLSL_CollectUtm(VoltageValues, IterationsCount)
 			// Relative error
 			var UtmErr = ((UtmSc - UtmRead) / UtmRead * 100).toFixed(2);
 			clsl_UtmErr.push(UtmErr);
+			
+			//Summary error
+			var UtmErr_sum = (Math.sign_ma(UtmErr) * (Math.abs(UtmErr) + EUosc)).toFixed(2);
+			clsl_UtmErr_sum.push(UtmErr_sum);
+
 			print("Utmerr,  %: " + UtmErr);
+			print("UtmErr_sum,  %: " + UtmErr_sum);
 			print("--------------------");
 			
 			if (anykey()) return 0;
@@ -682,7 +703,14 @@ function CLSL_CollectIset(CurrentValues, IterationsCount)
 			// Relative error
 			var IsetErr = ((IsetSc - Iset) / Iset * 100).toFixed(2);
 			clsl_IsetErr.push(IsetErr);
+
+			//Summary error
+			var E0 = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ERshunt, 2));
+			var IsetErr_sum = (Math.sign_ma(IsetErr) * (Math.abs(IsetErr) + E0)).toFixed(2);
+			clsl_IsetErr_sum.push(IsetErr_sum);
+
 			print("Iseterr, %: " + IsetErr);
+			print("Iseterr_sum, %: " + IsetErr_sum);
 			print("--------------------");
 			
 			if (anykey()) return 0;
@@ -970,6 +998,10 @@ function CLSL_ResetA()
 	clsl_UgErr = [];
 	clsl_UgSetErr = [];
 
+	// Summary error
+	clsl_IsetErr_sum = [];
+	clsl_UtmErr_sum = [];
+
 	// Correction
 	clsl_UtmCorr = [];
 	clsl_ItmCorr = [];
@@ -983,7 +1015,7 @@ function CLSL_ResetA()
 // Save
 function CLSL_SaveUtm(NameUtm)
 {
-	CGEN_SaveArrays(NameUtm, clsl_Utm, clsl_UtmSc, clsl_UtmErr);
+	CGEN_SaveArrays(NameUtm, clsl_Utm, clsl_UtmSc, clsl_UtmErr, clsl_UtmErr_sum);
 }
 
 function CLSL_SaveItm(NameItm)
@@ -993,7 +1025,7 @@ function CLSL_SaveItm(NameItm)
 
 function CLSL_SaveIset(NameIset)
 {
-	CGEN_SaveArrays(NameIset, clsl_IsetSc, clsl_Iset, clsl_IsetErr);
+	CGEN_SaveArrays(NameIset, clsl_IsetSc, clsl_Iset, clsl_IsetErr, clsl_IsetErr_sum);
 }
 
 function CLSL_SaveIg(NameIg, NameIgSet)
