@@ -86,6 +86,9 @@ function LSLPC_Start(Current)
 			PrintStatus();
 			return false;
 		}
+
+		if(anykey())
+			return false;
 	}
 	
 	return true;
