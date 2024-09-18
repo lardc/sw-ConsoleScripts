@@ -600,9 +600,7 @@ function CGTU_CalIGT(P2, P1, P0)
 		}
 	}
 }
-// General functions end
 
-// CalGTU_4.0
 function CGTU_CalibrateIGate()
 {
 	// Collect data
@@ -1002,41 +1000,75 @@ function CGTU_CalSetID(P2, P1, P0)
 // Print
 function CGTU_PrintVGateCal()
 {
-	switch (cgtu_RangeVgt)
+	if (cgtu_Mode == cgtu_Mode2Wire)
 	{
-		case 0:
-			print("VGT0 P2 x1e6:	" + dev.rs(102));
-			print("VGT0 P1 x1000:	" + dev.r(103));
-			print("VGT0 P0:	" + dev.rs(104));
-			break;
-		case 1:
-			print("VGT1 P2 x1e6:	" + dev.rs(28));
-			print("VGT1 P1 x1000:	" + dev.r(29));
-			print("VGT1 P0:	" + dev.rs(30));
-			break;
-		default:
-			print("Incorrect Vgt range.");
-			break;
+		if (CGEN_UseQuadraticCorrection())
+		{
+			print("VGT P2 x1e6:	" + dev.rs(52));
+			print("VGT P1 x1000:	" + dev.r(53));
+			print("VGT P0:		" + dev.rs(56));
+		}
+		else
+		{
+			print("VGT K:		" + (dev.r(52) / dev.r(53)));
+			print("VGT Offset:	" + dev.rs(56));
+		}
+	}
+	else
+	{
+		switch (cgtu_RangeVgt)
+		{
+			case 0:
+				print("VGT0 P2 x1e6:	" + dev.rs(102));
+				print("VGT0 P1 x1000:	" + dev.r(103));
+				print("VGT0 P0:	" + dev.rs(104));
+				break;
+			case 1:
+				print("VGT1 P2 x1e6:	" + dev.rs(28));
+				print("VGT1 P1 x1000:	" + dev.r(29));
+				print("VGT1 P0:	" + dev.rs(30));
+				break;
+			default:
+				print("Incorrect Vgt range.");
+				break;
+		}
 	}
 }
 
 function CGTU_PrintIGateCal()
 {
-	switch (cgtu_RangeIgt)
+	if (cgtu_Mode == cgtu_Mode2Wire)
 	{
-		case 0:
-			print("IGT0 P2 x1e6:	" + dev.rs(115));
-			print("IGT0 P1 x1000:	" + dev.r(116));
-			print("IGT0 P0:		" + dev.rs(117));
-			break;
-		case 1:
-			print("IGT1 P2 x1e6:	" + dev.rs(33));
-			print("IGT1 P1 x1000:	" + dev.r(34));
-			print("IGT1 P0:		" + dev.rs(35));
-			break;
-		default:
-			print("Incorrect Igt range.");
-			break;
+		if (CGEN_UseQuadraticCorrection())
+		{
+			print("IGT P2 x1e6:	" + dev.rs(50));
+			print("IGT P1 x1000:	" + dev.r(51));
+			print("IGT P0:		" + dev.rs(57));
+		}
+		else
+		{
+			print("IGT K:		" + (dev.r(50) / dev.r(51)));
+			print("IGT Offset:	" + dev.rs(57));
+		}
+	}
+	else
+	{
+		switch (cgtu_RangeIgt)
+		{
+			case 0:
+				print("IGT0 P2 x1e6:	" + dev.rs(115));
+				print("IGT0 P1 x1000:	" + dev.r(116));
+				print("IGT0 P0:		" + dev.rs(117));
+				break;
+			case 1:
+				print("IGT1 P2 x1e6:	" + dev.rs(33));
+				print("IGT1 P1 x1000:	" + dev.r(34));
+				print("IGT1 P0:		" + dev.rs(35));
+				break;
+			default:
+				print("Incorrect Igt range.");
+				break;
+		}
 	}
 }
 
@@ -1069,6 +1101,20 @@ function CGTU_PrintVPowerCal()
 
 function CGTU_PrintIPowerCal()
 {
+	if (cgtu_mode == cgtu_Mode2Wire)
+	{
+		if (CGEN_UseQuadraticCorrection())
+		{
+			print("ID  P2 x1e6:	" + dev.rs(33));
+			print("ID  P1 x1000:	" + dev.r(34));
+			print("ID  P0:		" + dev.rs(35));
+		}
+		else
+		{
+			print("ID  K:		" + (dev.r(33) / dev.r(34)));
+			print("ID  Offset:	" + dev.rs(35));
+		}
+	}
 	print("ID P2 x1e6:	" + dev.rs(23));
 	print("ID P1 x1000:	" + dev.r(24));
 	print("ID P0:		" + dev.rs(25));
@@ -1158,11 +1204,7 @@ function CGTU_VerifyIh(rangeId, rangeMin, rangeMax, count, verificationCount, re
 	CGTU_VerifyIPower();
 	return [cgtu_id_set, cgtu_id, cgtu_id_sc, cgtu_id_set_err];
 }
-// end CalGTU_4.0
 
-// =================================
-
-// CalGTU.js
 function CGTU_LineResistanceCalc()
 {
 	var cgtu_dv_sum = 0;
@@ -1186,42 +1228,6 @@ function CGTU_LineResistanceCalc()
 		
 		dev.w(95,cgtu_rline);
 		dev.c(200);
-	}
-}
-
-function CGTU_PrintGateCal()
-{
-	if (CGEN_UseQuadraticCorrection())
-	{
-		print("IGT P2 x1e6:	" + dev.rs(50));
-		print("IGT P1 x1000:	" + dev.r(51));
-		print("IGT P0:		" + dev.rs(57));
-		
-		print("VGT P2 x1e6:	" + dev.rs(52));
-		print("VGT P1 x1000:	" + dev.r(53));
-		print("VGT P0:		" + dev.rs(56));
-	}
-	else
-	{
-		print("IGT K:		" + (dev.r(50) / dev.r(51)));
-		print("IGT Offset:	" + dev.rs(57));
-		print("VGT K:		" + (dev.r(52) / dev.r(53)));
-		print("VGT Offset:	" + dev.rs(56));
-	}
-}
-
-function CGTU_PrintPowerCal()
-{
-	if (CGEN_UseQuadraticCorrection())
-	{
-		print("IH  P2 x1e6:	" + dev.rs(33));
-		print("IH  P1 x1000:	" + dev.r(34));
-		print("IH  P0:		" + dev.rs(35));
-	}
-	else
-	{
-		print("IH  K:		" + (dev.r(33) / dev.r(34)));
-		print("IH  Offset:	" + dev.rs(35));
 	}
 }
 
