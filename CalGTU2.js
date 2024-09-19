@@ -1205,6 +1205,47 @@ function CGTU_VerifyIh(rangeId, rangeMin, rangeMax, count, verificationCount, re
 	return [cgtu_id_set, cgtu_id, cgtu_id_sc, cgtu_id_set_err];
 }
 
+function CGT_CalibrateIgt(rangeI, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+{
+	cgtu_RangeIgt = rangeI;
+	cgtu_Imin = rangeMin;
+	cgtu_Imax = rangeMax;
+	cgtu_Points = count;
+	cgtu_Iterations = verificationCount;
+	cgtu_Res = resistance;
+	cgtu_UseAvg = 0;
+	CGTU_Initialize();
+	CGTU_CalibrateIGate();
+	return [cgtu_igt_set, cgtu_igt, cgtu_igt_sc, cgtu_igt_set_err];
+}
+
+function CGT_CalibrateVgt(rangeV, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+{
+	cgtu_RangeVgt = rangeV;
+	cgtu_Vmin = rangeMin;
+	cgtu_Vmax = rangeMax;
+	cgtu_Points = count;
+	cgtu_Iterations = verificationCount;
+	cgtu_UseAvg = 0;
+	CGTU_Initialize();
+	CGTU_CalibrateVGate();
+	return [cgtu_vgt_set, cgtu_vgt, cgtu_vgt_sc, cgtu_vgt_err];
+}
+
+function CGT_CalibrateIh(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+{
+	cgtu_Imin = rangeMin;
+	cgtu_Imax = rangeMax;
+	cgtu_Points = count;
+	cgtu_Iterations = verificationCount;
+	cgtu_Res = resistance;
+	cgtu_UseAvg = 0;
+	CGTU_Initialize();
+	CGTU_CalibrateIPower();
+	return [cgtu_id_set, cgtu_id, cgtu_id_sc, cgtu_id_set_err];
+
+}
+
 function CGTU_LineResistanceCalc()
 {
 	var cgtu_dv_sum = 0;
