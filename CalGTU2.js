@@ -392,6 +392,7 @@ function CGTU_ResetA()
 
 function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 {
+	CGTU_DefineUnitMode();
 	// Выбор максимального тока
 	cgtu_ER = (cgtu_Mode == cgtu_Mode2Wire) ? cgtu_ER2Wire : cgtu_ER4Wire;
 
@@ -430,7 +431,7 @@ function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 	TEK_TriggerPulseInit(cgtu_Mode == cgtu_Mode2Wire ? cgtu_chMeasure : cgtu_chSync, cgtu_Mode == cgtu_Mode2Wire ? "1" : "2.5");
 	CGTU_TriggerTune();
 	// Horizontal settings
-	TEK_Horizontal(cgtu_Mode == cgtu_Mode2Wire ? "10e-3" : "1e-3", cgtu_Mode == cgtu_Mode2Wire ? "-40e-3" : "-4e-3");
+	TEK_Horizontal(cgtu_Mode == cgtu_Mode2Wire ? "1e-3" : "10e-3", cgtu_Mode == cgtu_Mode2Wire ? "-40e-3" : "-4e-3");
 	
 	// Display channels
 	for (var i = 1; i <= 4; i++)
@@ -628,8 +629,11 @@ function CGTU_CalibrateIGate()
 			cgtu_igt_corr = CGEN_GetCorrection2("gtu_igt");
 			CGTU_CalIGT(cgtu_igt_corr[0], cgtu_igt_corr[1], cgtu_igt_corr[2]);
 
-			cgtu_igt_set_corr = CGEN_GetCorrection2("gtu_igt_set");
-			CGTU_CalSetIGT(cgtu_igt_set_corr[0], cgtu_igt_set_corr[1], cgtu_igt_set_corr[2]);
+			if (cgtu_Mode != cgtu_Mode2Wire)
+			{
+				cgtu_igt_set_corr = CGEN_GetCorrection2("gtu_igt_set");
+				CGTU_CalSetIGT(cgtu_igt_set_corr[0], cgtu_igt_set_corr[1], cgtu_igt_set_corr[2]);
+			}
 		}
 
 		// Print correction
@@ -687,8 +691,11 @@ function CGTU_CalibrateIPower()
 			cgtu_id_corr = CGEN_GetCorrection2("gtu_id");
 			CGTU_CalID(cgtu_id_corr[0], cgtu_id_corr[1], cgtu_id_corr[2]);
 
-			cgtu_id_set_corr = CGEN_GetCorrection2("gtu_id_set");
-			CGTU_CalSetID(cgtu_id_set_corr[0], cgtu_id_set_corr[1], cgtu_id_set_corr[2]);
+			if (cgtu_Mode != cgtu_Mode2Wire)
+			{
+				cgtu_id_set_corr = CGEN_GetCorrection2("gtu_id_set");
+				CGTU_CalSetID(cgtu_id_set_corr[0], cgtu_id_set_corr[1], cgtu_id_set_corr[2]);
+			}
 		}
 		
 		// Print correction
@@ -1101,7 +1108,7 @@ function CGTU_PrintVPowerCal()
 
 function CGTU_PrintIPowerCal()
 {
-	if (cgtu_mode == cgtu_Mode2Wire)
+	if (cgtu_Mode == cgtu_Mode2Wire)
 	{
 		if (CGEN_UseQuadraticCorrection())
 		{
@@ -1115,9 +1122,12 @@ function CGTU_PrintIPowerCal()
 			print("ID  Offset:	" + dev.rs(35));
 		}
 	}
-	print("ID P2 x1e6:	" + dev.rs(23));
-	print("ID P1 x1000:	" + dev.r(24));
-	print("ID P0:		" + dev.rs(25));
+	else
+	{
+		print("ID P2 x1e6:	" + dev.rs(23));
+		print("ID P1 x1000:	" + dev.r(24));
+		print("ID P0:		" + dev.rs(25));
+	}
 }
 
 function CGTU_PrintIPowerSetCal()
@@ -1139,7 +1149,8 @@ function CGTU_ResetVGateCal()
 function CGTU_ResetIGateCal()
 {
 	CGTU_CalIGT(0, 1, 0);
-	CGTU_CalSetIGT(0, 1, 0);
+	if (cgtu_Mode != cgtu_Mode2Wire)
+		CGTU_CalSetIGT(0, 1, 0);
 }
 
 function CGTU_ResetVPowerCal()
@@ -1150,7 +1161,8 @@ function CGTU_ResetVPowerCal()
 function CGTU_ResetIPowerCal()
 {
 	CGTU_CalID(0, 1, 0);
-	CGTU_CalSetID(0, 1, 0);
+	if (cgtu_Mode != cgtu_Mode2Wire)
+		CGTU_CalSetID(0, 1, 0);
 }
 
 // HMIU calibration
@@ -1205,7 +1217,7 @@ function CGTU_VerifyIh(rangeId, rangeMin, rangeMax, count, verificationCount, re
 	return [cgtu_id_set, cgtu_id, cgtu_id_sc, cgtu_id_set_err];
 }
 
-function CGT_CalibrateIgt(rangeI, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+function CGTU_CalibrateIgt(rangeI, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	cgtu_RangeIgt = rangeI;
 	cgtu_Imin = rangeMin;
@@ -1219,7 +1231,7 @@ function CGT_CalibrateIgt(rangeI, rangeMin, rangeMax, count, verificationCount, 
 	return [cgtu_igt_set, cgtu_igt, cgtu_igt_sc, cgtu_igt_set_err];
 }
 
-function CGT_CalibrateVgt(rangeV, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+function CGTU_CalibrateVgt(rangeV, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	cgtu_RangeVgt = rangeV;
 	cgtu_Vmin = rangeMin;
@@ -1232,7 +1244,7 @@ function CGT_CalibrateVgt(rangeV, rangeMin, rangeMax, count, verificationCount, 
 	return [cgtu_vgt_set, cgtu_vgt, cgtu_vgt_sc, cgtu_vgt_err];
 }
 
-function CGT_CalibrateIh(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
+function CGTU_CalibrateIh(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	cgtu_Imin = rangeMin;
 	cgtu_Imax = rangeMax;
