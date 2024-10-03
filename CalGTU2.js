@@ -392,7 +392,6 @@ function CGTU_ResetA()
 
 function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 {
-	CGTU_DefineUnitMode();
 	// Выбор максимального тока
 	cgtu_ER = (cgtu_Mode == cgtu_Mode2Wire) ? cgtu_ER2Wire : cgtu_ER4Wire;
 
@@ -416,6 +415,7 @@ function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 	{
 		dev.Disconnect();
 		dev.co(portGate);
+		CGTU_DefineUnitMode();
 	}
 	
 	// Init Tektronix
@@ -638,7 +638,9 @@ function CGTU_CalibrateIGate()
 
 		// Print correction
 		CGTU_PrintIGateCal();
-		CGTU_PrintIGateSetCal();
+
+		if (cgtu_Mode != cgtu_Mode2Wire)
+			CGTU_PrintIGateSetCal();
 	}
 }
 
@@ -683,7 +685,7 @@ function CGTU_CalibrateIPower()
 		var LinearCorrection = cgtu_Mode == cgtu_Mode2Wire && !CGEN_UseQuadraticCorrection()
 		if (LinearCorrection)
 		{
-			cgtu_id_corr = CGEN_GetCorrection2("gtu_id");
+			cgtu_id_corr = CGEN_GetCorrection("gtu_id");
 			CGTU_CalID(null, cgtu_id_corr[0], cgtu_id_corr[1]);
 		}
 		else
@@ -700,7 +702,9 @@ function CGTU_CalibrateIPower()
 		
 		// Print correction
 		CGTU_PrintIPowerCal();
-		CGTU_PrintIPowerSetCal();
+
+		if (cgtu_Mode != cgtu_Mode2Wire)
+			CGTU_PrintIPowerSetCal();
 	}
 }
 
