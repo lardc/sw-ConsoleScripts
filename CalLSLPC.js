@@ -107,7 +107,7 @@ function CAL_VerifyId()
 
 	// Reload values
 	var CurrentArray = CGEN_GetRangeLogarithm(cal_IdMin[cal_CurrentRange], cal_IdMax[cal_CurrentRange], cal_Points);
-
+	
 	if (CAL_CollectId(CurrentArray, cal_Iterations))
 	{
 		CAL_SaveId("LSLPC_Id_fixed");
@@ -124,23 +124,23 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 {
 	cal_CntTotal = IterationsCount * CurrentValues.length;
 	cal_CntDone = 1;
-
-	var AvgNum;
-	if (cal_UseAvg)
-	{
-		AvgNum = 4;
-		TEK_AcquireAvg(AvgNum);
-	}
-	else
-	{
-		AvgNum = 1;
-		TEK_AcquireSample();
-	}
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
 		for (var j = 0; j < CurrentValues.length; j++)
 		{
+			var AvgNum;
+			if (CurrentValues[j] * cal_Rshunt / 1000000 < 0.3)
+			{
+				AvgNum = 4;
+				TEK_AcquireAvg(AvgNum);
+			}
+			else
+			{
+				AvgNum = 1;
+				TEK_AcquireSample();
+			}
+
 			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
 			//
 			CAL_TekScale(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1000000);
@@ -198,7 +198,7 @@ function CAL_TekScale(Channel, Value)
 	TEK_Send("ch" + Channel + ":scale " + scale);
 	
 	TEK_TriggerPulseInit(cal_chMeasureId, Value / 5);
-	while(TEK_Exec("TRIGger:STATE?") != "REA") // закомментировать для TPS2014
+	//while(TEK_Exec("TRIGger:STATE?") != "REA") // закомментировать для TPS2014
 		sleep(500);
 }
 //--------------------
@@ -215,7 +215,7 @@ function CAL_TekInit()
 
 function CAL_Measure(Channel)
 {
-	while(TEK_Exec("TRIGger:STATE?") != "REA")  // закомментировать для TPS2014
+	//while(TEK_Exec("TRIGger:STATE?") != "REA")  // закомментировать для TPS2014
 		sleep(500);
 	return TEK_Measure(Channel);
 }
