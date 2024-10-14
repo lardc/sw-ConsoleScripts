@@ -4,7 +4,7 @@ include("TestdVdt.js")
 include("SiC_Calc.js")
 
 cdvdt_chMeasure = 1;
-cdvdt_Powerex = 1;
+cdvdt_Powerex = 0;
 
 // DeviceState
 DS_None = 0;
@@ -346,7 +346,7 @@ function CdVdt_CellCalibrateRateA(CellArray)
 
 function CdVdt_CellCalibrateRate(CellNumber)
 {
-	var GateSetpointV = CGEN_GetRangeLogarithm(cdvdt_def_VGateMin, cdvdt_def_VGateMax, cdvdt_def_SetpointCount);
+	var GateSetpointV = CGEN_GetRange(cdvdt_def_VGateMin, cdvdt_def_VGateMax, (cdvdt_def_VGateMax - cdvdt_def_VGateMin) / (cdvdt_def_SetpointCount - 1));
 	
 	// Power enable cell
 	dVdt_CellCall(CellNumber, 1);
@@ -398,10 +398,13 @@ function CdVdt_CellCalibrateRate(CellNumber)
 		// Start pulse
 		for(var CounterAverages = 0; CounterAverages < cdvdt_def_UseAverage; CounterAverages++)
 		{
-			dev.c(114);
-			sleep(500);
-			while(_dVdt_Active()) sleep(100);
-			while(dVdt_CellReadReg(CellNumber, 14) == 0) sleep(100);
+			for (var count_p = 0; count_p < 3; count_p++)
+			{
+				dev.c(114);
+				sleep(500);
+				while(_dVdt_Active()) sleep(100);
+				while(dVdt_CellReadReg(CellNumber, 14) == 0) sleep(100);
+			}
 		}
 
 		TEK_Busy();
@@ -458,11 +461,11 @@ function CdVdt_CellCalibrateRate(CellNumber)
 		
 		if (anykey()) return 1;
 	}
-	scattern(GateSetpointV, cdvdt_rate_sc, "Gate voltage (in mV)", "Rate voltage (in V/us)", "Cell #" +
+	scattern(cdvdt_gate, cdvdt_rate_sc, "Gate voltage (in mV)", "Rate voltage (in V/us)", "Cell #" +
 			CellNumber + " range: " + cdvdt_SelectedRange + "; Vd = " + cdvdt_CalVoltage + " V; " +
 			cdvdt_rate_sc[0] + ".." + cdvdt_rate_sc[cdvdt_rate_sc.length - 1] +" V/us");
 
-	CdVdt_NonlinearityCell(GateSetpointV, cdvdt_rate_sc, CellNumber, cdvdt_SelectedRange);
+	CdVdt_NonlinearityCell(cdvdt_gate, cdvdt_rate_sc, CellNumber, cdvdt_SelectedRange);
 
 	// Power disable cell
 	sleep(3000);
@@ -484,14 +487,18 @@ function CdVdt_NonlinearityCell(X, Y, CellNumber, cdvdt_SelectedRange)
 	var sumxy = 0;
 	var k = 0;
 	var b = 0;
+	
+	Y = String(Y);
+	YArray = Y.split(",");
+	YFloatArray = YArray.map(Number);
 
 	// рассчет апроксимационной прямой
 	for (var i = 0; i < X.length; i++)
 	{
 		sumx += X[i];
-		sumy += Y[i];
+		sumy += YFloatArray[i];
 		sumx2 += X[i] * X[i];
-		sumxy += X[i] * Y[i];
+		sumxy += X[i] * YFloatArray[i];
 	}
 
 	k = (X.length * sumxy - (sumx * sumy)) / (X.length * sumx2 - sumx * sumx);
@@ -501,17 +508,17 @@ function CdVdt_NonlinearityCell(X, Y, CellNumber, cdvdt_SelectedRange)
 	for (var i = 0; i < X.length; i++)
 	{
 		y_linear = k * X[i] + b
-		y_err = ((Y[i] - y_linear) / y_linear * 100).toFixed(2);
+		y_err = ((YFloatArray[i] - y_linear) / y_linear * 100).toFixed(2);
 		y_err_array.push(y_err);
-		p(X[i] + " mV, y_err, % = " + y_err);
+									   
 		
 		// поиск макисмальной погрешности отклонения
 		if (Math.abs(y_err) > y_err_max)
-			y_err_max = y_err;
+			y_err_max = Math.abs(y_err);
 	}
 
 	scattern(X, y_err_array, "Gate voltage (in mV)", "Error relative Nonlinearity (in %)", "Cell #" + CellNumber + " range: " + cdvdt_SelectedRange)
-	p("y_err_max, % = " + y_err_max);
+	//p("y_err_max, % = " + y_err_max);
 }
 
 
@@ -692,7 +699,7 @@ function CdVdt_CollectFixedRate(Repeat)
 						var rate = CdVdt_MeasureRate();
 						CdVdt_SwitchToCursor();
 						sleep(500);
-						var rateObject = CdVdt_MeasureAutoCursor(v, rate, 10, 90);
+						var rateObject = CdVdt_MeasureAutoCursor(VoltageArray[k], rate, 10, 90);
 						rate = rateObject.Rate.toFixed(1);
 						CdVdt_TekMeasurement(cdvdt_chMeasure);
 						break;
@@ -701,9 +708,9 @@ function CdVdt_CollectFixedRate(Repeat)
 				TEK_Busy();
 
 				dVdt_err = (rate - cdvdt_RatePoint[i]) / cdvdt_RatePoint[i] * 100;
-				dVdt_err = Math.abs(dVdt_err) < 0.1 ? parseFloat(0).toFixed(1) : dVdt_err.toFixed(1)
-				V_err = ((v - VoltageArray[k]) / VoltageArray[k] * 100).toFixed(1)
-				V_err = Math.abs(V_err) < 0.1 ? parseFloat(0).toFixed(1) : V_err.toFixed(1)
+				dVdt_err = Math.abs(dVdt_err) < 0.1 ? parseFloat(0).toFixed(1) : dVdt_err.toFixed(1);
+				V_err = (v - VoltageArray[k]) / VoltageArray[k] * 100;
+				V_err = Math.abs(V_err) < 0.1 ? parseFloat(0).toFixed(1) : V_err.toFixed(1);
 
 				if(cdvdt_MeasureMethod == dVdt_AutoCursor)
 					var ETosc = rateObject.TimeErr;
@@ -978,7 +985,7 @@ function CdVdt_CollectdVdt(Repeat)
 {
 	CdVdt_ResetA();
 	
-	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, cdvdt_Vstp);
+	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, (cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Vstp - 1));
 	
 	var cntDone = 0;
 	var cntTotal = VoltageArray.length * cdvdt_RatePoint.length * Repeat;
