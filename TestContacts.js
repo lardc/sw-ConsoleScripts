@@ -6,7 +6,7 @@ portTek = 11
 portTOCU = 6
 
 Contacts_Rshunt = 0.001;		// in Ohms
-Contacts_RIngun = 0.005;		// in Ohms опытным путем
+Contacts_RIngun = 0.002;		// in Ohms опытным путем
 Contacts_IngunCount = 2;		// Количество контактов
 
 PulsesInASeries = 2;			// Количество импульсов в серии
@@ -72,24 +72,13 @@ function Contacts_TekScale(Channel, Value)
 	TEK_Send("ch" + Channel + ":scale " + scale);
 }
 
-function Contacts_MathVertScale(Value)
-{
-	// 0.9 - use 90% of full range
-	// 8 - number of scope grids in full scale
-	var scale = (Value / (8 * 0.7));
-	TEK_Send("MATH:VERtical:SCAle " + scale);
-}
-
 function Contacts_Pulse(Current)
 {
-	csv_array = [];
-	
 	var VertValueCurrent = Current * Contacts_Rshunt;
-	var VertValueVoltage = Contacts_RIngun / (Contacts_IngunCount / 2) * Current;
+	var VertValueVoltage = ((Contacts_RIngun * 2) / (Contacts_IngunCount / 2)) * Current;
 
 	Contacts_TekScale(ccontacts_chCurrent, VertValueCurrent);
 	Contacts_TekScale(ccontacts_chVoltage, VertValueVoltage);
-	Contacts_MathVertScale(VertValueCurrent * VertValueVoltage);
 
 	dev.co(portTOCU);
 	dev.c(Action_ContacsOn);
@@ -97,14 +86,16 @@ function Contacts_Pulse(Current)
 
 	for (var i = 1; i <= PulsesInASeries; i++)
 	{
+		csv_array = [];
+
 		dev.co(portSCPC);
 		if(SC_SineConfig(Current))
-			return;
+			return 32;
 
 		if(Contacts_AnykeyExit())
-		{
+			return 8;
+
 			var TimeStartActionPulse = new Date();
-			p("Time Pulse N" + i + ": "+ TimeStartActionPulse);
 			var TimeEndActionPulse = new Date();
 			var Seconds = TimeStartActionPulse.getSeconds() + SeriesPauseSeconds;
 			TimeEndActionPulse.setSeconds(Seconds);
@@ -117,41 +108,64 @@ function Contacts_Pulse(Current)
 
 			while (dev.r(REG_DEV_STATE) != DS_PulseEnd)
 			{
-				if(!Contacts_AnykeyExit())
+				if(Contacts_AnykeyExit())
 					return 8;
 				if (Print_FaultDisableWarning())
 					return 2;
 			}
 
+			sleep(1000);
+			var v_sc = Contacts_MeasureV();
+			var i_sc = Contacts_MeasureI();
+			var p_sc = v_sc * i_sc * 0.0064;
+			var r_sc = v_sc / i_sc;
+			var r_1Ingun_sc = (r_sc / 2 * Contacts_IngunCount) / 2;
+
+			if(r_1Ingun_sc >= 0.010 || i_sc < 100)		//Если сопротивление на один пруболее 10 мОм, то остановить тест
+			{
+				print("Контактное сопротивление на один контакт = " + r_1Ingun_sc.toFixed(6) + " Ом")
+				print("Ток в цепи = " + i_sc.toFixed(1) + " А")
+				print("Тест остановлен!")
+				return 10;
+			}
+			
+			print("Time Pulse   : " + TimeStartActionPulse);
+			print("Utek,       V: " + v_sc);
+			print("Itek,       A: " + i_sc.toFixed(3));
+			print("Ptek,       W: " + p_sc.toFixed(3));
+			print("Rtek,     Ohm: " + r_sc.toFixed(6));
+			print("R_PerOne, Ohm: " + r_1Ingun_sc.toFixed(6));
+			csv_array.push(TimeStartActionPulse + ";" + v_sc + ";" + i_sc + ";"
+				+ p_sc + ";" + r_sc + ";" + r_1Ingun_sc);
+			append("data/Contacts_ResourceTest.csv", csv_array);
+
 			while((new Date()).getTime() < TimeEndActionPulse.getTime())
-				if(!Contacts_AnykeyExit())
+			{
+				pinline("\rОжидание между импульсами = " + (TimeEndActionPulse.getTime() - (new Date()).getTime()) + " мс		");
+				sleep(50);
+
+				if(Contacts_AnykeyExit())
 					return 15;
-		}
+			}
+
+			pinline("\r                                                            \r");
 	}
-
-	sleep(1500);
-
-	var v_sc = Contacts_MeasureV();
-	var i_sc = Contacts_MeasureI();
-	var p_sc = Contacts_MeasureP();
-	var r_sc = v_sc / i_sc;
-	var r_1Ingun_sc = (r_sc / 2 * Contacts_IngunCount) / 2;
-	
-	print("Utek,       V: " + v_sc);
-	print("Itek,       A: " + i_sc.toFixed(3));
-	print("Ptek,       W: " + p_sc.toFixed(3));
-	print("Rtek,     Ohm: " + r_sc.toFixed(6));
-	print("R_PerOne, Ohm: " + r_1Ingun_sc.toFixed(6));
-	csv_array.push((new Date()) + ";" + v_sc + ";" + i_sc + ";"
-		+ p_sc + ";" + r_sc + ";" + r_1Ingun_sc);
-	append("data/Contacts_ResourceTest.csv", csv_array);
 
 	dev.co(portTOCU);
 	dev.c(Action_ContacsOff);
+
+	return 0;
 }
 
 function Contacts_ResourceTest(Current)
 {
+	csv_array = [];
+	
+	csv_array.push("Number of contacts = " + Contacts_IngunCount);
+	csv_array.push("Time start action pulse; Utek, V; Itek, A; Ptek, W; Rtek, Ohm; R_PerOne, Ohm");
+
+	append("data/Contacts_ResourceTest.csv", csv_array);
+
 	var today = new Date();								// Узнаем и сохраняем текущее время
 	var hours = today.getHours() + ResourceTestHours;	// Узнаем кол-во часов в текущем времени и прибавляем к нему продолжительность ресурсного теста
 	today.setHours(hours);
@@ -163,14 +177,22 @@ function Contacts_ResourceTest(Current)
 		var Seconds = TimeStartSeries.getSeconds() + DelayBetweenSeriesSeconds + SeriesPauseSeconds;
 		TimeEndSeries.setSeconds(Seconds);
 
-		Contacts_Pulse(Current);
+		if(Contacts_Pulse(Current))
+			return 5;
 
 		while((new Date()).getTime() < TimeEndSeries.getTime())
-			if(!Contacts_AnykeyExit())
-				return 58;
+		{
+			pinline("\rПауза между серией = " + (TimeEndSeries.getTime() - (new Date()).getTime()) + " мс		");
+			sleep(50);
 
-		if(!Contacts_AnykeyExit())
-				return 89;
+			if(Contacts_AnykeyExit())
+				return 58;
+		}
+		
+		pinline("\r                                                            \r");
+
+		if(Contacts_AnykeyExit())
+			return 89;
 	}
 }
 
@@ -195,14 +217,6 @@ function Contacts_MeasureV()
 	return f;
 }
 
-function Contacts_MeasureP()
-{
-	var f = TEK_Measure(3);
-	if (Math.abs(f) > 2e+4)
-		f = 0;
-	return (f / Contacts_Rshunt) * 0.0064;
-}
-
 function Contacts_MeasureI()
 {
 	var f = TEK_Measure(ccontacts_chCurrent);
@@ -217,9 +231,9 @@ function Contacts_AnykeyExit()
 	{
 		dev.co(portTOCU);
 		dev.c(Action_ContacsOff);
-		print("Stopped from user")
-		return 0;
+		print("\rStopped from user                              ");
+		return 1;
 	}
 
-	return 1;
+	return 0;
 }
