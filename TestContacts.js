@@ -19,7 +19,8 @@ Action_ContacsOn = 18;			// Команда на TOCU для замыкания �
 Action_ContacsOff = 26;			// Размыкание
 Action_Pulse = 63;				// Формирование импульса с помощью сигнала синхронизации
 
-csv_array	= [];
+csv_array= [];
+counter = 1;
 
 function Contacts_Init(portSCPC, portTOCU, portTek, channelVoltage, channelCurrent, channelSync)
 {
@@ -43,7 +44,7 @@ function Contacts_Init(portSCPC, portTOCU, portTek, channelVoltage, channelCurre
 	// Init trigger
 	TEK_TriggerPulseInit(ccontacts_chSync, "2.5");
 	// Horizontal settings
-	TEK_Horizontal("2.5e-3", "10e-3");
+	TEK_Horizontal("1e-3", "10e-3");
 	
 	// Display channels
 	for (var i = 1; i <= 4; i++)
@@ -64,11 +65,19 @@ function Contacts_TekMeasurement(Channel)
 	TEK_Send("measurement:meas" + Channel + ":type maximum");
 }
 
-function Contacts_TekScale(Channel, Value)
+function Contacts_TekScaleI(Channel, Value)
 {
-	// 0.9 - use 90% of full range
+	// 0.6 - use 60 % of full range
 	// 8 - number of scope grids in full scale
-	var scale = (Value / (8 * 0.9));
+	var scale = (Value / (8 * 0.4));
+	TEK_Send("ch" + Channel + ":scale " + scale);
+}
+
+function Contacts_TekScaleV(Channel, Value)
+{
+	// 0.6 - use 60 % of full range
+	// 8 - number of scope grids in full scale
+	var scale = (Value / (8 * 0.7));
 	TEK_Send("ch" + Channel + ":scale " + scale);
 }
 
@@ -77,8 +86,8 @@ function Contacts_Pulse(Current)
 	var VertValueCurrent = Current * Contacts_Rshunt;
 	var VertValueVoltage = ((Contacts_RIngun * 2) / (Contacts_IngunCount / 2)) * Current;
 
-	Contacts_TekScale(ccontacts_chCurrent, VertValueCurrent);
-	Contacts_TekScale(ccontacts_chVoltage, VertValueVoltage);
+	Contacts_TekScaleI(ccontacts_chCurrent, VertValueCurrent);
+	Contacts_TekScaleV(ccontacts_chVoltage, VertValueVoltage);
 
 	dev.co(portTOCU);
 	dev.c(Action_ContacsOn);
@@ -128,7 +137,10 @@ function Contacts_Pulse(Current)
 				print("Тест остановлен!")
 				return 10;
 			}
+
+			Contacts_RIngun = r_1Ingun_sc;
 			
+			print("-- result " + counter++ + " --");
 			print("Time Pulse   : " + TimeStartActionPulse);
 			print("Utek,       V: " + v_sc);
 			print("Itek,       A: " + i_sc.toFixed(3));
@@ -160,8 +172,19 @@ function Contacts_Pulse(Current)
 function Contacts_ResourceTest(Current)
 {
 	csv_array = [];
+	counter = 1;
+
+	dev.co(portSCPC);
+	p("dev.r 4 SCPC = " + dev.r(4));
+	p("dev.r 5 SCPC = " + dev.r(5));
+	dev.w(0,175)
+	dev.w(1,3300)
+	dev.w(2,359)
+	dev.w(3,90)
+	dev.w(4,830)
+	dev.w(5,100)
+	for(reg = 6; reg <= 64; reg++){dev.w(reg,0)}
 	
-	csv_array.push("Number of contacts = " + Contacts_IngunCount);
 	csv_array.push("Time start action pulse; Utek, V; Itek, A; Ptek, W; Rtek, Ohm; R_PerOne, Ohm");
 
 	append("data/Contacts_ResourceTest.csv", csv_array);
@@ -191,6 +214,9 @@ function Contacts_ResourceTest(Current)
 		
 		pinline("\r                                                            \r");
 
+		var left_time = new Date((today.getTime()) - ((new Date()).getTime()));
+		print("Осталось " + (left_time.getHours()-3) + " ч и " + left_time.getMinutes() + " мин");
+		
 		if(Contacts_AnykeyExit())
 			return 89;
 	}
