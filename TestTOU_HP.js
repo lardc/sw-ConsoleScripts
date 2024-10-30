@@ -100,6 +100,60 @@ function TOCUHP_Pulse(N, Voltage, Bit)
 		PrintStatus();
 }
 
+function TOCUHP_Pulse_Hz(Voltage, Bit, Hertz, Minutes)
+{
+	var period_ms = (1 / Hertz) * 1000;
+	var start = new Date();
+	var stop = new Date();
+	var minutes = start.getMinutes() + Minutes;
+	stop.setMinutes(minutes);
+	var i = 1;
+	print("Начало теста: " + new Date());
+
+	while((new Date()).getTime() < stop.getTime())
+	{
+		var start_pulse = new Date();
+		var stop_pulse = new Date();
+		var milliseconds = start_pulse.getMilliseconds() + period_ms;
+		stop_pulse.setMilliseconds(milliseconds);
+
+		print("Импульс № " + i);
+		//TOCUHP_Pulse(1, Voltage, Bit);
+
+		while((new Date()).getTime() < stop_pulse.getTime())
+		{
+			if (anykey()) return;
+			sleep(1);
+		}
+
+		i++;
+
+		if (anykey()) break;
+	}
+	p("Конец теста: " + new Date());
+}
+
+function TOCUHP_ResourceTest(Voltage, Bit, HoursTest, Sleep)
+{
+	var i = 1;
+	var end = new Date();
+	var start = new Date();
+	var hours = start.getHours() + HoursTest;
+	end.setHours(hours);
+
+	while((new Date()).getTime() < end.getTime())
+	{
+		TOCUHP_Pulse(1, Voltage, Bit);
+
+		var left_time = new Date(end.getTime() - (new Date()).getTime());
+		print("#" + i + " Осталось " + (left_time.getHours() - 3) + " ч и " + left_time.getMinutes() + " мин");
+		sleep(Sleep);
+		if (anykey()) break;
+
+		i++;
+	}
+}
+
 // TOMU HP
 function TOMUHP_GatePulse(GateCurrentRate, GateCurrent)
 {
