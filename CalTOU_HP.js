@@ -222,7 +222,7 @@ function CTOU_IdTekInit()
 function CTOU_UdTekInit()
 {
 	// Init channels
-	TEK_ChannelInit(ctou_chMeasureUd, "100", "100");
+	TEK_ChannelInit(ctou_chMeasureUd, "1000", "100");
 	TEK_ChannelInit(ctou_chSync, "1", "1");
 	// Init trigger
 	TEK_TriggerInit(ctou_chSync, "4");
