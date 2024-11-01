@@ -59,7 +59,7 @@ function CAL_Init(portDevice, portTek, channelMeasureVd)
 	}
 }
 
-function CTOCUHP_CalIdbrateVd()
+function CTOCUHP_СalibrateVd()
 {
 	CTOCUHP_ResetA();
 	CTOCUHP_ResetVdCal();

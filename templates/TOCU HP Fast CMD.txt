@@ -39,4 +39,4 @@ CAL_Init(9,8,1);
 
 CTOCUHP_VerifyVd();
 
-CTOCUHP_CalIdbrateVd();
+CTOCUHP_СalibrateVd();
