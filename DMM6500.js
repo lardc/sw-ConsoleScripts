@@ -96,6 +96,12 @@ function KEI_ReadMinimum()
 }
 //--------------------
 
+function KEI_ReadPeakToPeak()
+{
+	return tmc.q('TRAC:STAT:PK2Pk? "TestBuffer"');
+}
+//--------------------
+
 function KEI_ReadArrayMaximum()
 {
 	AverageValue = 0;

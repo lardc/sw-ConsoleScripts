@@ -183,6 +183,7 @@ function CCS_ClampCollectAutomatic()
 			break;
 
 		dev.w(70, Math.round(force_input / 100));
+		dev.w(71, 0);
 		
 		// Start clamping
 		print("Clamping.")

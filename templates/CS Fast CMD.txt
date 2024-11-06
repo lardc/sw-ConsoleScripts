@@ -34,4 +34,15 @@ CCS_TempToDACCalibrate(); // Нагрев пресса не нужен
 include("CalCS.js");
 CCS_TempReadCalibrate([TRM_AddrArray]) // Для штыревых ЗУ: [1] - основание, [2] - хвост; для таблеточных ЗУ: [1, 2] - обе нагревательные пластины 
 
+// Калибровка усилия зажатия
+include("CalCS.js");
+dev.co(12)
+force_min = 5;
+force_max = 50;
+force_step = 5;
+PortNumberTerminal = 7;		// COM порт терминала
+mode_force = 's';			// 'a' автоматический ввод задания, 's' - ручной ввод в консоль
+mode_terminal = 's';		// 'a' автоматическое снятие данных с терминала, 's' - ручной ввод кг в консоль
 
+CCS_ClampVerify()
+CCS_ClampCalibrate()

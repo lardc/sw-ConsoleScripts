@@ -1,49 +1,53 @@
 include("DMM6500.js")
 include("CalGeneral.js")
+include("TestIGTU.js")
 
 //---------Calibration setup parameters-------
 
 // Voltage source
 //
-cal_V_PulsePlate 	= 4000 					// us
-cal_V_TriggerDelay	= 500e-6				// s
-cal_V_Ilow 			= [0.1, 2, 20]			// mA
-cal_V_Ihigh 		= [1, 20, 200]			// mA
-cal_V_Rint 			= [8600, 34, 34]		// Ohm
-cal_V_Rext			= [16000, 999.436, 100.095]	// Ohm
-cal_Vset_Low 		= 2;					// V
-cal_Vset_High 		= 30;					// V
-cal_Vmsr_Low 		= 2;					// V
-cal_Vmsr_High 		= 10;					// V
+cal_V_Ilow 				= [0.1, 2, 20]					// mA
+cal_V_Ihigh 			= [1, 20, 200]					// mA
+cal_V_Rint 				= [8600, 34, 34]				// Ohm
+cal_V_Rext				= [15400, 999.436, 100.095]		// Ohm
+cal_Vset_Low 			= 2;							// V
+cal_Vset_High 			= 30;							// V
+cal_Vmsr_Low 			= 2;							// V
+cal_Vmsr_High 			= 10;							// V
 
 // Current source
 //
-cal_I_PulsePlate 	= 100 					// us
-cal_I_TriggerDelay	= 480e-6				// s
-cal_I_Ilow			= 20					// mA
-cal_I_Ihigh			= 500					// mA
-cal_I_Vneglow		= 0.5					// V
-cal_I_Vneghigh		= 20					// V
-cal_I_Vcolow		= 2					// V
-cal_I_Vcohigh		= 20					// V
+cal_I_Imin				= 20							// mA
+cal_I_Imax				= 500							// mA
+cal_I_Vnegmin			= 0.5							// V
+cal_I_Vnegmax			= 20							// V
+cal_I_Vcomin			= 2								// V
+cal_I_Vcomax			= 20							// V
+cal_I_Qmin				= 400							// nC
+cal_I_Qmax				= 15000							// nC
+cal_I_Tmin				= 20							// us
+cal_I_Tmax				= 100							// us
+cal_I_Cload				= 2.25							// uF
 
 // Calibration types
 //
-cal_V_Imeas_R0		= 0
-cal_V_Imeas_R1		= 1
-cal_V_Imeas_R2		= 2
-cal_V_Vmeas			= 3
-cal_V_Vset			= 4
-cal_I_Iset			= 5
-cal_I_Vco			= 6
-cal_I_Vneg			= 7
+cal_V_Imeas_R0			= 0
+cal_V_Imeas_R1			= 1
+cal_V_Imeas_R2			= 2
+cal_V_Vmeas				= 3
+cal_V_Vset				= 4
+cal_I_Iset				= 5
+cal_I_Vco				= 6
+cal_I_Vneg				= 7
+cal_I_Q					= 8
 	
-cal_CalibrationType = cal_I_Vneg
+cal_CalibrationType 	= cal_V_Imeas_R0
+cal_I_Q_VoltageMethod	= 1								// 1 - using voltage, 0 - using current
 
 // Calibration points
 //
 cal_Points 			= 10
-cal_Iterations 		= 5
+cal_Iterations 		=5
 //------------------------------------------
 
 // Counters
@@ -60,6 +64,7 @@ Xstp = 0;
 // Results storage
 cal_I = [];
 cal_V = [];
+cal_Q = [];
 
 // Keithley data
 cal_KEIData = [];
@@ -89,6 +94,12 @@ function CAL_Calibrate_I()
 //--------------------
 
 function CAL_Verify_I()
+{	
+	CAL_I_Process(0)
+}
+//--------------------
+
+function CAL_Verify_Q()
 {	
 	CAL_I_Process(0)
 }
@@ -172,19 +183,24 @@ function CAL_I_Process(Calibration)
 	// Reload values
 	switch(cal_CalibrationType)
 	{
+		case cal_I_Q:
+			Xmin = cal_I_Qmin
+			Xmax = cal_I_Qmax
+			break
+			
 		case cal_I_Iset:
-			Xmin = cal_I_Ilow
-			Xmax = cal_I_Ihigh
+			Xmin = cal_I_Imin
+			Xmax = cal_I_Imax
 			break
 			
 		case cal_I_Vco:
-			Xmin = cal_I_Vcolow;
-			Xmax = cal_I_Vcohigh;
+			Xmin = cal_I_Vcomin;
+			Xmax = cal_I_Vcomax;
 			break
 			
 		case cal_I_Vneg:
-			Xmin = cal_I_Vneglow;
-			Xmax = cal_I_Vneghigh;
+			Xmin = cal_I_Vnegmin;
+			Xmax = cal_I_Vnegmax;
 			break
 			
 		default:
@@ -200,12 +216,16 @@ function CAL_I_Process(Calibration)
 	CAL_ResetArrays()
 	CAL_ResetCalibration(Calibration)
 	
+	IGTU_Print = false
+	
 	if (CAL_Collect(SetpointArray, cal_Iterations))
 	{
 		CAL_Save()
 		CAL_PlotGraph()
 		CAL_CalculateCorrection(Calibration)
 	}
+	
+	IGTU_Print = true
 }
 //--------------------
 
@@ -223,11 +243,37 @@ function CAL_Collect(SetpointValues, IterationsCount)
 			
 			switch(cal_CalibrationType)
 			{
-				case cal_I_Vco:
+				case cal_I_Q:
+					if(cal_I_Imin * cal_I_Tmax > SetpointValues[j])
+					{
+						Q_I = cal_I_Imin;
+						Q_T = SetpointValues[j] / cal_I_Imin;
+					}
+					else
+					{
+						Q_T = cal_I_Tmax;
+						Q_I = SetpointValues[j] / cal_I_Tmax;
+					}
+					
+					Q_V = Q_I / 1000 * Q_T / cal_I_Cload;
+					
+					if(Q_V < cal_I_Vcomin)
+						Q_V = cal_I_Vcomin;
+					
+					if(Q_V > cal_I_Vcomax)
+						Q_V = cal_I_Vcomax
+					
+					(cal_I_Q_VoltageMethod) ? KEI_SetVoltageRange(Q_V) : KEI_SetCurrentRange(Q_I / 1000);
+					break
+					
 				case cal_I_Vneg:
+					(SetpointValues[j] > 10) ? KEI_SetVoltageRange(100) : KEI_SetVoltageRange(10)
+					break
+					
+				case cal_I_Vco:
 				case cal_V_Vmeas:
 				case cal_V_Vset:
-					KEI_SetVoltageRange(SetpointValues[j] * 1.2)
+						KEI_SetVoltageRange(SetpointValues[j] * 1.2)
 					break
 					
 				case cal_V_Imeas_R0:			
@@ -247,7 +293,7 @@ function CAL_Collect(SetpointValues, IterationsCount)
 			{
 				case cal_V_Vmeas:
 				case cal_V_Vset:
-					dev.wf(141, cal_V_Ihigh[cal_V_Imeas_R2])
+					dev.wf(142, cal_V_Ihigh[cal_V_Imeas_R2])
 					dev.wf(140, SetpointValues[j])
 					dev.c(70)
 					
@@ -257,7 +303,7 @@ function CAL_Collect(SetpointValues, IterationsCount)
 				case cal_V_Imeas_R0:			
 				case cal_V_Imeas_R1:			
 				case cal_V_Imeas_R2:
-					dev.wf(141, cal_V_Ihigh[cal_CalibrationType])
+					dev.wf(142, cal_V_Ihigh[cal_CalibrationType])
 					dev.wf(140, SetpointValues[j])
 					dev.c(70)
 					
@@ -265,20 +311,35 @@ function CAL_Collect(SetpointValues, IterationsCount)
 					break;
 					
 				case cal_I_Iset:
-					dev.wf(140, 20)
-					dev.wf(141, SetpointValues[j])
+					dev.wf(140, 15)
+					dev.wf(141, 15)
+					dev.wf(142, SetpointValues[j])
 					dev.c(71)
 					
 					print("Iset,    mA: " + SetpointValues[j])
 					break
 					
 				case cal_I_Vco:
-				case cal_I_Vneg:
 					dev.wf(140, SetpointValues[j])
-					dev.wf(141, 100)
+					dev.wf(141, 0.5)
+					dev.wf(142, 500)
 					dev.c(71)
 					
 					print("Vset,     V: " + SetpointValues[j])
+					break
+					
+				case cal_I_Vneg:
+					dev.wf(140, 2)
+					dev.wf(141, SetpointValues[j])
+					dev.wf(142, 500)
+					dev.c(71)
+					
+					print("Vset,     V: " + SetpointValues[j])
+					break
+					
+				case cal_I_Q:
+					print("Qset,     nC: " + SetpointValues[j])
+					IGTU_Qg(Q_I, Q_T, Q_V, Q_V);
 					break
 			}
 			sleep(500)
@@ -303,40 +364,24 @@ function CAL_Collect(SetpointValues, IterationsCount)
 					print("Verr,    %: " + Verr)
 					break
 					
-				case cal_I_Vco:					
-					var Vco = dev.rf(210)
-					cal_V.push(Vco)
-					print("Vco,   V: " + Vco)
-					
+				case cal_I_Vco:										
 					var KEIData = KEI_ReadMaximum()
 					cal_KEIData.push(KEIData)
 					print("KEI,     V: " + KEIData)
 
-					// Relative error
-					var Verr = ((Vco - SetpointValues[j]) / SetpointValues[j] * 100).toFixed(2)
-					cal_Err.push(Verr)
-					print("VcoErr,    %: " + Verr)
-					
+					// Relative error					
 					var VsetErr = ((KEIData - SetpointValues[j]) / SetpointValues[j] * 100).toFixed(2)
 					cal_SetErr.push(VsetErr)
 					print("VsetErr, %: " + VsetErr)
 					break
 					
 				case cal_I_Vneg:					
-					var Vneg = dev.rf(211)
-					cal_V.push(Vneg)
-					print("Vneg,  V: " + Vneg)
-					
-					var KEIData = KEI_ReadMinimum()
+					var KEIData = CAL_KeiReadVneg()
 					KEIData = KEIData * (-1)
 					cal_KEIData.push(KEIData)
 					print("KEI,     V: " + KEIData)
 
-					// Relative error
-					var Verr = ((Vneg - SetpointValues[j]) / SetpointValues[j] * 100).toFixed(2)
-					cal_Err.push(Verr)
-					print("VnegErr,    %: " + Verr)
-					
+					// Relative error					
 					var VsetErr = ((KEIData - SetpointValues[j]) / SetpointValues[j] * 100).toFixed(2)
 					cal_SetErr.push(VsetErr)
 					print("VsetErr, %: " + VsetErr)
@@ -354,6 +399,24 @@ function CAL_Collect(SetpointValues, IterationsCount)
 					break
 					
 				case cal_I_Iset:
+					var KEIData = CAL_KeiExtractGraphMax(15) * 1000;
+					cal_KEIData.push(KEIData)
+					print("KEI,     mA: " + KEIData)
+					
+					var Iread = dev.rf(212)
+					cal_I.push(Iread)
+					print("Iread,   mA: " + Iread)
+
+					// Relative error
+					var Ierr = ((Iread - KEIData) / KEIData * 100).toFixed(2)
+					cal_Err.push(Ierr)
+					print("Ierr,     %: " + Ierr)
+					
+					var IsetErr = ((SetpointValues[j] - KEIData) / KEIData * 100).toFixed(2)
+					cal_SetErr.push(IsetErr)
+					print("IsetErr,  %: " + IsetErr)
+					break
+					
 				case cal_V_Imeas_R0:
 				case cal_V_Imeas_R1:					
 				case cal_V_Imeas_R2:
@@ -369,14 +432,35 @@ function CAL_Collect(SetpointValues, IterationsCount)
 					var Ierr = ((Iread - KEIData) / KEIData * 100).toFixed(2)
 					cal_Err.push(Ierr)
 					print("Ierr,     %: " + Ierr)
-					
-					if(cal_CalibrationType == cal_I_Iset)
-					{
-						var IsetErr = ((SetpointValues[j] - KEIData) / KEIData * 100).toFixed(2)
-						cal_SetErr.push(IsetErr)
-						print("IsetErr,  %: " + IsetErr)
-					}
 					break;
+					
+				case cal_I_Q:
+					if(cal_I_Q_VoltageMethod)
+					{
+						var KeiPk2Pk = parseFloat((-1) * CAL_KeiReadVneg()) + parseFloat(CAL_KeiExtractGraphMax(10));
+						KEIData = (KeiPk2Pk * cal_I_Cload * 1000).toFixed(1);
+					}
+					else
+					{
+						KEIData = 0;
+						DataTemp = KEI_ReadArray();
+						
+						for(k = 0; k < DataTemp.length; k++)
+							KEIData += DataTemp[k] * 1000;
+					}
+					
+					cal_KEIData.push(KEIData)
+					print("KEI,     nC: " + KEIData)
+					
+					var Qread = dev.rf(202)
+					cal_Q.push(Qread)
+					print("Qread,   nC: " + Qread)
+					
+					// Relative error
+					var Qerr = ((Qread - KEIData) / KEIData * 100).toFixed(2)
+					cal_Err.push(Qerr)
+					print("Qerr,     %: " + Qerr)
+					break
 			}			
 
 			print("--------------------")
@@ -400,7 +484,6 @@ function CAL_PlotGraph()
 		
 		case cal_I_Vco:
 		case cal_I_Vneg:
-			scattern(Setpoint, cal_Err, "Voltage (in V)", "Error (in %)", "Voltage relative error")
 		case cal_V_Vset:
 			scattern(Setpoint, cal_SetErr, "Voltage (in V)", "Error (in %)", "Set voltage relative error")
 			break
@@ -414,6 +497,10 @@ function CAL_PlotGraph()
 		case cal_I_Iset:
 			scattern(Setpoint, cal_SetErr, "Current (in mA)", "Error (in %)", "Set current relative error")
 			scattern(cal_KEIData, cal_Err, "Current (in mA)", "Error (in %)", "Current relative error")
+			break
+			
+		case cal_I_Q:
+			scattern(cal_KEIData, cal_Err, "Charge (in nC)", "Error (in %)", "Charge relative error")
 			break
 	}
 }
@@ -470,26 +557,12 @@ function CAL_CalculateCorrection(Calibration)
 				cal_Corr = CGEN_GetCorrection2("IGTU_I")
 				break
 				
-			case cal_I_Vco:
-				Reg = [40,41,42]		// [P2, P1, P0]
-				cal_Corr = CGEN_GetCorrection2("IGTU_V")
-				CAL_SetCoef(Reg, cal_Corr)
-				p('Voltage set coefficients:')
-				CAL_PrintCoef(Reg)
-				p('')
-				
+			case cal_I_Vco:				
 				Reg = [30,31,32]		// [P2, P1, P0]
 				cal_Corr = CGEN_GetCorrection2("IGTU_Vset")
 				break
 				
-			case cal_I_Vneg:
-				Reg = [79,80,81]		// [P2, P1, P0]
-				cal_Corr = CGEN_GetCorrection2("IGTU_V")
-				CAL_SetCoef(Reg, cal_Corr)
-				p('Voltage set coefficients:')
-				CAL_PrintCoef(Reg)
-				p('')
-				
+			case cal_I_Vneg:				
 				Reg = [35,36,37]		// [P2, P1, P0]
 				cal_Corr = CGEN_GetCorrection2("IGTU_Vset")
 				break
@@ -610,7 +683,7 @@ function CAL_V_SetCurrentRange()
 			CurrentMax = cal_V_Ihigh[cal_V_Imeas_R2];
 	}
 	
-	dev.wf(141, CurrentMax)
+	dev.wf(142, CurrentMax)
 }
 //--------------------
 
@@ -629,36 +702,43 @@ function CAL_V_ParametricMode(State)
 
 function CAL_ConfigDMM6500()
 {
+	// Config digitize points & trig delay
+	DigPoints_I	= 400
+	DigPoints_V	= 4000
+	TrigDelay_I	= 0
+	TrigDelay_V	= 500e-6
+	//
+	
 	KEI_Reset()
 	
 	switch(cal_CalibrationType)
 	{
 		case cal_I_Vco:
-			KEI_ConfigVoltage(cal_I_PulsePlate)
-			KEI_ConfigExtTrigger(cal_I_TriggerDelay)
-			break
-			
 		case cal_I_Vneg:
-			KEI_ConfigVoltage(cal_I_PulsePlate)
-			KEI_ConfigExtTrigger(0)
+			KEI_ConfigVoltage(DigPoints_I)
+			KEI_ConfigExtTrigger(TrigDelay_I)
 			break
 			
+		case cal_I_Q:
+			(cal_I_Q_VoltageMethod) ? KEI_ConfigVoltage(DigPoints_I) : KEI_ConfigCurrent(DigPoints_I)
+			KEI_ConfigExtTrigger(TrigDelay_I)
+			break
 		case cal_I_Iset:
-			KEI_ConfigCurrent(cal_I_PulsePlate)
-			KEI_ConfigExtTrigger(cal_I_TriggerDelay)
+			KEI_ConfigCurrent(DigPoints_I)
+			KEI_ConfigExtTrigger(TrigDelay_I)
 			break
 			
 		case cal_V_Vmeas:
 		case cal_V_Vset:
-			KEI_ConfigVoltage(cal_V_PulsePlate)
-			KEI_ConfigExtTrigger(cal_V_TriggerDelay)
+			KEI_ConfigVoltage(DigPoints_V)
+			KEI_ConfigExtTrigger(TrigDelay_V)
 			break
 			
 		case cal_V_Imeas_R0:
 		case cal_V_Imeas_R1:
 		case cal_V_Imeas_R2:
-			KEI_ConfigCurrent(cal_V_PulsePlate)
-			KEI_ConfigExtTrigger(cal_V_TriggerDelay)
+			KEI_ConfigCurrent(DigPoints_V)
+			KEI_ConfigExtTrigger(TrigDelay_V)
 			break;
 	}
 }
@@ -672,6 +752,7 @@ function CAL_ResetArrays()
 	// Results storage
 	cal_V = []
 	cal_I = []
+	cal_Q = []
 
 	// Keithley data
 	cal_KEIData = []
@@ -684,5 +765,38 @@ function CAL_ResetArrays()
 	// Correction
 	cal_Corr = []
 	cal_Icorr = []
+}
+//--------------------
+
+function CAL_KeiReadVneg()
+{
+	AveragePointsNum = 30;
+	Average = 0;
+	
+	Data = KEI_ReadArray();
+	
+	for(i = 0; i < AveragePointsNum; i++)
+		Average += Data[i] / AveragePointsNum;
+	
+	return Average;
+}
+//--------------------
+
+function CAL_KeiExtractGraphMax(AveragePointsNum)
+{
+	Average = 0;
+	
+	Data = KEI_ReadArray().sort(CAL_ArraySortRule)
+	
+	for(var i = Data.length - 1; i >= Data.length - AveragePointsNum; i--)
+		Average += Data[i]
+	
+	return Average / AveragePointsNum
+}
+//--------------------
+
+function CAL_ArraySortRule(a, b)
+{
+	return a > b ? 1 : b > a ? -1 : 0;
 }
 //--------------------
