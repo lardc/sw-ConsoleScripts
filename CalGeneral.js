@@ -1,3 +1,5 @@
+include("Numeric.js")
+
 // Correction
 cgen_correctionDir = "data"
 cgen_correctionApp = "correction_calc.exe"		// Linear polyfit function
@@ -66,6 +68,39 @@ function CGEN_GetCorrection2(Filename)
 	
 	CGEN_WaitForCorrection("Correcting " + Filename + "...")
 	return CGEN_CorrectionToFloat(load(cgen_correctionDir + "/" + Filename + "_corr.csv"))
+}
+
+function Test_Calibrate(arrayUnit, arrayReference, order)
+{
+	var XMatrix = [];
+	var YMatrix = numeric.transpose([arrayReference]);
+
+	for (var i = 0; i < arrayUnit.length; i++) {
+		var TempMatrix = [];
+
+		for (var j = 0; j <= order; j++) {
+			TempMatrix.push(Math.pow(arrayUnit[i], j));
+		}
+		XMatrix.push(TempMatrix);
+	}
+
+	var XMatrixT = numeric.transpose(XMatrix);
+	var Dot1 = numeric.dot(XMatrixT, XMatrix);
+	var Dot2 = numeric.dot(XMatrixT, YMatrix);
+	var DotInv = numeric.inv(Dot1);
+
+	var Coefficients = numeric.dot(DotInv, Dot2);
+	return Coefficients;
+}
+
+function CGEN_GetNumericCorrection(arrayUnit, arrayReference)
+{
+	return Test_Calibrate(arrayUnit, arrayReference, 1);
+}
+
+function CGEN_GetNumericCorrection2(arrayUnit, arrayReference)
+{
+	return Test_Calibrate(arrayUnit, arrayReference, 2);
 }
 
 function CGEN_CorrectionToFloat(InputData)
