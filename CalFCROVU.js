@@ -1,7 +1,7 @@
 include("TestFCROVU.js")
 include("Tektronix.js")
 
-cfdvdt_chMeasure = 2;
+cfdvdt_chMeasure = 1;
 // Measure method
 cfdVdt_RiseTime =			1; // Встроенная функция Rise Time на Tek
 cfdVdt_Approx =				2; // Апроксимация линейная с вычитываем точек измерения
@@ -12,7 +12,7 @@ cfdvdt_MeasureMethod = cfdVdt_Approx;
 DS_None = 0;
 //DS_Fault = 1;
 //DS_Disabled = 2;
-DS_Ready = 4;
+DS_Ready = 3;
 
 // Definition section (modification is dangerous)
 cfdvdt_def_VGateMin = 1750;
@@ -69,7 +69,9 @@ function CfdVdt_Init(portfdVdt, portTek, channelMeasure)
 	dev.Connect(portfdVdt);
 	
 	// Init Tektronix
-	TEK_PortInit(portTek);
+	SiC_GD_Init(portTek);
+	//TEK_PortInit(portTek);
+	//TEK_Send("data:encdg srp");
 	
 	// Tektronix init
 	// Init channels
