@@ -339,20 +339,37 @@ function FWU_RestoreLSLPC()
 }
 //------------------------
 
-// DRCU
-function FWU_DRCU()
+// DCU
+function FWU_DCU()
 {
 	FWUpdateSTM("../../hw-DRCUControlBoard/Firmware/Release/DRCUControlBoard.binary");
 }
 
-function FWU_DumpDRCU()
+function FWU_DumpDCU(Num)
 {
-	dev.Dump("../../hw-DRCUControlBoard/Firmware/DRCUControlBoard.regdump", 0, 126);
+	FWU_DumpCommon("DCU", Num, 126);
 }
 
-function FWU_RestoreDRCU()
+function FWU_RestoreDCU(Num)
 {
-	dev.Restore("../../hw-DRCUControlBoard/Firmware/DRCUControlBoard.regdump");
+	FWU_RestoreCommon("DCU", Num);
+}
+//------------------------
+
+// RCU
+function FWU_RCU()
+{
+	FWUpdateSTM("../../hw-DRCUControlBoard/Firmware/Release/DRCUControlBoard.binary");
+}
+
+function FWU_DumpRCU(Num)
+{
+	FWU_DumpCommon("RCU", Num, 126);
+}
+
+function FWU_RestoreDCU(Num)
+{
+	FWU_RestoreCommon("RCU", Num);
 }
 //------------------------
 
@@ -605,7 +622,7 @@ function FWU_DumpSAU(Num)
 	FWU_DumpCommon("SAU", Num, 126);
 }
 
-function FWU_RestoreSAU()
+function FWU_RestoreSAU(Num)
 {
 	FWU_RestoreCommon("SAU", Num);
 }
@@ -621,7 +638,7 @@ function FWU_DumpITU(Num)
 	FWU_DumpCommon("ITU", Num, 126);
 }
 
-function FWU_RestoreITU()
+function FWU_RestoreITU(Num)
 {
 	FWU_RestoreCommon("ITU", Num);
 }
@@ -637,7 +654,7 @@ function FWU_DumpCSI(Num)
 	FWU_DumpCommon("CSI", Num, 126);
 }
 
-function FWU_RestoreCSI()
+function FWU_RestoreCSI(Num)
 {
 	FWU_RestoreCommon("CSI", Num);
 }
