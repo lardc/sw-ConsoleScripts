@@ -2,6 +2,8 @@ include("PrintStatus.js")
 include("CalGeneral.js")
 include("SiC_Calc.js")
 
+cfdvdt_RatePoint = [20, 50, 100, 200]
+
 function fdVdt_DiagPulse(Gate, Current, Time)
 {
 	dev.w(150, Time)
@@ -34,4 +36,27 @@ function fdVdt_StartPulse(Rate, Current, Sync)
 	else
 		dev.c(100)
 	sleep(500)
+}
+
+function fdVdt_ResTest(Pulse)
+{
+	Num = Pulse / cfdvdt_RatePoint.length
+	for (var i = 0; i < Num ; i++)
+	{
+		for (var j = 0; j < cfdvdt_RatePoint.length; j++)
+		{	
+		print("Test " + (((i * cfdvdt_RatePoint.length) + j) + 1) + " is " + Pulse ) 
+		while (dev.r(192) != 3)	
+		{
+			sleep(100)
+			p(dev.r(200))
+			if(anykey()) return 0	
+		}	
+		fdVdt_StartPulse(cfdvdt_RatePoint[j], 1600, 0)
+		sleep (1500)
+		p(dev.r(200))
+		
+		if(anykey()) return 0
+		}
+	}
 }
