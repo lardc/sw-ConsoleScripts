@@ -1,0 +1,58 @@
+﻿//Подключение библиотеки
+include("CalQRRHP016.js") 
+
+//Инциализация портов и выходов
+CAL_Init(1,2,1,2);
+CAL_Init(portDevice, portTek, channelMeasureI, channelMeasureU) 
+portDevice: Порт блока QSU (RS232)
+portTek: Порт осциллографа (RS232)
+channelMeasureI: Канал измерения тока на осциллографе
+channelMeasureU: Канад измерения напряжения на осциллографе
+
+//Включение на всех активных блоках режима для калибровки
+Cal_Reg_En()
+	
+//Одиночное формирование
+QRR_Start(0,320,4,100,10);
+QRR_Start(Mode, IDC, IDCFallRate, OSV, OSVRate)		
+Mode:
+	#define MODE_QRR_ONLY	0
+	#define MODE_QRR_TQ	1
+	#define MODE_DVDT_ONLY	2
+IDC: Задание значение тока, в A (для DCU & RCU)
+IDCFallRate: Задание значения номера скорости спада тока (для DCU & RCU)
+OSV: Задание значения напряжения, в V (для CROVU)
+OSVRate: Задание значения скорости напряжения  , в V/us (для CROVU)
+
+// Режим измерения QRR
+QrrGOST = 1; 
+// Прямой ток для верификации 
+DirectCurrentTest = 1000;
+
+//Верификация QRR  
+CAL_VerifyQrr();
+//Верификация TQ  
+CAL_VerifyTq();				
+
+//Ресурсный тест
+DRCU_Test(1000);
+DRCU_Test(N)
+
+//Ресурсный тест для RCU
+RCU_Resource(1000);
+RCU_Resource(N)
+
+//Статус всех активных блоков
+QRR_Status()	
+
+//Результат замера 
+QRR_Result()	
+
+//Запись через блок QSU
+QSU_WriteReg(0, 0, 0)
+
+//Чтение через блок QSU
+p(QSU_ReadReg(0, 0))
+
+//Выполнение команды через блок QSU
+QSU_Call(0, 0)

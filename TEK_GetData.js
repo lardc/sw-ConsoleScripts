@@ -4,7 +4,8 @@ include("CalGeneral.js")
 tek_measuring_device = "TPS2024";	// "TPS2014"
 
 // Channels
-UsePort = 1;
+UsePort = MAXPort = 1;
+MINPort = 2;
 
 // 
 Cal_RCU = 1;
@@ -68,10 +69,11 @@ function ChannelData(NameFile, Channel)
 	SaveChannelData(NameFile, Data);
 }
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
+// Выбор отрезка данных по выбранным процентам (однополюсный)
 function Use_Data(InNameFile, OutNameFile)
 {
 	Load = [];
-	Use_Load =[];
+	Use_Load = [];
 	Start = 0;
 	End = 0;
 	Min_i = 0;
@@ -116,6 +118,72 @@ function Use_Data(InNameFile, OutNameFile)
 	save(cgen_correctionDir + "/" + OutNameFile + ".csv", Use_Load);
 
 }
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
+// Выбор отрезка данных по выбранным процентам (двухполюсный) 
+function Use_Data2(InNameFile, OutNameFile, Use_Max, Use_Min)
+{
+	Load = [];
+	Use_Load = [];
+	Start = 0;
+	End = 0;
+	Min_i = 0;
+	Max_i = 0;
+	Load = load(cgen_correctionDir + "/" + InNameFile + ".csv");
+	MeasureMax = TEK_Measure(MAXPort) * 1e4;
+	MeasureMin = TEK_Measure(MINPort) * 1e4;
+
+	for (var i = 0 ; i < Load.length ; ++i)
+	{
+		if (Load[i] == MeasureMax.toFixed(0) || (Load[i]-1) == MeasureMax.toFixed(0) || (Load[i]+1) == MeasureMax.toFixed(0))
+			{
+			Min_i = i;
+			p("Min_i " + Min_i);
+			p("Min_i_L " + Load[Min_i]);
+			break;
+			}
+	}
+	p("MeasureMax " + MeasureMax);
+
+	for (var i = Load.length ; i > 0  ; --i)
+	{
+		if (Load[i] == MeasureMin.toFixed(0) || (Load[i]-1) == MeasureMin.toFixed(0) || (Load[i]+1) == MeasureMin.toFixed(0))
+			{
+			Max_i = i;
+			p("Max_i " + Max_i);
+			p("Max_i_L " + Load[Max_i]);
+			break;
+			}
+	}
+	p("MeasureMin " + MeasureMin);
+
+	for (var i = Min_i; i < Load.length; ++i)
+	{
+		if (Load[i] <= MeasureMax * Use_Max && Load[i+1] <= MeasureMax * Use_Max && Load[i+2] <= MeasureMax * Use_Max && Load[i+3] <= MeasureMax * Use_Max && Load[i+4] <= MeasureMax * Use_Max) 
+		//if (Load[i] <= 400)
+		{ 
+			Start = i;
+			//p("Start " + Start);
+			break;
+		}
+	}	
+	for (var i = Load.length ; i > 0 ; --i)	
+	{
+		if (Load[i] >= MeasureMin * Use_Min && Load[i-1] >= MeasureMin * Use_Min && Load[i-2] >= MeasureMin * Use_Min && Load[i-3] >= MeasureMin * Use_Min && Load[i-4] >= MeasureMin * Use_Min)
+		{	
+			End = i;
+			//p("End " + End);
+			break;
+		}
+	}
+	
+	for (var i = Start; i < End; ++i)
+	{
+		Use_Load.push(Load[i]);	
+	}
+	save(cgen_correctionDir + "/" + OutNameFile + ".csv", Use_Load);
+
+}
+
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
 // Нахождение скорости спада  
 function Use_Time(InNameFile)
