@@ -1,5 +1,7 @@
 include("Tektronix.js")
 
+sic_measuring_device = "TPS2024";	// "TPS2014"
+
 sic_gd_filter_points = 5;
 sic_gd_filter_factor = 0.5;
 
@@ -8,9 +10,18 @@ sic_gd_ice_shunt = 2.5e-3;
 
 function SiC_GD_Init(Port)
 {
+	if(sic_measuring_device == "TPS2014")
+	{
+		TEK_PortInit(Port);
+		TEK_Send("data:encdg srp");
+	}
+	else
+	{
 	TEK_PortInit(Port, 19200);
-	TEK_Send("data:width 1");
 	TEK_Send("data:encdg rpb");
+	}
+
+	TEK_Send("data:width 1");	
 	TEK_Send("data:start 1");
 	TEK_Send("data:stop 2500");
 }
@@ -29,11 +40,23 @@ function SiC_GD_GetChannelCurve(Channel)
 	//print("Channel " + Channel + " loaded");
 	
 	// validate data
-	if ((data_input[0] != "#") || (data_input[1] != 4) || (data_input[2] != 2) ||
-		(data_input[3] != 5) || (data_input[4] != 0) || (data_input[5] != 0))
+	if(sic_measuring_device == "TPS2014")
 	{
-		print("Invalid CH" + Channel + " data.");
-		return;
+		if ((data_input[0] != "#") || (data_input[1] != 4) || (data_input[2] != 5) ||
+			(data_input[3] != 0) || (data_input[4] != 0) || (data_input[5] != 0))
+		{
+			print("Invalid CH" + Channel + " data.");
+			return;
+		}
+	}
+	else
+	{
+		if ((data_input[0] != "#") || (data_input[1] != 4) || (data_input[2] != 2) ||
+			(data_input[3] != 5) || (data_input[4] != 0) || (data_input[5] != 0))
+		{
+			print("Invalid CH" + Channel + " data.");
+			return;
+		}
 	}
 	
 	// adjust data

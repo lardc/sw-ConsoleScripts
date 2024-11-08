@@ -4,7 +4,7 @@ include("TestdVdt.js")
 include("SiC_Calc.js")
 
 cdvdt_chMeasure = 1;
-cdvdt_Powerex = 1;
+cdvdt_Powerex = 0;
 
 // DeviceState
 DS_None = 0;
@@ -46,20 +46,21 @@ cdvdt_def_SetpointStartAddr[cdvdt_def_NO_RANGE] = 30;
 //
 cdvdt_CalVoltage = 900;
 cdvdt_SelectedRange = cdvdt_def_RANGE_LOW;
-cdvdt_HVProbeScale = 1000	// Коэффициент деления щупа
-cdvdt_DeviderRate = 10; 		// Делить скорости. Установить равным 1 если плата без диапазонов 
+cdvdt_HVProbeScale = 1000					// Коэффициент деления щупа
+cdvdt_DeviderRate = 10; 					// Делитель скорости. Установить равным 1 если плата без диапазонов 
 
 // Voltage settings for unit calibration
 cdvdt_Vmin = 500;
 cdvdt_Vmax = 4500;
+cdvdt_Points = 10;
 //
 cdvdt_collect_v = 0;
 
 // Measure method
-dVdt_HandCursors =		1;
-dVdt_RiseTime =			2;
-dVdt_Approx =			3;
-dVdt_AutoCursor =		4;
+dVdt_HandCursors =		1; // Курсоры вручную
+dVdt_RiseTime =			2; // Встроенная функция Rise Time на Tek
+dVdt_Approx =			3; // Апроксимация линейная с вычитываем точек измерения
+dVdt_AutoCursor =		4; // Курсоры автоматически по заданным уровням
 
 cdvdt_MeasureMethod = dVdt_AutoCursor;
 
@@ -84,7 +85,30 @@ cdvdt_scatter20 = [];
 cdvdt_scatter25 = [];
 //
 cdvdt_gate = [];
-cdvdt_ratesc = [];
+
+// Tektronix data
+cdvdt_rate_sc = [];
+cdvdt_v_sc = [];
+
+// Set data
+cdvdt_rate_set = [];
+cdvdt_v_set = [];
+
+// Relative error
+cdvdt_rate_err = [];
+cdvdt_v_err = [];
+
+// Summary error
+cdvdt_rate_err_sum = [];
+cdvdt_v_err_sum = [];
+
+// Measurement errors
+EUosc = 3;
+EProbe = 2;
+
+E0dvdt = 0;
+E0V = 0;
+ETosc = 0;
 
 function CdVdt_Init(portdVdt, portTek, channelMeasure)
 {
@@ -122,7 +146,7 @@ function CdVdt_Init(portdVdt, portTek, channelMeasure)
 	}
 	
 	// Init cursor
-	//CdVdt_TekCursor(channelMeasure);
+	CdVdt_TekCursor(channelMeasure);
 	
 	// Init measurement
 	CdVdt_TekMeasurement(cdvdt_chMeasure);
@@ -212,10 +236,11 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 	var cdvdt_u10_err_high = cdvdt_u10 * 1.3
 	var cdvdt_u10_err_low = cdvdt_u10 * 0.8
 
-	var cdvdt_timescale = TEK_Exec("horizontal:main:scale?") / 25;
+	var cdvdt_timescale = TEK_Exec("horizontal:main:scale?");
+	var cdvdt_timestep = cdvdt_timescale / 25;
 
-	var cursor_place1 = ((cdvdt_u10 - cdvdt_u50) / Rate) * 1e-6 - 3 * cdvdt_timescale;
-	var cursor_place2 = ((cdvdt_u90 - cdvdt_u50) / Rate) * 1e-6 - 3 * cdvdt_timescale;
+	var cursor_place1 = ((cdvdt_u10 - cdvdt_u50) / Rate) * 1e-6 - 3 * cdvdt_timestep;
+	var cursor_place2 = ((cdvdt_u90 - cdvdt_u50) / Rate) * 1e-6 - 3 * cdvdt_timestep;
 
 	var cdvdt_u_err = 0;
 
@@ -223,10 +248,10 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 	{
 		TEK_Send("cursor:vbars:position1 "+ cursor_place1);
 		TEK_Send("cursor:vbars:position2 "+ cursor_place2);
-		cdvdt_u_hpos2 = parseFloat(TEK_Exec("cursor:vbars:hpos2?"));
-		cdvdt_u_hpos2.toFixed(1);
 		cdvdt_u_hpos1 = parseFloat(TEK_Exec("cursor:vbars:hpos1?"));
 		cdvdt_u_hpos1.toFixed(1);
+		cdvdt_u_hpos2 = parseFloat(TEK_Exec("cursor:vbars:hpos2?"));
+		cdvdt_u_hpos2.toFixed(1);		
 		if (anykey()) return 0;
 	} while(cdvdt_u_hpos1 > 10e+6 || cdvdt_u_hpos2 > 10e+6)
 
@@ -235,9 +260,9 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 	{
 		cdvdt_u_err = cdvdt_u_hpos2 - cdvdt_u90;
 		if(cdvdt_u_err > 0)
-			cursor_place_fixed2 = cdvdt_timescale;
+			cursor_place_fixed2 = cdvdt_timestep;
 		else
-			cursor_place_fixed2 = -cdvdt_timescale;
+			cursor_place_fixed2 = -cdvdt_timestep;
 		
 		// Корректировка, отправка нового положения курсора и измерение напряжения в этой точке
 		cursor_place2 = cursor_place2 - cursor_place_fixed2;
@@ -249,9 +274,9 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 
 		cdvdt_u_err = cdvdt_u_hpos1 - cdvdt_u10;
 		if(cdvdt_u_err > 0)
-			cursor_place_fixed1 = cdvdt_timescale;
+			cursor_place_fixed1 = cdvdt_timestep;
 		else
-			cursor_place_fixed1 = -cdvdt_timescale;
+			cursor_place_fixed1 = -cdvdt_timestep;
 
 		// Корректировка, отправка нового положения курсора и измерение напряжения в этой точке
 		cursor_place1 = cursor_place1 - cursor_place_fixed1;
@@ -265,9 +290,12 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 	var U1 = TEK_Exec("cursor:vbars:hpos1?");
 	var U2 = TEK_Exec("cursor:vbars:hpos2?");
 	var dT = TEK_Exec("cursor:vbars:delta?");
-	var dVdt = (U2 - U1) / dT / 1000000;
+	var dVdt = (U2 - U1) / dT / 1e+6;
 
-	return parseFloat(dVdt);
+	var dT_err_Theta = cdvdt_timescale * 0.004 * 1e+6 + 0.0001 * dT * 1e+6 + 0.0006;
+	var dT_err_Epsilon = dT_err_Theta / (dT * 1e+6);
+
+	return {Rate : parseFloat(dVdt), TimeErr : dT_err_Epsilon};
 }
 
 function CdVdt_TekVScale(Channel, Voltage)
@@ -318,7 +346,7 @@ function CdVdt_CellCalibrateRateA(CellArray)
 
 function CdVdt_CellCalibrateRate(CellNumber)
 {
-	var GateSetpointV = CGEN_GetRange(cdvdt_def_VGateMin, cdvdt_def_VGateMax, Math.round((cdvdt_def_VGateMax - cdvdt_def_VGateMin) / (cdvdt_def_SetpointCount - 1)));
+	var GateSetpointV = CGEN_GetRange(cdvdt_def_VGateMin, cdvdt_def_VGateMax, (cdvdt_def_VGateMax - cdvdt_def_VGateMin) / (cdvdt_def_SetpointCount - 1));
 	
 	// Power enable cell
 	dVdt_CellCall(CellNumber, 1);
@@ -370,10 +398,13 @@ function CdVdt_CellCalibrateRate(CellNumber)
 		// Start pulse
 		for(var CounterAverages = 0; CounterAverages < cdvdt_def_UseAverage; CounterAverages++)
 		{
-			dev.c(114);
-			sleep(500);
-			while(_dVdt_Active()) sleep(100);
-			while(dVdt_CellReadReg(CellNumber, 14) == 0) sleep(100);
+			for (var count_p = 0; count_p < 3; count_p++)
+			{
+				dev.c(114);
+				sleep(500);
+				while(_dVdt_Active()) sleep(100);
+				while(dVdt_CellReadReg(CellNumber, 14) == 0) sleep(100);
+			}
 		}
 
 		TEK_Busy();
@@ -402,9 +433,9 @@ function CdVdt_CellCalibrateRate(CellNumber)
 				break;
 
 			case dVdt_AutoCursor:
-				rate = CdVdt_MeasureRate();
+				var rate = CdVdt_MeasureRate();
 				CdVdt_SwitchToCursor();
-				var rate = CdVdt_MeasureAutoCursor(v, rate, 10, 90).toFixed(1);
+				rate = CdVdt_MeasureAutoCursor(v, rate, 10, 90).toFixed(1);
 				CdVdt_TekMeasurement(cdvdt_chMeasure);
 				break;
 		}
@@ -417,7 +448,7 @@ function CdVdt_CellCalibrateRate(CellNumber)
 		}
 		
 		cdvdt_gate.push(GateSetpointV[i]);
-		cdvdt_ratesc.push(rate);
+		cdvdt_rate_sc.push(rate);
 
 		print("Vgt,     mV: " + GateSetpointV[i]);
 		print("dV/dt, V/us: " + rate);
@@ -430,14 +461,66 @@ function CdVdt_CellCalibrateRate(CellNumber)
 		
 		if (anykey()) return 1;
 	}
-	scattern(GateSetpointV, cdvdt_ratesc, "Gate voltage (in mV)", "Rate voltage (in V/us)", "Cell #" +
+	scattern(cdvdt_gate, cdvdt_rate_sc, "Gate voltage (in mV)", "Rate voltage (in V/us)", "Cell #" +
 			CellNumber + " range: " + cdvdt_SelectedRange + "; Vd = " + cdvdt_CalVoltage + " V; " +
-			cdvdt_ratesc[0] + ".." + cdvdt_ratesc[cdvdt_ratesc.length - 1] +" V/us");
+			cdvdt_rate_sc[0] + ".." + cdvdt_rate_sc[cdvdt_rate_sc.length - 1] +" V/us");
+
+	CdVdt_NonlinearityCell(cdvdt_gate, cdvdt_rate_sc, CellNumber, cdvdt_SelectedRange);
+
 	// Power disable cell
 	sleep(3000);
 	dVdt_CellCall(CellNumber, 2);
 	return 0;
 }
+
+// Вывод графика оценки нелинейности, относительно апроксимационной прямой
+function CdVdt_NonlinearityCell(X, Y, CellNumber, cdvdt_SelectedRange)
+{
+	var y_err_array = [];
+
+	var y_linear = 0;
+	var y_err_max = 0;
+
+	var sumx = 0;
+	var sumy = 0;
+	var sumx2 = 0;
+	var sumxy = 0;
+	var k = 0;
+	var b = 0;
+	
+	Y = String(Y);
+	YArray = Y.split(",");
+	YFloatArray = YArray.map(Number);
+
+	// рассчет апроксимационной прямой
+	for (var i = 0; i < X.length; i++)
+	{
+		sumx += X[i];
+		sumy += YFloatArray[i];
+		sumx2 += X[i] * X[i];
+		sumxy += X[i] * YFloatArray[i];
+	}
+
+	k = (X.length * sumxy - (sumx * sumy)) / (X.length * sumx2 - sumx * sumx);
+	b = (sumy - k * sumx) / X.length;
+
+	// относительная оценка отклонения скорости нарастания от прямой
+	for (var i = 0; i < X.length; i++)
+	{
+		y_linear = k * X[i] + b
+		y_err = ((YFloatArray[i] - y_linear) / y_linear * 100).toFixed(2);
+		y_err_array.push(y_err);
+									   
+		
+		// поиск макисмальной погрешности отклонения
+		if (Math.abs(y_err) > y_err_max)
+			y_err_max = Math.abs(y_err);
+	}
+
+	scattern(X, y_err_array, "Gate voltage (in mV)", "Error relative Nonlinearity (in %)", "Cell #" + CellNumber + " range: " + cdvdt_SelectedRange)
+	//p("y_err_max, % = " + y_err_max);
+}
+
 
 function CdVdt_Collect(Iterations)
 {
@@ -515,35 +598,22 @@ function CdVdt_CollectFixedRate(Repeat)
 	CdVdt_ResetA();
 
 	// Re-enable power
-	if (dev.r(192) == DS_Fault)
+	if(dev.r(192) != DS_Ready)
 	{
-		print("Fault Reason = " + dev.r(193));
-		dev.c(3);
-		if (dev.r(192) == DS_None)
+		if (dev.r(192) == DS_Fault)
 		{
-			print("Ошибка сброшена");
-			sleep(500);
-			dev.c(1);
-			while(_dVdt_Active())
-				sleep(100);
-			print("Питание в блок подано");
-		}		
-		else
-			print("Ошибка не сброшена");
-	}
+			PrintStatus();
+			return 0;
+		}
 
-	if (dev.r(192) == DS_None)
-	{
-		print("Unit is in a none state");
-		dev.c(1);
+		if (dev.r(192) == DS_None || dev.r(192) == DS_Disabled)
+			dev.c(1);
+
 		while(_dVdt_Active())
 			sleep(100);
-		print("The unit has been switched to enabled state");
-		sleep(500);
 	}
 	
-	var cdvdt_Vstp = Math.round((cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Points - 1));
-	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, cdvdt_Vstp);
+	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, (cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Points - 1));
 	
 	var cntDone = 0;
 	var cntTotal = VoltageArray.length * cdvdt_RatePoint.length * Repeat;
@@ -576,10 +646,27 @@ function CdVdt_CollectFixedRate(Repeat)
 					while (_dVdt_Active())
 					{
 						if (anykey()){ print("Stopped from user!"); return};
-						sleep(300);
+						sleep(100);
 					}
 
 					dev.c(100);
+
+					while (_dVdt_Active())
+					{
+						if (anykey()){ print("Stopped from user!"); return};
+						sleep(100);
+					}
+
+					dev.c(100);
+					
+					while (_dVdt_Active())
+					{
+						if (anykey()){ print("Stopped from user!"); return};
+						sleep(100);
+					}
+
+					dev.c(100);
+
 					while(TEK_Exec("TRIGger:STATE?") == "REA") sleep(50);
 					//print("Impulse #" + (CounterAverages + 1))
 				}
@@ -609,16 +696,45 @@ function CdVdt_CollectFixedRate(Repeat)
 						break;
 
 					case dVdt_AutoCursor:
+						var rate = CdVdt_MeasureRate();
 						CdVdt_SwitchToCursor();
-						var rate = CdVdt_MeasureAutoCursor(v, cdvdt_RatePoint[i], 10, 90).toFixed(1);
+						sleep(500);
+						var rateObject = CdVdt_MeasureAutoCursor(VoltageArray[k], rate, 10, 90);
+						rate = rateObject.Rate.toFixed(1);
 						CdVdt_TekMeasurement(cdvdt_chMeasure);
 						break;
 				}
 
 				TEK_Busy();
 
-				dVdt_err = ((rate - cdvdt_RatePoint[i]) / cdvdt_RatePoint[i] * 100).toFixed(1);
-				V_err = ((v - VoltageArray[k]) / VoltageArray[k] * 100).toFixed(1)
+				dVdt_err = (rate - cdvdt_RatePoint[i]) / cdvdt_RatePoint[i] * 100;
+				dVdt_err = Math.abs(dVdt_err) < 0.1 ? parseFloat(0).toFixed(1) : dVdt_err.toFixed(1);
+				V_err = (v - VoltageArray[k]) / VoltageArray[k] * 100;
+				V_err = Math.abs(V_err) < 0.1 ? parseFloat(0).toFixed(1) : V_err.toFixed(1);
+
+				if(cdvdt_MeasureMethod == dVdt_AutoCursor)
+					var ETosc = rateObject.TimeErr;
+				else
+					var ETosc = 0;
+
+				cdvdt_rate_set.push(cdvdt_RatePoint[i]);
+				cdvdt_v_set.push(VoltageArray[k]);
+
+				cdvdt_rate_sc.push(rate);
+				cdvdt_v_sc.push(v);
+
+				cdvdt_rate_err.push(dVdt_err);
+				cdvdt_v_err.push(V_err);
+
+				// Summary error
+				E0dvdt = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ETosc, 2) + Math.pow(EProbe, 2));
+				dVdt_err_sum = (CdVdt_sign(dVdt_err)*(Math.abs(dVdt_err) + E0dvdt)).toFixed(1)
+				cdvdt_rate_err_sum.push(dVdt_err_sum);
+
+				E0V = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(EProbe, 2));
+				V_err_sum = (CdVdt_sign(V_err)*(Math.abs(V_err) + E0V)).toFixed(1)
+				cdvdt_v_err_sum.push(V_err_sum);
+
 
 				print("  " + cdvdt_RatePoint[i] + (cdvdt_RatePoint[i] < 100 ? " " : "") + (cdvdt_RatePoint[i] < 1000 ? " " : "") + " | " + rate + (rate < 100 ? " " : "") + (rate < 1000 ? " " : "") + "| " + (dVdt_err >= 0 ? " " : "") + dVdt_err + (Math.abs(dVdt_err) < 10 ? " " : "") + " |  " + VoltageArray[k] + (VoltageArray[k] < 100 ? " " : "") + (VoltageArray[k] < 1000 ? " " : "") + " | " + v + (v < 100 ? " " : "") + (v < 1000 ? " " : "") + "  | " + (V_err >= 0 ? " " : "") + V_err);
 				//p(dev.r(38))
@@ -637,7 +753,7 @@ function CdVdt_CollectFixedRate(Repeat)
 				
 				cntDone++;
 				//print("-- result " + cntDone + " of " + cntTotal + " --");
-				CdVdt_StoreVoltageAndFixRate(cdvdt_RatePoint[i], rate, VoltageArray[k], v);
+				//CdVdt_StoreVoltageAndFixRate(cdvdt_RatePoint[i], rate, VoltageArray[k], v);
 				
 				if (cdvdt_def_UseSaveImage)
 				{
@@ -653,7 +769,41 @@ function CdVdt_CollectFixedRate(Repeat)
 	}
 	// Power disable
 	dev.c(2);
+
+	CdVdt_SaveRate("dvdt_rate", "dvdt_rate_sum");
+	CdVdt_SaveV("dvdt_v","dvdt_v_sum");
+
+	// Plot relative error distribution
+	scattern(cdvdt_rate_sc, cdvdt_rate_err, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt relative error " + cdvdt_RatePoint.join(", ") + " V/us");
+	scattern(cdvdt_v_sc, cdvdt_rate_err, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt relative error " + cdvdt_RatePoint.join(", ") + " V/us");
+	scattern(cdvdt_v_sc, cdvdt_v_err, "Voltage (in V)", "Error relative Voltage (in %)", "Ud relative error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
+	
+	scattern(cdvdt_rate_sc, cdvdt_rate_err_sum, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
+	scattern(cdvdt_v_sc, cdvdt_rate_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
+	scattern(cdvdt_v_sc, cdvdt_v_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "Ud summary error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
 }
+
+function CdVdt_sign(a)
+{
+	if (a >= 0)
+		return 1
+	else if (a < 0)
+		return -1
+}
+
+// Save
+function CdVdt_SaveRate(NameErr,NameErrSum)
+{
+	CGEN_SaveArrays(NameErr, cdvdt_rate_sc, cdvdt_rate_set, cdvdt_rate_err);
+	CGEN_SaveArrays(NameErrSum, cdvdt_rate_sc, cdvdt_rate_set, cdvdt_rate_err_sum);
+}
+
+function CdVdt_SaveV(NameErr, NameErrSum)
+{
+	CGEN_SaveArrays(NameErr, cdvdt_v_sc, cdvdt_v_set, cdvdt_v_err);
+	CGEN_SaveArrays(NameErrSum, cdvdt_v_sc, cdvdt_v_set, cdvdt_v_err_sum);
+}
+
 
 function CdVdt_StabCheck(CellNumber, Voltage, Gate)
 {
@@ -739,11 +889,8 @@ function CdVdt_StoreVoltageAndRate(CMD, RateScope, Voltage, VoltageScope)
 
 function CdVdt_StoreVoltageAndFixRate(Rate, RateScope, Voltage, VoltageScope)
 {
-	var ConfiguredRate, RateErr, RateSet;
+	var RateErr = ((RateScope - Rate) / Rate * 100).toFixed(1);
 	var VoltageErr = ((VoltageScope - Voltage) / Voltage * 100).toFixed(1);
-	
-	RateErr = ((RateScope - Rate) / Rate * 100).toFixed(1);
-	cdvdt_scatter05.push(RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
 	
 	cdvdt_scatter.push(Rate + ";" + RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
 }
@@ -776,7 +923,22 @@ function CdVdt_ResetA()
 	cdvdt_scatter25 = [];
 	//
 	cdvdt_gate = [];
-	cdvdt_ratesc = [];
+
+	// Tektronix data
+	cdvdt_rate_sc = [];
+	cdvdt_v_sc = [];
+
+	// Set data
+	cdvdt_rate_set = [];
+	cdvdt_v_set = [];
+
+	// Relative error
+	cdvdt_rate_err = [];
+	cdvdt_v_err = [];
+
+	// Summary error
+	cdvdt_rate_err_sum = [];
+	cdvdt_v_err_sum = [];
 }
 
 function CdVdt_SaveA(Name)
@@ -819,91 +981,11 @@ function CdVdt_ClearDisplay()
 	TEK_Busy();
 }
 
-function CdVdt_ResourceTest(Repeat)
-{
-	CdVdt_ResetA();
-	
-	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, cdvdt_Vstp);
-	var random = 0;
-	var cntDone = 0;
-	var cntFailedVerify = 0;
-	var cntTotal = VoltageArray.length * cdvdt_RatePoint.length * Repeat;
-	
-	// Re-enable power
-	if(dev.r(192) == DS_None)
-	{
-		dev.c(1);
-		while (dev.r(192) != DS_Ready)
-		sleep(100);
-	}	
-	else	
-	{
-		dev.c(2);
-		while (dev.r(192) != DS_None)
-			sleep(100);
-
-		dev.c(1);
-		while (dev.r(192) != DS_Ready)
-			sleep(100);
-	}
-	
-	for (var counter = 0; counter < Repeat; counter++)
-	{
-		for (var k = 0; k < VoltageArray.length; k++)
-		{
-			dev.w(128, VoltageArray[k]);
-			for (var i = 0; i < cdvdt_RatePoint.length; i++)
-			{
-				sleep(1000);
-				dev.w(129, cdvdt_RatePoint[i] * cdvdt_DeviderRate)
-
-				dev.w(150, random);
-				dev.c(117);
-
-				sleep(1000);
-				p("random = " + random);
-
-				dev.c(100);
-				sleep(1000);
-				while(_dVdt_Active()) sleep(50);
-				
-				
-				print("dVdt set,  V/us: " + cdvdt_RatePoint[i]);
-				print("Vset,         V: " + VoltageArray[k]);
-				if (dev.r(197) == 2)
-					print("Test Failed");
-				else if (dev.r(197) == 1)
-					print("Test OK");
-				cntDone++;
-				print("-- result " + cntDone + " of " + cntTotal + " --");
-
-				if((random == 1 && dev.r(197) == 1) || (random == 0 && dev.r(197) == 2))
-					cntFailedVerify++;
-				
-				print("Кол-во неудачных тестов = " + cntFailedVerify);
-
-				random = Math.round(Math.random())
-				if (anykey())
-				{
-					print("Stopped from user!");
-					return;
-				}
-
-			}
-		}
-	}
-	// Power disable
-	dev.w(150, 0);
-	dev.c(117);
-	dev.c(2);
-	print("Кол-во неудачных тестов = " + cntFailedVerify);
-}
-
 function CdVdt_CollectdVdt(Repeat)
 {
 	CdVdt_ResetA();
 	
-	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, cdvdt_Vstp);
+	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, (cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Vstp - 1));
 	
 	var cntDone = 0;
 	var cntTotal = VoltageArray.length * cdvdt_RatePoint.length * Repeat;

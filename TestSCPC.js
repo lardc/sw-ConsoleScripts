@@ -60,6 +60,65 @@ WAVEFORM_TRAPEZE  						= 0xBBBB;			//Тип формы импульса трапеция
 
 
 //-----------------------------------------------------------
+function SC_SineConfig(Current)
+{
+	//Заряд батареи
+	if(dev.r(REG_DEV_STATE) == DS_None)
+		dev.c(ACT_BAT_START_CHARGE);
+	
+	if(dev.r(REG_DEV_STATE) == DS_Disabled)
+	{
+		dev.c(ACT_FAULT_CLEAR);
+		dev.c(ACT_BAT_START_CHARGE);
+	}
+
+	if(dev.r(REG_DEV_STATE) == DS_PulseConfigReady)
+	{
+		dev.c(ACT_DS_NONE);
+		sleep(500);
+		dev.c(ACT_BAT_START_CHARGE);
+	}
+
+	while(dev.r(REG_DEV_STATE)!= DS_Ready)
+	{
+		if (anykey()) return 1;
+
+		if(Print_FaultDisableWarning())
+			return 1;
+	}
+
+	while(dev.r(REG_DEV_STATE) == DS_WaitTimeOut)
+	{
+		if (anykey()) return 1;
+		pinline("\rБлок в ожидании таймаута между импульсами ударного тока");
+
+		if(Print_FaultDisableWarning())
+			return 1;
+	}
+
+	//Запись значения ударного тока
+	dev.w(REG_SC_PULSE_VALUE, Current);
+	dev.w(REG_WAVEFORM_TYPE, WAVEFORM_SINE);
+	dev.w(REG_TRAPEZE_EDGE_TIME, 1000);
+	dev.c(ACT_SC_PULSE_CONFIG);
+
+	while(dev.r(REG_DEV_STATE) != DS_PulseConfigReady)
+	{
+		sleep(1000);
+
+		if (anykey()) return 1;
+
+		if(Print_FaultDisableWarning())
+			return 1;
+	}
+
+	return 0;
+}
+
+//-----------------------------------------------------------
+
+
+//-----------------------------------------------------------
 function SC(Current,WaveForm,TrapezeEdgeTime)
 {
 	//Заряд батареи

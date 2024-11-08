@@ -73,7 +73,15 @@ function BVT_StartPulse(N, Voltage, Current)
 	{
 		if (N > 1) print("#" + (i + 1));
 		dev.c(100);
-		while (dev.r(192) == 5) sleep(100);
+		while (dev.r(192) == 5) 
+			if (dev.r(192) == 1)
+			{
+				PrintStatus();
+				BVT_Plot();
+				return
+			}
+			else	
+				sleep(100);
 		
 		if (bvt_direct)
 		{
@@ -89,6 +97,7 @@ function BVT_StartPulse(N, Voltage, Current)
 		if (dev.r(195) == 404)
 		{
 			PrintStatus()
+			BVT_Plot();
 			return
 		}
 		

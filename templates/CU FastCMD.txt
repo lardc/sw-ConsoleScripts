@@ -1,3 +1,6 @@
+// Пояснения
+CU_SetPin(PinID, Action, ResetMode) // PinID = 
+
 // Посмотреть версию прошивки
 PrintFWInfo();
 
@@ -24,3 +27,9 @@ dev.w(82,0);
 dev.w(83,0);
 dev.c(1);
 while(anykey() == 0){dev.c(110);sleep(500);dev.c(115);sleep(500)}
+
+
+// Тестирование отдельных линий коммутации
+include("TestCU.js");
+Count_CUOutputExtensionBoard = 2;
+CU_SetPin(43, 1, 1)

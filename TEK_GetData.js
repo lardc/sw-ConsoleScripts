@@ -1,6 +1,8 @@
 include("Tektronix.js")
 include("CalGeneral.js")
 
+tek_measuring_device = "TPS2024";	// "TPS2014"
+
 // Channels
 UsePort = 1;
 
@@ -14,9 +16,18 @@ Use_Max = 0.9;
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
 function TEK_GD_Init(Port)
 {
+	if(tek_measuring_device == "TPS2014")
+	{
+		TEK_PortInit(Port);
+		TEK_Send("data:encdg srp");
+	}
+	else
+	{
 	TEK_PortInit(Port, 9600);
-	TEK_Send("data:width 1");
 	TEK_Send("data:encdg rpb");
+	}
+
+	TEK_Send("data:width 1");
 	TEK_Send("data:start 1");
 	TEK_Send("data:stop 2500");
 }
@@ -43,36 +54,6 @@ function TEK_Init(PortTek,UsePort)
 	}
 
 	
-}
-//---------------------------------------------------------------------------------------------------------------------------------------------------------
-function GetChannelData(Channel) 
-{
-
-	// read basic data
-	var p_scale = TEK_Exec("ch" + Channel + ":scale?");
-	var p_position = TEK_Exec("ch" + Channel + ":position?");
-
-	// init data read
-	TEK_Send("data:source ch" + Channel);
-
-	// read curve
-	var data_input = TEK_Exec("curve?");
-	print("Channel " + Channel + " loaded");
-
-	// validate data
-	if ((data_input[0] != "#") || (data_input[1] != 4) || (data_input[2] != 2) ||
-		(data_input[3] != 5) || (data_input[4] != 0) || (data_input[5] != 0))
-	{
-		print("Invalid CH" + Channel + " data.");
-		return;
-	}
-
-	// adjust data
-	var res = [];
-	for (var i = 6; i < 2506; ++i)
-		res[i - 6] = (((data_input[i].charCodeAt(0) - 128 - p_position * 25) * p_scale / 25)*10000).toFixed(0);
-	
-	return res;
 }
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
 function SaveChannelData(NameFile, Data)
@@ -210,3 +191,38 @@ function Derivative(InNameFile, OutNameFile)
 
 }
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
+// Максимальная амплиутуда для одного синуса
+function TEK_GD_Sinus_MAX(Data)
+{
+	var AverageValue = 0;
+
+	Data.sort(function (a, b)
+	{
+		return a - b;
+	});
+
+	var CoefBufferLengthForCalcAvg = Data.length / 1000;
+	var SamplingAvgNum = parseInt(15 * CoefBufferLengthForCalcAvg);
+	var MaxSamplesCutoffNum = parseInt(10 * CoefBufferLengthForCalcAvg);
+
+	for (var i = Data.length - SamplingAvgNum - MaxSamplesCutoffNum;
+			i < Data.length - MaxSamplesCutoffNum; ++i)
+		AverageValue += Data[i];
+
+	return (AverageValue / SamplingAvgNum);
+}
+
+function TEK_GD_MAX(Data)
+{
+	var value = Data[0];
+	var index;
+	
+	for (var i = 0; i < Data.length; ++i)
+		if (Data[i] > value)
+		{
+			value = Data[i];
+			index = i;
+		}
+	
+	return {Value : value, Index : index};
+}
