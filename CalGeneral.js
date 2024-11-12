@@ -70,15 +70,17 @@ function CGEN_GetCorrection2(Filename)
 	return CGEN_CorrectionToFloat(load(cgen_correctionDir + "/" + Filename + "_corr.csv"))
 }
 
-function Test_Calibrate(arrayUnit, arrayReference, order)
+function CGEN_NumericCorrectionX(arrayUnit, arrayReference, order)
 {
 	var XMatrix = [];
 	var YMatrix = numeric.transpose([arrayReference]);
 
-	for (var i = 0; i < arrayUnit.length; i++) {
+	for (var i = 0; i < arrayUnit.length; i++)
+	{
 		var TempMatrix = [];
 
-		for (var j = 0; j <= order; j++) {
+		for (var j = 0; j <= order; j++)
+		{
 			TempMatrix.push(Math.pow(arrayUnit[i], j));
 		}
 		XMatrix.push(TempMatrix);
@@ -95,12 +97,12 @@ function Test_Calibrate(arrayUnit, arrayReference, order)
 
 function CGEN_GetNumericCorrection(arrayUnit, arrayReference)
 {
-	return Test_Calibrate(arrayUnit, arrayReference, 1);
+	return CGEN_NumericCorrectionX(arrayUnit, arrayReference, 1);
 }
 
 function CGEN_GetNumericCorrection2(arrayUnit, arrayReference)
 {
-	return Test_Calibrate(arrayUnit, arrayReference, 2);
+	return CGEN_NumericCorrectionX(arrayUnit, arrayReference, 2);
 }
 
 function CGEN_CorrectionToFloat(InputData)
