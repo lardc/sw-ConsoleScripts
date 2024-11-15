@@ -220,7 +220,6 @@ function CdVdt_MeasureVfast()
 function CdVdt_MeasureRate()
 {
 	var TimeRate = TEK_Exec("measurement:meas2:value?");
-	//print("Time Rate, us " + (TimeRate  * 1e6).toFixed(2));
 	return (TEK_Measure(3) * 0.8 / TimeRate  * 1e-6).toFixed(1);
 }
 
@@ -521,78 +520,6 @@ function CdVdt_NonlinearityCell(X, Y, CellNumber, cdvdt_SelectedRange)
 	//p("y_err_max, % = " + y_err_max);
 }
 
-
-function CdVdt_Collect(Iterations)
-{
-	var cdvdt_Vstp = Math.round((cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Points - 1));
-	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, cdvdt_Vstp);
-	
-	var cntDone = 0;
-	var cntTotal = VoltageArray.length * Iterations * 5;
-	
-	// Re-enable power
-	dev.c(2);
-	sleep(1000);
-	dev.c(1);
-	
-	for (var k = 0; k < Iterations; k++)
-	{
-		for (var i = 0; i < VoltageArray.length; i++)
-		{
-			dev.w(128, VoltageArray[i])
-			CdVdt_TekVScale(cdvdt_chMeasure, VoltageArray[i]);
-			TEK_TriggerInit(cdvdt_chMeasure, VoltageArray[i] / 2);
-			sleep(500);
-			
-			for (var j = 101; j <= 105; j++)
-			{
-				// Coarse horizontal setting
-				if (j == 101) TEK_Horizontal("25e-6", "0");
-				
-				dev.c(j);
-				while(_dVdt_Active()) sleep(50);
-				sleep(1000);
-				
-				CdVdt_TekHScale(cdvdt_chMeasure, VoltageArray[i], CdVdt_MeasureRate());
-				sleep(500);
-				
-				dev.c(j);
-				while(_dVdt_Active()) sleep(50);
-				sleep(1000);
-				// Get rate
-				var rate = CdVdt_MeasureRate();
-				
-				if (cdvdt_collect_v)
-				{
-					// Get voltage
-					CdVdt_SwitchToCursor();
-					sleep(1000);
-					var v = CdVdt_MeasureV();
-					//
-					CdVdt_SwitchToMeasurement();
-				}
-				else
-					var v = CdVdt_MeasureVfast();
-				
-				print("CMD        : " + j);
-				print("dV/dt, V/us: " + rate);
-				print("Vset,     V: " + VoltageArray[i]);
-				print("V,        V: " + v);
-				
-				cntDone++;
-				print("-- result " + cntDone + " of " + cntTotal + " --");
-				
-				CdVdt_StoreVoltageAndRate(j, rate, VoltageArray[i], v);
-				
-				if (anykey()) return;
-			}
-		}
-	}
-	
-	// Power disable
-	dev.c(2);
-}
-
 function CdVdt_CollectFixedRate(Repeat)
 {
 	CdVdt_ResetA();
@@ -737,23 +664,8 @@ function CdVdt_CollectFixedRate(Repeat)
 
 
 				print("  " + cdvdt_RatePoint[i] + (cdvdt_RatePoint[i] < 100 ? " " : "") + (cdvdt_RatePoint[i] < 1000 ? " " : "") + " | " + rate + (rate < 100 ? " " : "") + (rate < 1000 ? " " : "") + "| " + (dVdt_err >= 0 ? " " : "") + dVdt_err + (Math.abs(dVdt_err) < 10 ? " " : "") + " |  " + VoltageArray[k] + (VoltageArray[k] < 100 ? " " : "") + (VoltageArray[k] < 1000 ? " " : "") + " | " + v + (v < 100 ? " " : "") + (v < 1000 ? " " : "") + "  | " + (V_err >= 0 ? " " : "") + V_err);
-				//p(dev.r(38))
 
-				//sleep(1000);
-				//for (var CellID = 1; CellID <= 5; CellID++) p("Cell: " + CellID + " Range: " + dVdt_CellReadReg(CellID, 4)+ " Gate = " + dVdt_CellReadReg(CellID, 2))
-
-				/*
-				print("dV/dt set, V/us: " + cdvdt_RatePoint[i]);
-				print("dV/dt osc, V/us: " + rate);
-				print("dV/dt err,    %: " + ((cdvdt_RatePoint[i] - rate) / rate * 100).toFixed(1));
-				print("Voltage set,  V: " + VoltageArray[k]);
-				print("Voltage osc,  V: " + v);
-				print("Voltage err,  %: " + ((VoltageArray[k] - v) / v * 100).toFixed(1));
-				*/
-				
 				cntDone++;
-				//print("-- result " + cntDone + " of " + cntTotal + " --");
-				//CdVdt_StoreVoltageAndFixRate(cdvdt_RatePoint[i], rate, VoltageArray[k], v);
 				
 				if (cdvdt_def_UseSaveImage)
 				{
@@ -977,89 +889,7 @@ function CdVdt_ClearDisplay()
 	TEK_AcquireSample();
 	if(cdvdt_def_UseAverage > 1)
 		TEK_AcquireAvg(cdvdt_def_UseAverage);
-	//sleep(500);
+
 	TEK_Busy();
 }
 
-function CdVdt_CollectdVdt(Repeat)
-{
-	CdVdt_ResetA();
-	
-	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, (cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Vstp - 1));
-	
-	var cntDone = 0;
-	var cntTotal = VoltageArray.length * cdvdt_RatePoint.length * Repeat;
-	
-	// Re-enable power
-	dev.c(2);
-	sleep(1000);
-	dev.c(1);
-
-	for (var counter = 0; counter < Repeat; counter++)
-	{
-		for (var k = 0; k < VoltageArray.length; k++)
-		{
-			dev.w(128, VoltageArray[k]);
-			CdVdt_TekVScale(cdvdt_chMeasure, VoltageArray[k]);
-			TEK_TriggerInit(cdvdt_chMeasure, VoltageArray[k] / 2);
-			
-			for (var i = 0; i < cdvdt_RatePoint.length; i++)
-			{
-				sleep(1000);
-				dev.w(129, cdvdt_RatePoint[i] * cdvdt_DeviderRate);
-				
-				CdVdt_TekHScale(cdvdt_chMeasure, VoltageArray[k], cdvdt_RatePoint[i]);
-				sleep(1500);
-				
-				CdVdt_ClearDisplay();
-				sleep(1500);
-				
-				var DesiredHalfTimeRise = ((VoltageArray[k] / 2) / cdvdt_RatePoint[i] * 1e-6).toExponential();
-				
-				// Start pulse
-				for(var CounterAverages = 0; CounterAverages < cdvdt_def_UseAverage; CounterAverages++)
-				{
-					while(_dVdt_Active()) sleep(50);
-					dev.c(100);
-					sleep(1500);
-				}
-				
-				sleep(1500);
-				while(_dVdt_Active()) sleep(50);
-				
-				CdVdt_SetTekCursor(cdvdt_chMeasure, 4 * DesiredHalfTimeRise, 4 * DesiredHalfTimeRise);
-				
-				var v = CdVdt_CursorMeasureV();
-				
-				var RealHalfTimeRise = ((v / 2) / cdvdt_RatePoint[i] * 1e-6).toExponential();
-				
-				var FirstTimePoint =  (RealHalfTimeRise - (0.97 * v / cdvdt_RatePoint[i]) * 1e-6).toExponential();
-				
-				var SecondTimePoint = (RealHalfTimeRise - (0.17 * v / cdvdt_RatePoint[i]) * 1e-6).toExponential();
-				
-				CdVdt_SetTekCursor(cdvdt_chMeasure, FirstTimePoint, SecondTimePoint);
-				
-				var OutRate = CdVdt_MeasuredVdt(cdvdt_chMeasure);
-				
-				var dVdt_err = ((OutRate - cdvdt_RatePoint[i]) / cdvdt_RatePoint[i] * 100).toFixed(2);
-				var v_err = ((v - VoltageArray[k]) / VoltageArray[k] * 100).toFixed(2);
-				
-				print("dVdt set,  V/us: " + cdvdt_RatePoint[i]);
-				print("dV/dt osc, V/us: " + OutRate);
-				print("dV/dt err,    %: " + dVdt_err);
-				print("V set,        V: " + VoltageArray[k]);
-				print("V osc,        V: " + v);
-				print("V err,        %: " + v_err);
-				
-				cntDone++;
-				print("-- result " + cntDone + " of " + cntTotal + " --");
-				CdVdt_StoreVoltageAndFixRate(cdvdt_RatePoint[i], OutRate, VoltageArray[k], v);
-				
-				if (anykey()){ print("Stopped from user!"); return};
-			}
-		}
-	}
-	
-	// Power disable
-	dev.c(2);
-}
