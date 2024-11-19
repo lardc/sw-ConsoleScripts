@@ -67,7 +67,7 @@ cdvdt_MeasureMethod = dVdt_AutoCursor;
 cdvdt_def_UseSaveImage = false;
 
 // Voltage rate points
-cdvdt_RatePoint = [200, 500, 1000, 1600, 2000, 2500];
+cdvdt_RatePoint = [20, 50, 100, 200, 320, 500, 1000, 1600, 2000, 2500];
 
 // Use averages in OSC
 cdvdt_NO_AVERAGES = 1;
@@ -517,7 +517,6 @@ function CdVdt_NonlinearityCell(X, Y, CellNumber, cdvdt_SelectedRange)
 	}
 
 	scattern(X, y_err_array, "Gate voltage (in mV)", "Error relative Nonlinearity (in %)", "Cell #" + CellNumber + " range: " + cdvdt_SelectedRange)
-	//p("y_err_max, % = " + y_err_max);
 }
 
 function CdVdt_CollectFixedRate(Repeat)
@@ -541,6 +540,7 @@ function CdVdt_CollectFixedRate(Repeat)
 	}
 	
 	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, (cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Points - 1));
+	dvdt_array_offset = VoltageArray.length;
 	
 	var cntDone = 0;
 	var cntTotal = VoltageArray.length * cdvdt_RatePoint.length * Repeat;
@@ -559,43 +559,66 @@ function CdVdt_CollectFixedRate(Repeat)
 			TEK_Busy();
 			for (var i = 0; i < cdvdt_RatePoint.length; i++)
 			{
-				//sleep(1000);
-				dev.w(129, cdvdt_RatePoint[i] * cdvdt_DeviderRate)
+				// dev.w(129, cdvdt_RatePoint[i] * cdvdt_DeviderRate)
 				
 				CdVdt_TekHScale(cdvdt_chMeasure, VoltageArray[k], cdvdt_RatePoint[i]);
-				//sleep(500);
 				CdVdt_ClearDisplay();
-				//sleep(1000);
 				
 				// Start pulse
 				for (var CounterAverages = 0; CounterAverages < cdvdt_def_UseAverage; CounterAverages++)
 				{
-					while (_dVdt_Active())
+					for (var t = 0; t < 3; t++)
 					{
-						if (anykey()){ print("Stopped from user!"); return};
-						sleep(100);
+						while (_dVdt_Active())
+						{
+							if (anykey()){ print("Stopped from user!"); return};
+							sleep(100);
+						}
+
+						switch (cdvdt_RatePoint[i])
+						{
+							case 20:
+								dev.c(95);
+								break;
+
+							case 50:
+								dev.c(96);
+								break;
+
+							case 100:
+								dev.c(97);
+								break;
+
+							case 200:
+								dev.c(98);
+								break;
+
+							case 320:
+								dev.c(99);
+								break;
+
+							case 500:
+								dev.c(101);
+								break;
+
+							case 1000:
+								dev.c(102);
+								break;
+
+							case 1600:
+								dev.c(103);
+								break;
+
+							case 2000:
+								dev.c(104);
+								break;
+
+							case 2500:
+								dev.c(105);
+								break;
+						}
 					}
-
-					dev.c(100);
-
-					while (_dVdt_Active())
-					{
-						if (anykey()){ print("Stopped from user!"); return};
-						sleep(100);
-					}
-
-					dev.c(100);
-					
-					while (_dVdt_Active())
-					{
-						if (anykey()){ print("Stopped from user!"); return};
-						sleep(100);
-					}
-
-					dev.c(100);
-
 					while(TEK_Exec("TRIGger:STATE?") == "REA") sleep(50);
-					//print("Impulse #" + (CounterAverages + 1))
 				}
 				TEK_Busy();
 				sleep(500);
