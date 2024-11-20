@@ -86,6 +86,9 @@ cdvdt_scatter25 = [];
 //
 cdvdt_gate = [];
 
+// { rate_set: { voltage: [], rate: [] } }
+cdvdt_CollectedData = {}
+
 // Tektronix data
 cdvdt_rate_sc = [];
 cdvdt_v_sc = [];
@@ -676,6 +679,9 @@ function CdVdt_CollectFixedRate(Repeat)
 				cdvdt_rate_err.push(dVdt_err);
 				cdvdt_v_err.push(V_err);
 
+				cdvdt_CollectedData[cdvdt_RatePoint[i]].voltage.push(VoltageArray[k]);
+				cdvdt_CollectedData[cdvdt_RatePoint[i]].rate.push(rate);
+
 				// Summary error
 				E0dvdt = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ETosc, 2) + Math.pow(EProbe, 2));
 				dVdt_err_sum = (CdVdt_sign(dVdt_err)*(Math.abs(dVdt_err) + E0dvdt)).toFixed(1)
@@ -874,6 +880,9 @@ function CdVdt_ResetA()
 	// Summary error
 	cdvdt_rate_err_sum = [];
 	cdvdt_v_err_sum = [];
+
+	for (var i = 0; i < cdvdt_RatePoint.length; i++)
+		cdvdt_CollectedData[cdvdt_RatePoint[i]] = { "voltage": [], "rate": [] }
 }
 
 function CdVdt_SaveA(Name)
