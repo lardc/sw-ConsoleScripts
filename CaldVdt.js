@@ -562,8 +562,6 @@ function CdVdt_CollectFixedRate(Repeat)
 			TEK_Busy();
 			for (var i = 0; i < cdvdt_RatePoint.length; i++)
 			{
-				// dev.w(129, cdvdt_RatePoint[i] * cdvdt_DeviderRate)
-				
 				CdVdt_TekHScale(cdvdt_chMeasure, VoltageArray[k], cdvdt_RatePoint[i]);
 				CdVdt_ClearDisplay();
 				
