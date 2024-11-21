@@ -1,14 +1,20 @@
-var ACT_FLASH_DIAG_SAVE			= 332;	// Flash write
-var ACT_FLASH_DIAG_ERASE		= 333;	// Flash erase data sector
+var ACT_FLASH_DIAG_READ_SYMBOL		= 330;
+var ACT_FLASH_DIAG_INIT_READ		= 331;
+var ACT_FLASH_DIAG_SAVE				= 332;
+var ACT_FLASH_DIAG_ERASE			= 333;
 
-var ACT_FLASH_DIAG_READ_SYMBOL	= 330;	// Flash read symbol and shift
-var ACT_FLASH_DIAG_INIT_READ	= 331;	// Flash read start position
+var ACT_FLASH_COUNTER_INIT_READ		= 334;
+var ACT_FLASH_COUNTER_READ_SYMBOL	= 335;
+var ACT_FLASH_COUNTER_SET			= 336;
+var ACT_FLASH_COUNTER_SAVE			= 337;
+var ACT_FLASH_COUNTER_ERASE			= 338;
 
-var REG_MEM_SYMBOL				= 299;	// Current data
+var ACT_FLASH_COUNTER_TO_EP			= 339;
+var ACT_FLASH_DIAG_TO_EP			= 340;
 
-var ACT_FLASH_COUNTER_INIT_READ	= 334;	// Перемещение указателя в область счетчиков
-var ACT_FLASH_COUNTER_READ_SYMBOL= 335;	// Сохранение наработки счетчиков во флеш
-var ACT_FLASH_COUNTER_SAVE		= 336
+var REG_MEM_SYMBOL					= 299;
+
+var EP_FLASH_DATA					= 30;
 
 var DT_Char		= 0;
 var DT_Int8U	= 1;
@@ -19,11 +25,24 @@ var DT_Int32U	= 5;
 var DT_Int32S	= 6;
 var DT_Float	= 7;
 
+var FR_LocalDataCopy;
+var FR_ForceEP = true;
+var FR_LocalDataCounter = 0;
 
 function flash_read(ActReadSymbol)
 {
-	dev.c(ActReadSymbol);
-	return dev.r(REG_MEM_SYMBOL);
+	if(FR_LocalDataCopy)
+	{
+		if(FR_LocalDataCounter < FR_LocalDataCopy.length)
+			return FR_LocalDataCopy[FR_LocalDataCounter++];
+		else
+			return 0xFFFF;
+	}
+	else
+	{
+		dev.c(ActReadSymbol);
+		return dev.r(REG_MEM_SYMBOL);
+	}
 }
 
 function DataTypeString(DataType)
@@ -83,11 +102,15 @@ function ToFloat(value)
 	if (exponent == 128) 
 		return sign * ((significand) ? Number.NaN : Number.POSITIVE_INFINITY);
 
-	if (exponent == -127) {
-		if (significand == 0) return sign * 0.0;
+	if (exponent == -127)
+	{
+		if (significand == 0)
+			return sign * 0.0;
 		exponent = -126;
 		significand /= (1 << 22);
-	} else significand = (significand | (1 << 23)) / (1 << 23);
+	}
+	else
+		significand = (significand | (1 << 23)) / (1 << 23);
 
 	return sign * significand * Math.pow(2, exponent);
 }
@@ -114,17 +137,39 @@ function FlashReadDiagRaw(i)
 
 function FlashEraseDiag()
 {
-	dev.c(333);
+	dev.c(ACT_FLASH_DIAG_ERASE);
 }
 
 function FlashEraseCounters()
 {
-	dev.c(338);
+	dev.c(ACT_FLASH_COUNTER_ERASE);
 }
 
 function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 {
 	dev.c(ActMemLabel);
+	
+	// Попытка чтения данных через EP
+	var EPReadCMD = (ActMemLabel == ACT_FLASH_DIAG_INIT_READ) ? ACT_FLASH_DIAG_TO_EP : ACT_FLASH_COUNTER_TO_EP;
+	FR_LocalDataCopy = null;
+	FR_LocalDataCounter = 0;
+	try
+	{
+		var res = [], arr = [];
+		do
+		{
+			dev.c(EPReadCMD);
+			arr = dev.raf(EP_FLASH_DATA);
+			res = res.concat(arr);
+		}
+		while(arr.length > 0);
+		FR_LocalDataCopy = res;
+	}
+	catch(e)
+	{
+		if(FR_ForceEP)
+			throw new Error("EP not supported");
+	}
 
 	var FileName = "";
 
@@ -214,7 +259,8 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 			if (Data.length > 1)
 			{
 				var date = new Date();
-				FileName += "_" + (new Date(date.getTime() - (date.getTimezoneOffset() * 60000))).toISOString().slice(0, 19).replace(/[\-:]/g, "").replace("T", "_") + ".csv";
+				FileName += "_" + (new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
+					).toISOString().slice(0, 19).replace(/[\-:]/g, "").replace("T", "_") + ".csv";
 				save(FileName, Data);
 
 				if (PrintPlot)
@@ -230,34 +276,11 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 
 function FlashRead(i, ActMemLabel)
 {
-	if (ActMemLabel == ACT_FLASH_DIAG_INIT_READ)
+	FR_LocalDataCopy = null;
+	dev.c(ActMemLabel);
+	for (var j = 0; j < i; j++)
 	{
-		dev.c(ACT_FLASH_DIAG_INIT_READ);
-		for (var j = 0; j < i; j++)
-		{
-			p(flash_read(ACT_FLASH_DIAG_READ_SYMBOL));
-		}
+		p(flash_read(ActMemLabel == ACT_FLASH_DIAG_INIT_READ ? ACT_FLASH_DIAG_READ_SYMBOL :
+			ACT_FLASH_COUNTER_READ_SYMBOL));
 	}
-
-	if (ActMemLabel == ACT_FLASH_COUNTER_INIT_READ)
-	{
-		dev.c(ACT_FLASH_COUNTER_INIT_READ);
-		for (var j = 0; j < i; j++)
-		{
-			var Word1 = flash_read(ACT_FLASH_COUNTER_READ_SYMBOL);
-			p(Word1);
-		}
-	}
-}
-
-/** DEBUG MXU
-	* REG_CNT_NUMBER	104
-	* REG_CNT_VALUE		105
-	* ACT_SET_COUNTER	336
-*/
-function AssignCounter(Index, Value)
-{
-	dev.w(104, Index);
-	dev.w(105, Value);
-	dev.c(336);
 }
