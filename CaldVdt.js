@@ -75,15 +75,6 @@ cdvdt_AVERAGES_4 = 4;
 cdvdt_AVERAGES_16 = 16;
 cdvdt_def_UseAverage = cdvdt_NO_AVERAGES;
 
-// Data arrays
-cdvdt_scatter = [];
-//
-cdvdt_scatter05 = [];
-cdvdt_scatter10 = [];
-cdvdt_scatter16 = [];
-cdvdt_scatter20 = [];
-cdvdt_scatter25 = [];
-//
 cdvdt_gate = [];
 
 // { rate_set: { voltage: [], rate: [] } }
@@ -785,55 +776,6 @@ function CdVdt_StabCheck(CellNumber, Voltage, Gate)
 	dVdt_CellCall(CellNumber, 2);
 }
 
-function CdVdt_StoreVoltageAndRate(CMD, RateScope, Voltage, VoltageScope)
-{
-	var ConfiguredRate, RateErr, RateSet;
-	var VoltageErr = ((VoltageScope - Voltage) / Voltage * 100).toFixed(1);
-	
-	switch (CMD)
-	{
-		case 101:
-			RateSet = 500;
-			RateErr = ((RateScope - 500) / 500 * 100).toFixed(1);
-			cdvdt_scatter05.push(RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
-			break;
-			
-		case 102:
-			RateSet = 1000;
-			RateErr = ((RateScope - 1000) / 1000 * 100).toFixed(1);
-			cdvdt_scatter10.push(RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
-			break;
-			
-		case 103:
-			RateSet = 1600;
-			RateErr = ((RateScope - 1600) / 1600 * 100).toFixed(1);
-			cdvdt_scatter16.push(RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
-			break;
-			
-		case 104:
-			RateSet = 2000;
-			RateErr = ((RateScope - 2000) / 2000 * 100).toFixed(1);
-			cdvdt_scatter20.push(RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
-			break;
-			
-		case 105:
-			RateSet = 2500;
-			RateErr = ((RateScope - 2500) / 2500 * 100).toFixed(1);
-			cdvdt_scatter25.push(RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
-			break;
-	}
-	
-	cdvdt_scatter.push(RateSet + ";" + RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
-}
-
-function CdVdt_StoreVoltageAndFixRate(Rate, RateScope, Voltage, VoltageScope)
-{
-	var RateErr = ((RateScope - Rate) / Rate * 100).toFixed(1);
-	var VoltageErr = ((VoltageScope - Voltage) / Voltage * 100).toFixed(1);
-	
-	cdvdt_scatter.push(Rate + ";" + RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
-}
-
 function CdVdt_PrintSetpoints(CellNumber)
 {
 	print("Selected range code: " + cdvdt_SelectedRange);
@@ -853,14 +795,6 @@ function CdVdt_PrintSetpoints(CellNumber)
 
 function CdVdt_ResetA()
 {
-	cdvdt_scatter = [];
-	//
-	cdvdt_scatter05 = [];
-	cdvdt_scatter10 = [];
-	cdvdt_scatter16 = [];
-	cdvdt_scatter20 = [];
-	cdvdt_scatter25 = [];
-	//
 	cdvdt_gate = [];
 
 	// Tektronix data
@@ -881,11 +815,6 @@ function CdVdt_ResetA()
 
 	for (var i = 0; i < cdvdt_RatePoint.length; i++)
 		cdvdt_CollectedData[cdvdt_RatePoint[i]] = { "voltage": [], "rate": [] }
-}
-
-function CdVdt_SaveA(Name)
-{
-	save("data/dvdt_" + Name + ".csv", cdvdt_scatter);
 }
 
 function CdVdt_CalRate(K)
