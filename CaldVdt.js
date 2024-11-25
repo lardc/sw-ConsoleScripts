@@ -480,13 +480,38 @@ function CdVdt_CalibrateRate()
 {
 	CdVdt_ResetA();
 
+	for (var i = 0; i < cdvdt_RatePoint.length; i++)
+		CdVdt_ResetRateCal(cdvdt_RatePoint[i]);
+
 	if (CdVdt_CollectFixedRate(1))
 	{
 		CdVdt_SaveRate("dvdt_rate_fixed", "dvdt_rate_sum_fixed");
-		var cdvdt_rate_corr = CGEN_GetNumericCorrection2(cdvdt_CollectedData.voltage, cdvdt_CollectedData.rate);
+
+		for (var i = 0; i < cdvdt_CollectedData.length; i++)
+		{
+			var cdvdt_rate_corr = CGEN_GetNumericCorrection2(cdvdt_CollectedData[i].voltage, cdvdt_CollectedData[i].rate);
+			CdVdt_CalRate(cdvdt_rate_corr[0][2], cdvdt_rate_corr[0][1], cdvdt_rate_corr[0][0], cdvdt_CollectedData[i]);
+		}
 	}
 
 	CdVdt_PrintRateCal();
+}
+
+function CdVdt_RateOffsetP2(Rate)
+{
+	switch (Rate)
+	{
+		case 20:	return 500;
+		case 50:	return 503;
+		case 100:	return 506;
+		case 200:	return 509;
+		case 320:	return 512;
+		case 500:	return 515;
+		case 1000:	return 518;
+		case 1600:	return 521;
+		case 2000:	return 524;
+		case 2500:	return 527;
+	}
 }
 
 function CdVdt_Fit(arg, length)
@@ -512,62 +537,10 @@ function CdVdt_PrintRateCal()
 	print("  Rate  | P2 x1e6 | P1 x1000 |   P0   ");
 	print("--------------------------------------");
 
-	var offset = 0;
-	var rate = 0;
 	for (var i = 0; i < cdvdt_RatePoint.length; i++)
 	{
-		switch (cdvdt_RatePoint[i])
-		{
-			case 20:
-				offset = 500;
-				rate = 20;
-				break;
-
-			case 50:
-				offset = 503;
-				rate = 50;
-				break;
-
-			case 100:
-				offset = 506;
-				rate = 100;
-				break;
-
-			case 200:
-				offset = 509;
-				rate = 200;
-				break;
-
-			case 320:
-				offset = 512;
-				rate = 320;
-				break;
-
-			case 500:
-				offset = 515;
-				rate = 500;
-				break;
-
-			case 1000:
-				offset = 518;
-				rate = 1000;
-				break;
-
-			case 1600:
-				offset = 521;
-				rate = 1600;
-				break;
-
-			case 2000:
-				offset = 524;
-				rate = 2000;
-				break;
-
-			case 2500:
-				offset = 527;
-				rate = 2500;
-				break;
-		}
+		var offset = CdVdt_RateOffsetP2(cdvdt_RatePoint[i]);
+		var rate = cdvdt_RatePoint[i];
 		print(CdVdt_Fit(rate, 8) + "|" + CdVdt_Fit(dev.r(offset), 9) + "|" + CdVdt_Fit(dev.r(offset + 1), 10) + "|" + CdVdt_Fit(dev.r(offset + 2), 8))
 	}
 }
@@ -922,10 +895,12 @@ function CdVdt_ResetA()
 		cdvdt_CollectedData[cdvdt_RatePoint[i]] = { "voltage": [], "rate": [] }
 }
 
-function CdVdt_CalRate(K)
+function CdVdt_CalRate(P2, P1, P0, Rate)
 {
-	dev.w(6, Math.round(K * 1000));
-	dev.w(7, 1000);
+	var offset = CdVdt_RateOffsetP2(Rate);
+	dev.w(offset, Math.round(P2 * 1e6));
+	dev.w(offset + 1, Math.round(P1 * 1000));
+	dev.w(offset + 2, Math.round(P0));
 }
 
 function CdVdt_CalV(K, Offset)
@@ -935,12 +910,12 @@ function CdVdt_CalV(K, Offset)
 	dev.ws(2, Math.round(Offset));
 }
 
-function CdVdt_ResetRateCal()
+function CdVdt_ResetRateCal(Rate)
 {
-	dev.w(3, 0);
-	dev.w(5, 0);
-	
-	CdVdt_CalRate(1);
+	var offset = CdVdt_RateOffsetP2(Rate);
+	dev.w(offset, 0);
+	dev.w(offset + 1, 1);
+	dev.w(offset + 2, 0);
 }
 
 function CdVdt_ResetVCal()
