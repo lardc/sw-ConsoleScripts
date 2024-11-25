@@ -466,6 +466,112 @@ function CdVdt_CellCalibrateRate(CellNumber)
 	return 0;
 }
 
+function CdVdt_VerifyRate()
+{
+	CdVdt_ResetA();
+
+	if (CdVdt_CollectFixedRate(1))
+	{
+		CdVdt_SaveRate("dvdt_rate_fixed", "dvdt_rate_sum_fixed");
+	}
+}
+
+function CdVdt_CalibrateRate()
+{
+	CdVdt_ResetA();
+
+	if (CdVdt_CollectFixedRate(1))
+	{
+		CdVdt_SaveRate("dvdt_rate_fixed", "dvdt_rate_sum_fixed");
+		var cdvdt_rate_corr = CGEN_GetNumericCorrection2(cdvdt_CollectedData.voltage, cdvdt_CollectedData.rate);
+	}
+
+	CdVdt_PrintRateCal();
+}
+
+function CdVdt_Fit(arg, length)
+{
+	var str = arg.toString();
+	var before = Math.floor((length - str.length) / 2) + (str.length <= 2 ? -1 : 0);
+	var after = length - str.length - before;
+	var result = "";
+
+	for (var i = 0; i < before; i++)
+		result += " ";
+
+	result += str;
+
+	for (var i = 0; i < after; i++)
+		result += " ";
+
+	return result;
+}
+
+function CdVdt_PrintRateCal()
+{
+	print("  Rate  | P2 x1e6 | P1 x1000 |   P0   ");
+	print("--------------------------------------");
+
+	var offset = 0;
+	var rate = 0;
+	for (var i = 0; i < cdvdt_RatePoint.length; i++)
+	{
+		switch (cdvdt_RatePoint[i])
+		{
+			case 20:
+				offset = 500;
+				rate = 20;
+				break;
+
+			case 50:
+				offset = 503;
+				rate = 50;
+				break;
+
+			case 100:
+				offset = 506;
+				rate = 100;
+				break;
+
+			case 200:
+				offset = 509;
+				rate = 200;
+				break;
+
+			case 320:
+				offset = 512;
+				rate = 320;
+				break;
+
+			case 500:
+				offset = 515;
+				rate = 500;
+				break;
+
+			case 1000:
+				offset = 518;
+				rate = 1000;
+				break;
+
+			case 1600:
+				offset = 521;
+				rate = 1600;
+				break;
+
+			case 2000:
+				offset = 524;
+				rate = 2000;
+				break;
+
+			case 2500:
+				offset = 527;
+				rate = 2500;
+				break;
+		}
+		print(CdVdt_Fit(rate, 8) + "|" + CdVdt_Fit(dev.r(offset), 9) + "|" + CdVdt_Fit(dev.r(offset + 1), 10) + "|" + CdVdt_Fit(dev.r(offset + 2), 8))
+	}
+}
+
 // Вывод графика оценки нелинейности, относительно апроксимационной прямой
 function CdVdt_NonlinearityCell(X, Y, CellNumber, cdvdt_SelectedRange)
 {
@@ -700,7 +806,6 @@ function CdVdt_CollectFixedRate(Repeat)
 	// Power disable
 	dev.c(2);
 
-	CdVdt_SaveRate("dvdt_rate", "dvdt_rate_sum");
 	CdVdt_SaveV("dvdt_v","dvdt_v_sum");
 
 	// Plot relative error distribution
