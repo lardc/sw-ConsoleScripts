@@ -14,7 +14,7 @@ var ACT_FLASH_DIAG_TO_EP			= 340;
 
 var REG_MEM_SYMBOL					= 299;
 
-var EP_FLASH_DATA					= 30;
+var EP_FLASH_DATA					= 20;
 
 var DT_Char		= 0;
 var DT_Int8U	= 1;
@@ -25,24 +25,41 @@ var DT_Int32U	= 5;
 var DT_Int32S	= 6;
 var DT_Float	= 7;
 
+var FR_ForceEP = false;
 var FR_LocalDataCopy;
-var FR_ForceEP = true;
 var FR_LocalDataCounter = 0;
 
-function flash_read(ActReadSymbol)
+function ReadSymbolFromRegistry(ActReadSymbol)
 {
-	if(FR_LocalDataCopy)
+	dev.c(ActReadSymbol);
+	return dev.r(REG_MEM_SYMBOL);
+}
+
+function ReadSymbolWrapper(ActReadSymbol)
+{
+	if(!FR_ForceEP)
+		return ReadSymbolFromRegistry(ActReadSymbol);
+	
+	if(!FR_LocalDataCopy || FR_LocalDataCopy.length == FR_LocalDataCounter)
 	{
-		if(FR_LocalDataCounter < FR_LocalDataCopy.length)
-			return FR_LocalDataCopy[FR_LocalDataCounter++];
-		else
-			return 0xFFFF;
+		try
+		{
+			FR_LocalDataCopy = dev.raf(EP_FLASH_DATA);
+			FR_LocalDataCounter = 0;
+		}
+		catch(e)
+		{
+			if(FR_ForceEP)
+				throw new Error("EP not supported");
+			else
+				return ReadSymbolFromRegistry(ActReadSymbol);
+		}
 	}
+	
+	if(FR_LocalDataCounter < FR_LocalDataCopy.length)
+		return FR_LocalDataCopy[FR_LocalDataCounter++];
 	else
-	{
-		dev.c(ActReadSymbol);
-		return dev.r(REG_MEM_SYMBOL);
-	}
+		return 0xFFFF;
 }
 
 function DataTypeString(DataType)
@@ -148,34 +165,11 @@ function FlashEraseCounters()
 function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 {
 	dev.c(ActMemLabel);
-	
-	// Попытка чтения данных через EP
-	var EPReadCMD = (ActMemLabel == ACT_FLASH_DIAG_INIT_READ) ? ACT_FLASH_DIAG_TO_EP : ACT_FLASH_COUNTER_TO_EP;
-	FR_LocalDataCopy = null;
-	FR_LocalDataCounter = 0;
-	try
-	{
-		var res = [], arr = [];
-		do
-		{
-			dev.c(EPReadCMD);
-			arr = dev.raf(EP_FLASH_DATA);
-			res = res.concat(arr);
-		}
-		while(arr.length > 0);
-		FR_LocalDataCopy = res;
-	}
-	catch(e)
-	{
-		if(FR_ForceEP)
-			throw new Error("EP not supported");
-	}
-
 	var FileName = "";
 
 	while (true)
 	{
-		var dataType = flash_read(ActReadSymbol);
+		var dataType = ReadSymbolWrapper(ActReadSymbol);
 
 		if (dataType == 0xFFFF)
 		{
@@ -198,17 +192,17 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 		if (dataType == DT_Char)
 		{
 			var Description = "";
-			var length = flash_read(ActReadSymbol);
+			var length = ReadSymbolWrapper(ActReadSymbol);
 
 			for (var i = 0; i < length; i++)
 			{
-				Description += String.fromCharCode(flash_read(ActReadSymbol));
+				Description += String.fromCharCode(ReadSymbolWrapper(ActReadSymbol));
 			}
 			FileName += Description;
 		}
 		else
 		{
-			var length = flash_read(ActReadSymbol);
+			var length = ReadSymbolWrapper(ActReadSymbol);
 			Message += FileName + " (Type: " + DataTypeString(dataType) + ", Length: " + length + ")\n";
 
 			for (var i = 0; i < length; i++)
@@ -216,8 +210,8 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 				var word = 0;
 				if (dataTypeLength == 2)
 				{
-					var LOW = flash_read(ActReadSymbol);
-					var HIGH = flash_read(ActReadSymbol);
+					var LOW = ReadSymbolWrapper(ActReadSymbol);
+					var HIGH = ReadSymbolWrapper(ActReadSymbol);
 					switch (dataType)
 					{
 						case DT_Int32U:
@@ -233,7 +227,7 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 				}
 				else
 				{
-					var value = flash_read(ActReadSymbol);
+					var value = ReadSymbolWrapper(ActReadSymbol);
 					switch (dataType)
 					{
 						case DT_Int8U:
@@ -276,11 +270,7 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 
 function FlashRead(i, ActMemLabel)
 {
-	FR_LocalDataCopy = null;
 	dev.c(ActMemLabel);
 	for (var j = 0; j < i; j++)
-	{
-		p(flash_read(ActMemLabel == ACT_FLASH_DIAG_INIT_READ ? ACT_FLASH_DIAG_READ_SYMBOL :
-			ACT_FLASH_COUNTER_READ_SYMBOL));
-	}
+		p(ReadSymbolFromRegistry(ActMemLabel == ACT_FLASH_DIAG_INIT_READ ? ACT_FLASH_DIAG_READ_SYMBOL : ACT_FLASH_COUNTER_READ_SYMBOL));
 }
