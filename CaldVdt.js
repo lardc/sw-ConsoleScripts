@@ -22,6 +22,8 @@ cdvdt_def_SetpointCount = 7;
 cdvdt_def_VGateMin = 1800;
 cdvdt_def_VGateMax = 5000;
 
+cdvdt_iterations = 1;
+
 // Definition range config
 cdvdt_def_NO_RANGE = 3; 		// for compibility old pcb
 
@@ -470,7 +472,7 @@ function CdVdt_VerifyRate()
 {
 	CdVdt_ResetA();
 
-	if (CdVdt_CollectFixedRate(1))
+	if (CdVdt_CollectFixedRate(cdvdt_iterations))
 	{
 		CdVdt_SaveRate("dvdt_rate_fixed", "dvdt_rate_sum_fixed");
 	}
@@ -483,14 +485,14 @@ function CdVdt_CalibrateRate()
 	for (var i = 0; i < cdvdt_RatePoint.length; i++)
 		CdVdt_ResetRateCal(cdvdt_RatePoint[i]);
 
-	if (CdVdt_CollectFixedRate(1))
+	if (CdVdt_CollectFixedRate(cdvdt_iterations))
 	{
-		CdVdt_SaveRate("dvdt_rate_fixed", "dvdt_rate_sum_fixed");
+		CdVdt_SaveRate("dvdt_rate", "dvdt_rate_sum");
 
 		for (var i = 0; i < cdvdt_CollectedData.length; i++)
 		{
 			var cdvdt_rate_corr = CGEN_GetNumericCorrection2(cdvdt_CollectedData[i].voltage, cdvdt_CollectedData[i].rate);
-			CdVdt_CalRate(cdvdt_rate_corr[0][2], cdvdt_rate_corr[0][1], cdvdt_rate_corr[0][0], cdvdt_CollectedData[i]);
+			CdVdt_CalRate(cdvdt_rate_corr[2], cdvdt_rate_corr[1], cdvdt_rate_corr[0], cdvdt_CollectedData[i]);
 		}
 	}
 
