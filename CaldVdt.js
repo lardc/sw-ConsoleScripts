@@ -313,14 +313,10 @@ function CdVdt_TekHScale(Channel, Voltage, Rate)
 function CdVdt_CellCalibrateRateA(CellArray)
 {
 	// Power disable all cells
+	p("Disabling all flyback.");
 	dev.c(2);
 	dev.c(3);
 	sleep(1000);
-
-	dev.w(128,4400);
-	dev.w(129,200);
-	
-	p("Disabling all flyback.");
 
 	for (var i = 1; i < 6; i++)
 	{
@@ -354,9 +350,6 @@ function CdVdt_CellCalibrateRate(CellNumber)
 	CdVdt_TekVScale(cdvdt_chMeasure, cdvdt_CalVoltage);
 	TEK_TriggerInit(cdvdt_chMeasure, cdvdt_CalVoltage / 2);
 	
-	// Wait for power ready
-	
-	
 	// Base DataTable address
 	var BaseDTAddress = cdvdt_def_SetpointStartAddr[cdvdt_SelectedRange] + (CellNumber - 1) * cdvdt_def_SetpointCount * 2;
 	
@@ -364,10 +357,6 @@ function CdVdt_CellCalibrateRate(CellNumber)
 	{
 		// Force triggering
 		CdVdt_ClearDisplay();
-		//TEK_TriggerInit(cdvdt_chMeasure, cdvdt_CalVoltage / 2);
-		
-		// Set gate cdvdt_CalVoltage
-		//sleep(500);
 
 		// Coarse horizontal setting
 		if (i == 0)
