@@ -464,6 +464,12 @@ function CdVdt_VerifyRate()
 	if (CdVdt_CollectFixedRate(cdvdt_iterations))
 	{
 		CdVdt_SaveRate("dvdt_rate_fixed", "dvdt_rate_sum_fixed");
+
+		scattern(cdvdt_rate_sc, cdvdt_rate_err, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt relative error " + cdvdt_RatePoint.join(", ") + " V/us");
+		scattern(cdvdt_v_sc, cdvdt_rate_err, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt relative error " + cdvdt_RatePoint.join(", ") + " V/us");
+
+		scattern(cdvdt_rate_sc, cdvdt_rate_err_sum, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
+		scattern(cdvdt_v_sc, cdvdt_rate_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
 	}
 }
 
@@ -505,6 +511,35 @@ function CdVdt_RateOffsetP2(Rate)
 	}
 }
 
+function CdVdt_VerifyV()
+{
+	CdVdt_ResetA();
+
+	if (CdVdt_CollectFixedRate(cdvdt_iterations))
+	{
+		CdVdt_SaveV("dvdt_v_fixed","dvdt_v_sum_fixed");
+
+		scattern(cdvdt_v_sc, cdvdt_v_err, "Voltage (in V)", "Error relative Voltage (in %)", "Ud relative error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
+		scattern(cdvdt_v_sc, cdvdt_v_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "Ud summary error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
+	}
+}
+
+function CdVdt_CalibrateV()
+{
+	CdVdt_ResetA();
+	CdVdt_ResetVCal();
+
+	if (CdVdt_CollectFixedRate(cdvdt_iterations))
+	{
+		CdVdt_SaveV("dvdt_v","dvdt_v_sum");
+
+		var cdvdt_v_corr = CGEN_GetNumericCorrection2(cdvdt_v_set, cdvdt_v_sc);
+		CdVdt_CalV(cdvdt_v_corr[0], cdvdt_v_corr[1], cdvdt_v_corr[2]);
+	}
+
+	CdVdt_PrintVCal();
+}
+
 function CdVdt_Fit(arg, length)
 {
 	var str = arg.toString();
@@ -534,6 +569,14 @@ function CdVdt_PrintRateCal()
 		var rate = cdvdt_RatePoint[i];
 		print(CdVdt_Fit(rate, 8) + "|" + CdVdt_Fit(dev.r(offset), 9) + "|" + CdVdt_Fit(dev.r(offset + 1), 10) + "|" + CdVdt_Fit(dev.r(offset + 2), 8))
 	}
+}
+
+function CdVdt_PrintVCal()
+{
+	print(" P2 x1e6 | P1 x1000 |   P0   ");
+	print("-----------------------------");
+
+	print(CdVdt_Fit(dev.r(0)), 9) + "|" + CdVdt_Fit(dev.r(1), 10) + "|" + CdVdt_Fit(dev.r(2), 8);
 }
 
 // Вывод графика оценки нелинейности, относительно апроксимационной прямой
@@ -769,17 +812,6 @@ function CdVdt_CollectFixedRate(Repeat)
 	}
 	// Power disable
 	dev.c(2);
-
-	CdVdt_SaveV("dvdt_v","dvdt_v_sum");
-
-	// Plot relative error distribution
-	scattern(cdvdt_rate_sc, cdvdt_rate_err, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt relative error " + cdvdt_RatePoint.join(", ") + " V/us");
-	scattern(cdvdt_v_sc, cdvdt_rate_err, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt relative error " + cdvdt_RatePoint.join(", ") + " V/us");
-	scattern(cdvdt_v_sc, cdvdt_v_err, "Voltage (in V)", "Error relative Voltage (in %)", "Ud relative error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
-	
-	scattern(cdvdt_rate_sc, cdvdt_rate_err_sum, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
-	scattern(cdvdt_v_sc, cdvdt_rate_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
-	scattern(cdvdt_v_sc, cdvdt_v_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "Ud summary error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
 }
 
 function CdVdt_sign(a)
@@ -891,14 +923,14 @@ function CdVdt_CalRate(P2, P1, P0, Rate)
 	var offset = CdVdt_RateOffsetP2(Rate);
 	dev.w(offset, Math.round(P2 * 1e6));
 	dev.w(offset + 1, Math.round(P1 * 1000));
-	dev.w(offset + 2, Math.round(P0));
+	dev.ws(offset + 2, Math.round(P0));
 }
 
-function CdVdt_CalV(K, Offset)
+function CdVdt_CalV(P2, P1, P0)
 {
-	dev.w(0, Math.round(K * 1000));
-	dev.w(1, 1000);
-	dev.ws(2, Math.round(Offset));
+	dev.w(0, Math.round(P2 * 1e6));
+	dev.w(1, Math.round(P1 * 1000));
+	dev.ws(2, Math.round(P0));
 }
 
 function CdVdt_ResetRateCal(Rate)
@@ -911,7 +943,7 @@ function CdVdt_ResetRateCal(Rate)
 
 function CdVdt_ResetVCal()
 {
-	CdVdt_CalV(1, 0);
+	CdVdt_CalV(0, 1, 0);
 }
 
 function CdVdt_ClearDisplay()
