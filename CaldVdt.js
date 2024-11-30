@@ -489,6 +489,12 @@ function CdVdt_CalibrateRate()
 			var cdvdt_rate_corr = CGEN_GetNumericCorrection2(cdvdt_CollectedData[i].voltage, cdvdt_CollectedData[i].rate);
 			CdVdt_CalRate(cdvdt_rate_corr[2], cdvdt_rate_corr[1], cdvdt_rate_corr[0], cdvdt_CollectedData[i]);
 		}
+
+		scattern(cdvdt_rate_sc, cdvdt_rate_err, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt relative error " + cdvdt_RatePoint.join(", ") + " V/us");
+		scattern(cdvdt_v_sc, cdvdt_rate_err, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt relative error " + cdvdt_RatePoint.join(", ") + " V/us");
+
+		scattern(cdvdt_rate_sc, cdvdt_rate_err_sum, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
+		scattern(cdvdt_v_sc, cdvdt_rate_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
 	}
 
 	CdVdt_PrintRateCal();
@@ -535,6 +541,9 @@ function CdVdt_CalibrateV()
 
 		var cdvdt_v_corr = CGEN_GetNumericCorrection2(cdvdt_v_set, cdvdt_v_sc);
 		CdVdt_CalV(cdvdt_v_corr[0], cdvdt_v_corr[1], cdvdt_v_corr[2]);
+
+		scattern(cdvdt_v_sc, cdvdt_v_err, "Voltage (in V)", "Error relative Voltage (in %)", "Ud relative error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
+		scattern(cdvdt_v_sc, cdvdt_v_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "Ud summary error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
 	}
 
 	CdVdt_PrintVCal();
@@ -938,7 +947,7 @@ function CdVdt_ResetRateCal(Rate)
 	var offset = CdVdt_RateOffsetP2(Rate);
 	dev.w(offset, 0);
 	dev.w(offset + 1, 1);
-	dev.w(offset + 2, 0);
+	dev.ws(offset + 2, 0);
 }
 
 function CdVdt_ResetVCal()
