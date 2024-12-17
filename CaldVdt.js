@@ -930,24 +930,21 @@ function CdVdt_ResetA()
 function CdVdt_CalRate(P2, P1, P0, Rate)
 {
 	var offset = CdVdt_RateOffsetP2(Rate);
-	dev.w(offset, Math.round(P2 * 1e6));
+	dev.ws(offset, Math.round(P2 * 1e6));
 	dev.w(offset + 1, Math.round(P1 * 1000));
 	dev.ws(offset + 2, Math.round(P0));
 }
 
 function CdVdt_CalV(P2, P1, P0)
 {
-	dev.w(0, Math.round(P2 * 1e6));
+	dev.ws(0, Math.round(P2 * 1e6));
 	dev.w(1, Math.round(P1 * 1000));
 	dev.ws(2, Math.round(P0));
 }
 
 function CdVdt_ResetRateCal(Rate)
 {
-	var offset = CdVdt_RateOffsetP2(Rate);
-	dev.w(offset, 0);
-	dev.w(offset + 1, 1);
-	dev.ws(offset + 2, 0);
+	CdVdt_CalRate(0, 1, 0, Rate);
 }
 
 function CdVdt_ResetVCal()
