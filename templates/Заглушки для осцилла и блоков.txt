@@ -9,6 +9,8 @@ dev.w = function(reg, val) { p('w  ' + reg + ' = ' + val) }
 dev.c = function(act) { p('c  ' + act) }
 dev.co = function(port) { p('co ' + port) }
 dev.rs = function(reg) { var ret = 0; p('rs ' + reg + ' > ' + ret); return ret }
+dev.rafs = function(ep) { p('rafs  ' + ep); return [1, -2, 3, -4] }
+dev.raf = function(ep) { p('raf  ' + ep); return [1, 2, 3, 4] }
 dev.nid = function(nid) { p('n  ' + nid) }
 dev.Disconnect = function() { p('dco') }
 dev.Connect = dev.co
