@@ -118,7 +118,7 @@ function TOCUHP_Pulse_Hz(Voltage, Bit, Hertz, Minutes)
 		stop_pulse.setMilliseconds(milliseconds);
 
 		print("Импульс № " + i);
-		//TOCUHP_Pulse(1, Voltage, Bit);
+		TOCUHP_Pulse(1, Voltage, Bit);
 
 		while((new Date()).getTime() < stop_pulse.getTime())
 		{
