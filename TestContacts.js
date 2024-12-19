@@ -222,19 +222,34 @@ function Contacts_ResourceTest(Current)
 	}
 }
 
+function Contacts_GetTS()
+{
+	return Math.floor(Date.now() / 1000)
+}
+
 function Contacts_TestContactor()
 {
 	var i = 1
+	var PrevStartTS = 0
+	
 	while(!anykey())
 	{
+		/*
 		var TimeStartSeries = new Date();
 		var TimeEndSeries  = new Date();
 		var Milliseconds = TimeStartSeries.getMilliseconds() + 1000;
 		TimeEndSeries.setMilliseconds(Milliseconds);
+		*/
+
+		while(Contacts_GetTS() < PrevStartTS + 4)
+			sleep(10);
+		PrevStartTS = Contacts_GetTS()
 
 		dev.co(portTOCU);
+		p("Зажатие")
 		dev.c(Action_ContacsOn);
 
+		/*
 		while((new Date()).getTime() < TimeEndSeries.getTime())
 		{
 			pinline("\rЗажатие = " + (TimeEndSeries.getTime() - (new Date()).getTime()) + " мс	");
@@ -244,16 +259,23 @@ function Contacts_TestContactor()
 
 		var Milliseconds = TimeStartSeries.getMilliseconds() + 2000;
 		TimeEndSeries.setMilliseconds(Milliseconds);
-
+		*/
+		
+		while(Contacts_GetTS() < PrevStartTS + 2)
+			sleep(10);
+		
+		p("Разжатие")
 		dev.c(Action_ContacsOff);
-
+		
+		/*
 		while((new Date()).getTime() < TimeEndSeries.getTime())
 		{
 			pinline("\rРазжатие = " + (TimeEndSeries.getTime() - (new Date()).getTime()) + " мс	");
 			sleep(1);
 		}
 		pinline("\r                    	\r");
-
+		*/
+		
 		print("Clamp #" + i + " : " + TimeStartSeries);
 		i++;
 	}
