@@ -276,7 +276,8 @@ function Contacts_TestContactor()
 		pinline("\r                    	\r");
 		*/
 		
-		print("Clamp #" + i + " : " + TimeStartSeries);
+		//print("Clamp #" + i + " : " + TimeStartSeries);
+		p("Clamp # " + i);
 		i++;
 	}
 }
