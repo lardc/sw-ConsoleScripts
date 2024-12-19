@@ -1,12 +1,12 @@
 include("TestSCPC.js")
 include("Tektronix.js")
 
-portSCPC = 7
+portSCPC = 18
 portTek = 11
-portTOCU = 6
+portTOCU = 17
 
 Contacts_Rshunt = 0.001;		// in Ohms
-Contacts_RIngun = 0.002;		// in Ohms опытным путем
+Contacts_RIngun = 0.0006;		// in Ohms опытным путем
 Contacts_IngunCount = 2;		// Количество контактов
 
 PulsesInASeries = 2;			// Количество импульсов в серии
@@ -19,7 +19,7 @@ Action_ContacsOn = 18;			// Команда на TOCU для замыкания �
 Action_ContacsOff = 26;			// Размыкание
 Action_Pulse = 63;				// Формирование импульса с помощью сигнала синхронизации
 
-csv_array= [];
+csv_array = [];
 counter = 1;
 
 function Contacts_Init(portSCPC, portTOCU, portTek, channelVoltage, channelCurrent, channelSync)
@@ -49,7 +49,7 @@ function Contacts_Init(portSCPC, portTOCU, portTek, channelVoltage, channelCurre
 	// Display channels
 	for (var i = 1; i <= 4; i++)
 	{
-		if (i == ccontacts_chCurrent || i == ccontacts_chVoltage || i == ccontacts_chSync)
+		if (i == ccontacts_chCurrent || i == ccontacts_chVoltage)
 			TEK_ChannelOn(i);
 		else
 			TEK_ChannelOff(i);
@@ -67,15 +67,15 @@ function Contacts_TekMeasurement(Channel)
 
 function Contacts_TekScaleI(Channel, Value)
 {
-	// 0.6 - use 60 % of full range
+	// 0.5 - use 50 % of full range
 	// 8 - number of scope grids in full scale
-	var scale = (Value / (8 * 0.4));
+	var scale = (Value / (8 * 0.9));
 	TEK_Send("ch" + Channel + ":scale " + scale);
 }
 
 function Contacts_TekScaleV(Channel, Value)
 {
-	// 0.6 - use 60 % of full range
+	// 0.7 - use 70 % of full range
 	// 8 - number of scope grids in full scale
 	var scale = (Value / (8 * 0.7));
 	TEK_Send("ch" + Channel + ":scale " + scale);
@@ -123,22 +123,22 @@ function Contacts_Pulse(Current)
 					return 2;
 			}
 
-			sleep(1000);
+			sleep(800);
 			var v_sc = Contacts_MeasureV();
 			var i_sc = Contacts_MeasureI();
 			var p_sc = v_sc * i_sc * 0.0064;
 			var r_sc = v_sc / i_sc;
 			var r_1Ingun_sc = (r_sc / 2 * Contacts_IngunCount) / 2;
 
-			if(r_1Ingun_sc >= 0.010 || i_sc < 100)		//Если сопротивление на один пруболее 10 мОм, то остановить тест
+			if(r_1Ingun_sc >= 0.020 || i_sc < 50)		// Если сопротивление на один контакт более 20 мОм или ток менее 50 А на , то остановить тест
 			{
 				print("Контактное сопротивление на один контакт = " + r_1Ingun_sc.toFixed(6) + " Ом")
 				print("Ток в цепи = " + i_sc.toFixed(1) + " А")
 				print("Тест остановлен!")
+				dev.co(portTOCU);
+				dev.c(Action_ContacsOff);
 				return 10;
 			}
-
-			Contacts_RIngun = r_1Ingun_sc;
 			
 			print("-- result " + counter++ + " --");
 			print("Time Pulse   : " + TimeStartActionPulse);
@@ -153,8 +153,8 @@ function Contacts_Pulse(Current)
 
 			while((new Date()).getTime() < TimeEndActionPulse.getTime())
 			{
-				pinline("\rОжидание между импульсами = " + (TimeEndActionPulse.getTime() - (new Date()).getTime()) + " мс		");
-				sleep(50);
+				pinline("\rОжидание между импульсами = " + ((TimeEndActionPulse.getTime() - (new Date()).getTime()) / 1000).toFixed(1) + " с		");
+				sleep(100);
 
 				if(Contacts_AnykeyExit())
 					return 15;
@@ -205,8 +205,8 @@ function Contacts_ResourceTest(Current)
 
 		while((new Date()).getTime() < TimeEndSeries.getTime())
 		{
-			pinline("\rПауза между серией = " + (TimeEndSeries.getTime() - (new Date()).getTime()) + " мс		");
-			sleep(50);
+			pinline("\rПауза между серией = " + ((TimeEndSeries.getTime() - (new Date()).getTime()) / 1000).toFixed(1) + " с		");
+			sleep(100);
 
 			if(Contacts_AnykeyExit())
 				return 58;
@@ -224,14 +224,38 @@ function Contacts_ResourceTest(Current)
 
 function Contacts_TestContactor()
 {
+	var i = 1
 	while(!anykey())
 	{
+		var TimeStartSeries = new Date();
+		var TimeEndSeries  = new Date();
+		var Milliseconds = TimeStartSeries.getMilliseconds() + 1000;
+		TimeEndSeries.setMilliseconds(Milliseconds);
+
 		dev.co(portTOCU);
 		dev.c(Action_ContacsOn);
-		sleep(2000);
+
+		while((new Date()).getTime() < TimeEndSeries.getTime())
+		{
+			pinline("\rЗажатие = " + (TimeEndSeries.getTime() - (new Date()).getTime()) + " мс	");
+			sleep(1);
+		}
+		pinline("\r                    	\r");
+
+		var Milliseconds = TimeStartSeries.getMilliseconds() + 2000;
+		TimeEndSeries.setMilliseconds(Milliseconds);
 
 		dev.c(Action_ContacsOff);
-		sleep(2000);
+
+		while((new Date()).getTime() < TimeEndSeries.getTime())
+		{
+			pinline("\rРазжатие = " + (TimeEndSeries.getTime() - (new Date()).getTime()) + " мс	");
+			sleep(1);
+		}
+		pinline("\r                    	\r");
+
+		print("Clamp #" + i + " : " + TimeStartSeries);
+		i++;
 	}
 }
 
