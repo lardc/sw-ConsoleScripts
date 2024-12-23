@@ -20,23 +20,37 @@ i("STM_FWUpdate.js");
 FWU_RestoreTOCUHP()
 
 include("TestTOU_HP.js");
-TOCUHP_Pulse(1, 600, 1025);
+TOCUHP_Pulse(1, 600, 2047);
 TOCUHP_Pulse_Hz(600, 1025, 1, 1);
 
 // Ресурсный тест
 include("TestTOU_HP.js");
-TOCUHP_ResourceTest(1500, 1025, 8, 2000);
+TOCUHP_ResourceTest(1500, 1025, 8, 10000);
 
 // Калибровка напряжения
 / (Offset: 20) (K: 21)
 / [P0: 24] [P1: 23] [P2: 22]
 include("CalTOCU_HP.js");
 ctocu_hp_vd_array = [600, 1000, 1500];
-ctocu_hp_bit = 1025;
+ctocu_hp_bit = 2047;
 ctocu_hp_UseAvg = 0;
-ctocu_hp_Iterations = 1;
-CAL_Init(9,8,1);
+ctocu_hp_Iterations = 3;
+CAL_Init(6,11,1,2);
+dev.nid(180);
 
 CTOCUHP_VerifyVd();
 
 CTOCUHP_СalibrateVd();
+
+// Верификация тока
+include("CalTOCU_HP.js");
+ctocu_hp_voltage = 600;
+ctocu_hp_id_min = 120;
+ctocu_hp_id_max = 640;
+cal_Rshunt = 0.001;
+ctocu_hp_Iterations = 1;
+ctocu_hp_SaveImage = 1;
+CAL_Init(6,11,1,2);
+dev.nid(180);
+
+CTOCUHP_VerifyId();
