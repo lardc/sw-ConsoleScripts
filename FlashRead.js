@@ -44,6 +44,7 @@ function ReadSymbolWrapper(ActReadSymbol)
 	{
 		try
 		{
+			dev.c(ActReadSymbol == ACT_FLASH_DIAG_READ_SYMBOL ? ACT_FLASH_DIAG_TO_EP : ACT_FLASH_COUNTER_TO_EP);
 			FR_LocalDataCopy = dev.raf(EP_FLASH_DATA);
 			FR_LocalDataCounter = 0;
 		}
