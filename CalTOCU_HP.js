@@ -168,7 +168,7 @@ function CTOCUHP_CollectVd(VoltageValues, IterationsCount)
 			print("Vd_set, V: " + vd);
 
 			// Scope data
-			var vd_sc = CTOCUHP_Measure(cal_chMeasureVd).toFixed(1);
+			var vd_sc = CTOCUHP_Measure(cal_chMeasureVd);
 			ctocu_hp_vd_sc.push(vd_sc);
 			print("Vd_tek, V: " + vd_sc);
 
