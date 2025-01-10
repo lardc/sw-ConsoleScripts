@@ -25,7 +25,7 @@ var DT_Int32U	= 5;
 var DT_Int32S	= 6;
 var DT_Float	= 7;
 
-var FR_ForceEP = false;
+var FR_ForceEP = true;
 var FR_LocalDataCopy;
 var FR_LocalDataCounter = 0;
 
@@ -61,6 +61,12 @@ function ReadSymbolWrapper(ActReadSymbol)
 		return FR_LocalDataCopy[FR_LocalDataCounter++];
 	else
 		return 0xFFFF;
+}
+
+function FR_Reset()
+{
+	FR_LocalDataCopy = null;
+	FR_LocalDataCounter = 0;
 }
 
 function DataTypeString(DataType)
@@ -174,11 +180,13 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 
 		if (dataType == 0xFFFF)
 		{
+			FR_Reset();
 			p("[End of data]")
 			return;
 		}
 		if (dataType > 7)
 		{
+			FR_Reset();
 			p("ERROR: Invalid data type.");
 			p(dataType);
 			return;
