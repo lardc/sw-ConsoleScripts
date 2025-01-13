@@ -92,7 +92,8 @@ cgtu_Iterations = 1;
 cgtu_EUosc = 3;
 cgtu_ER2Wire = 1;
 cgtu_ER4Wire = 0.1;
-cgtu_ER = (cgtu_Mode == cgtu_Mode2Wire) ? cgtu_ER2Wire : cgtu_ER4Wire;
+// Выбор режима автоматически выполняется в CGTU_Init()
+cgtu_ER = cgtu_ER4Wire;
 
 // Функция знака с учётом формул МА
 Math.sign_ma = function(x)
@@ -392,9 +393,6 @@ function CGTU_ResetA()
 
 function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 {
-	// Выбор максимального тока
-	cgtu_ER = (cgtu_Mode == cgtu_Mode2Wire) ? cgtu_ER2Wire : cgtu_ER4Wire;
-
 	if (channelMeasure < 1 || channelMeasure > 4 ||
 		channelSyncOrMeasurePower < 1 || channelSyncOrMeasurePower > 4)
 	{
@@ -403,13 +401,7 @@ function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 	}
 	
 	cgtu_chMeasure = channelMeasure;
-
-	// Copy channel information
-	if (cgtu_Mode == cgtu_Mode2Wire)
-		cgtu_chMeasurePower = channelSyncOrMeasurePower;
-	else
-		cgtu_chSync = channelSyncOrMeasurePower;
-
+	
 	// Init GTU
 	if(portGate)
 	{
@@ -421,7 +413,16 @@ function CGTU_Init(portGate, portTek, channelMeasure, channelSyncOrMeasurePower)
 	// Init Tektronix
 	if(portTek)
 		TEK_PortInit(portTek);
-
+	
+	// Выбор величины погрешности
+	cgtu_ER = (cgtu_Mode == cgtu_Mode2Wire) ? cgtu_ER2Wire : cgtu_ER4Wire;
+	
+	// Copy channel information
+	if (cgtu_Mode == cgtu_Mode2Wire)
+		cgtu_chMeasurePower = channelSyncOrMeasurePower;
+	else
+		cgtu_chSync = channelSyncOrMeasurePower;
+	
 	// Tektronix init
 	// Init channels
 	TEK_ChannelInit(cgtu_chMeasure, "1", "1");
