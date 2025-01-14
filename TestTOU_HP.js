@@ -88,10 +88,13 @@ function TOCUHP_Pulse(N, Voltage, Bit)
 			
 			while(dev.r(192) == 4){sleep(50)}
 			
-			print("N          = " + i)
-			print("Voltage, V = " + dev.r(200));
-			print("-----------");
-			
+			if (tou_print)
+			{
+				print("N          = " + i)
+				print("Voltage, V = " + dev.r(200));
+				print("-----------");
+			}
+
 			if(anykey())
 				break;
 		}
