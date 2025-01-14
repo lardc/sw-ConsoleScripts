@@ -4,7 +4,7 @@ include("TestdVdt.js")
 include("SiC_Calc.js")
 
 cdvdt_chMeasure = 1;
-cdvdt_Powerex = 0;
+cdvdt_Powerex = 1;
 
 // DeviceState
 DS_None = 0;
@@ -12,10 +12,6 @@ DS_Fault = 1;
 DS_Disabled = 2;
 DS_Ready = 3;
 DS_InProcess = 4;
-
-// For 3d scatter plot use Matlab following commands
-// scatter3(x, y, z, 40, z, 'filled');
-// colorbar;
 
 // Definition section (modification is dangerous)
 cdvdt_def_SetpointCount = 7;
@@ -53,8 +49,6 @@ cdvdt_DeviderRate = 10; 					// Делитель скорости. Устано�
 cdvdt_Vmin = 500;
 cdvdt_Vmax = 4500;
 cdvdt_Points = 10;
-//
-cdvdt_collect_v = 0;
 
 // Measure method
 dVdt_HandCursors =		1; // Курсоры вручную
