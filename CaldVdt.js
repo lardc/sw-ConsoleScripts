@@ -518,79 +518,6 @@ function CdVdt_NonlinearityCell(X, Y, CellNumber, cdvdt_SelectedRange)
 	}
 
 	scattern(X, y_err_array, "Gate voltage (in mV)", "Error relative Nonlinearity (in %)", "Cell #" + CellNumber + " range: " + cdvdt_SelectedRange)
-	//p("y_err_max, % = " + y_err_max);
-}
-
-
-function CdVdt_Collect(Iterations)
-{
-	var cdvdt_Vstp = Math.round((cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Points - 1));
-	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, cdvdt_Vstp);
-	
-	var cntDone = 0;
-	var cntTotal = VoltageArray.length * Iterations * 5;
-	
-	// Re-enable power
-	dev.c(2);
-	sleep(1000);
-	dev.c(1);
-	
-	for (var k = 0; k < Iterations; k++)
-	{
-		for (var i = 0; i < VoltageArray.length; i++)
-		{
-			dev.w(128, VoltageArray[i])
-			CdVdt_TekVScale(cdvdt_chMeasure, VoltageArray[i]);
-			TEK_TriggerInit(cdvdt_chMeasure, VoltageArray[i] / 2);
-			sleep(500);
-			
-			for (var j = 101; j <= 105; j++)
-			{
-				// Coarse horizontal setting
-				if (j == 101) TEK_Horizontal("25e-6", "0");
-				
-				dev.c(j);
-				while(_dVdt_Active()) sleep(50);
-				sleep(1000);
-				
-				CdVdt_TekHScale(cdvdt_chMeasure, VoltageArray[i], CdVdt_MeasureRate());
-				sleep(500);
-				
-				dev.c(j);
-				while(_dVdt_Active()) sleep(50);
-				sleep(1000);
-				// Get rate
-				var rate = CdVdt_MeasureRate();
-				
-				if (cdvdt_collect_v)
-				{
-					// Get voltage
-					CdVdt_SwitchToCursor();
-					sleep(1000);
-					var v = CdVdt_MeasureV();
-					//
-					CdVdt_SwitchToMeasurement();
-				}
-				else
-					var v = CdVdt_MeasureVfast();
-				
-				print("CMD        : " + j);
-				print("dV/dt, V/us: " + rate);
-				print("Vset,     V: " + VoltageArray[i]);
-				print("V,        V: " + v);
-				
-				cntDone++;
-				print("-- result " + cntDone + " of " + cntTotal + " --");
-				
-				CdVdt_StoreVoltageAndRate(j, rate, VoltageArray[i], v);
-				
-				if (anykey()) return;
-			}
-		}
-	}
-	
-	// Power disable
-	dev.c(2);
 }
 
 function CdVdt_CollectFixedRate(Repeat)
@@ -632,13 +559,10 @@ function CdVdt_CollectFixedRate(Repeat)
 			TEK_Busy();
 			for (var i = 0; i < cdvdt_RatePoint.length; i++)
 			{
-				//sleep(1000);
 				dev.w(129, cdvdt_RatePoint[i] * cdvdt_DeviderRate)
 				
 				CdVdt_TekHScale(cdvdt_chMeasure, VoltageArray[k], cdvdt_RatePoint[i]);
-				//sleep(500);
 				CdVdt_ClearDisplay();
-				//sleep(1000);
 				
 				// Start pulse
 				for (var CounterAverages = 0; CounterAverages < cdvdt_def_UseAverage; CounterAverages++)
@@ -668,7 +592,6 @@ function CdVdt_CollectFixedRate(Repeat)
 					dev.c(100);
 
 					while(TEK_Exec("TRIGger:STATE?") == "REA") sleep(50);
-					//print("Impulse #" + (CounterAverages + 1))
 				}
 				TEK_Busy();
 				sleep(500);
@@ -735,25 +658,7 @@ function CdVdt_CollectFixedRate(Repeat)
 				V_err_sum = (CdVdt_sign(V_err)*(Math.abs(V_err) + E0V)).toFixed(1)
 				cdvdt_v_err_sum.push(V_err_sum);
 
-
 				print("  " + cdvdt_RatePoint[i] + (cdvdt_RatePoint[i] < 100 ? " " : "") + (cdvdt_RatePoint[i] < 1000 ? " " : "") + " | " + rate + (rate < 100 ? " " : "") + (rate < 1000 ? " " : "") + "| " + (dVdt_err >= 0 ? " " : "") + dVdt_err + (Math.abs(dVdt_err) < 10 ? " " : "") + " |  " + VoltageArray[k] + (VoltageArray[k] < 100 ? " " : "") + (VoltageArray[k] < 1000 ? " " : "") + " | " + v + (v < 100 ? " " : "") + (v < 1000 ? " " : "") + "  | " + (V_err >= 0 ? " " : "") + V_err);
-				//p(dev.r(38))
-
-				//sleep(1000);
-				//for (var CellID = 1; CellID <= 5; CellID++) p("Cell: " + CellID + " Range: " + dVdt_CellReadReg(CellID, 4)+ " Gate = " + dVdt_CellReadReg(CellID, 2))
-
-				/*
-				print("dV/dt set, V/us: " + cdvdt_RatePoint[i]);
-				print("dV/dt osc, V/us: " + rate);
-				print("dV/dt err,    %: " + ((cdvdt_RatePoint[i] - rate) / rate * 100).toFixed(1));
-				print("Voltage set,  V: " + VoltageArray[k]);
-				print("Voltage osc,  V: " + v);
-				print("Voltage err,  %: " + ((VoltageArray[k] - v) / v * 100).toFixed(1));
-				*/
-				
-				cntDone++;
-				//print("-- result " + cntDone + " of " + cntTotal + " --");
-				//CdVdt_StoreVoltageAndFixRate(cdvdt_RatePoint[i], rate, VoltageArray[k], v);
 				
 				if (cdvdt_def_UseSaveImage)
 				{
@@ -764,6 +669,8 @@ function CdVdt_CollectFixedRate(Repeat)
 					TEK_Busy();
 				}
 				if (anykey()){ print("Stopped from user!"); return};
+
+				cntDone++;
 			}
 		}
 	}
@@ -778,9 +685,9 @@ function CdVdt_CollectFixedRate(Repeat)
 	scattern(cdvdt_v_sc, cdvdt_rate_err, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt relative error " + cdvdt_RatePoint.join(", ") + " V/us");
 	scattern(cdvdt_v_sc, cdvdt_v_err, "Voltage (in V)", "Error relative Voltage (in %)", "Ud relative error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
 	
-	scattern(cdvdt_rate_sc, cdvdt_rate_err_sum, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
-	scattern(cdvdt_v_sc, cdvdt_rate_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
-	scattern(cdvdt_v_sc, cdvdt_v_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "Ud summary error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
+	// scattern(cdvdt_rate_sc, cdvdt_rate_err_sum, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
+	// scattern(cdvdt_v_sc, cdvdt_rate_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
+	// scattern(cdvdt_v_sc, cdvdt_v_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "Ud summary error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
 }
 
 function CdVdt_sign(a)
@@ -846,55 +753,6 @@ function CdVdt_StabCheck(CellNumber, Voltage, Gate)
 	dVdt_CellCall(CellNumber, 2);
 }
 
-function CdVdt_StoreVoltageAndRate(CMD, RateScope, Voltage, VoltageScope)
-{
-	var ConfiguredRate, RateErr, RateSet;
-	var VoltageErr = ((VoltageScope - Voltage) / Voltage * 100).toFixed(1);
-	
-	switch (CMD)
-	{
-		case 101:
-			RateSet = 500;
-			RateErr = ((RateScope - 500) / 500 * 100).toFixed(1);
-			cdvdt_scatter05.push(RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
-			break;
-			
-		case 102:
-			RateSet = 1000;
-			RateErr = ((RateScope - 1000) / 1000 * 100).toFixed(1);
-			cdvdt_scatter10.push(RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
-			break;
-			
-		case 103:
-			RateSet = 1600;
-			RateErr = ((RateScope - 1600) / 1600 * 100).toFixed(1);
-			cdvdt_scatter16.push(RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
-			break;
-			
-		case 104:
-			RateSet = 2000;
-			RateErr = ((RateScope - 2000) / 2000 * 100).toFixed(1);
-			cdvdt_scatter20.push(RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
-			break;
-			
-		case 105:
-			RateSet = 2500;
-			RateErr = ((RateScope - 2500) / 2500 * 100).toFixed(1);
-			cdvdt_scatter25.push(RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
-			break;
-	}
-	
-	cdvdt_scatter.push(RateSet + ";" + RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
-}
-
-function CdVdt_StoreVoltageAndFixRate(Rate, RateScope, Voltage, VoltageScope)
-{
-	var RateErr = ((RateScope - Rate) / Rate * 100).toFixed(1);
-	var VoltageErr = ((VoltageScope - Voltage) / Voltage * 100).toFixed(1);
-	
-	cdvdt_scatter.push(Rate + ";" + RateScope + ";" + RateErr + ";" + Voltage + ";" + VoltageScope + ";" + VoltageErr);
-}
-
 function CdVdt_PrintSetpoints(CellNumber)
 {
 	print("Selected range code: " + cdvdt_SelectedRange);
@@ -941,11 +799,6 @@ function CdVdt_ResetA()
 	cdvdt_v_err_sum = [];
 }
 
-function CdVdt_SaveA(Name)
-{
-	save("data/dvdt_" + Name + ".csv", cdvdt_scatter);
-}
-
 function CdVdt_CalRate(K)
 {
 	dev.w(6, Math.round(K * 1000));
@@ -977,89 +830,5 @@ function CdVdt_ClearDisplay()
 	TEK_AcquireSample();
 	if(cdvdt_def_UseAverage > 1)
 		TEK_AcquireAvg(cdvdt_def_UseAverage);
-	//sleep(500);
 	TEK_Busy();
-}
-
-function CdVdt_CollectdVdt(Repeat)
-{
-	CdVdt_ResetA();
-	
-	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, (cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Vstp - 1));
-	
-	var cntDone = 0;
-	var cntTotal = VoltageArray.length * cdvdt_RatePoint.length * Repeat;
-	
-	// Re-enable power
-	dev.c(2);
-	sleep(1000);
-	dev.c(1);
-
-	for (var counter = 0; counter < Repeat; counter++)
-	{
-		for (var k = 0; k < VoltageArray.length; k++)
-		{
-			dev.w(128, VoltageArray[k]);
-			CdVdt_TekVScale(cdvdt_chMeasure, VoltageArray[k]);
-			TEK_TriggerInit(cdvdt_chMeasure, VoltageArray[k] / 2);
-			
-			for (var i = 0; i < cdvdt_RatePoint.length; i++)
-			{
-				sleep(1000);
-				dev.w(129, cdvdt_RatePoint[i] * cdvdt_DeviderRate);
-				
-				CdVdt_TekHScale(cdvdt_chMeasure, VoltageArray[k], cdvdt_RatePoint[i]);
-				sleep(1500);
-				
-				CdVdt_ClearDisplay();
-				sleep(1500);
-				
-				var DesiredHalfTimeRise = ((VoltageArray[k] / 2) / cdvdt_RatePoint[i] * 1e-6).toExponential();
-				
-				// Start pulse
-				for(var CounterAverages = 0; CounterAverages < cdvdt_def_UseAverage; CounterAverages++)
-				{
-					while(_dVdt_Active()) sleep(50);
-					dev.c(100);
-					sleep(1500);
-				}
-				
-				sleep(1500);
-				while(_dVdt_Active()) sleep(50);
-				
-				CdVdt_SetTekCursor(cdvdt_chMeasure, 4 * DesiredHalfTimeRise, 4 * DesiredHalfTimeRise);
-				
-				var v = CdVdt_CursorMeasureV();
-				
-				var RealHalfTimeRise = ((v / 2) / cdvdt_RatePoint[i] * 1e-6).toExponential();
-				
-				var FirstTimePoint =  (RealHalfTimeRise - (0.97 * v / cdvdt_RatePoint[i]) * 1e-6).toExponential();
-				
-				var SecondTimePoint = (RealHalfTimeRise - (0.17 * v / cdvdt_RatePoint[i]) * 1e-6).toExponential();
-				
-				CdVdt_SetTekCursor(cdvdt_chMeasure, FirstTimePoint, SecondTimePoint);
-				
-				var OutRate = CdVdt_MeasuredVdt(cdvdt_chMeasure);
-				
-				var dVdt_err = ((OutRate - cdvdt_RatePoint[i]) / cdvdt_RatePoint[i] * 100).toFixed(2);
-				var v_err = ((v - VoltageArray[k]) / VoltageArray[k] * 100).toFixed(2);
-				
-				print("dVdt set,  V/us: " + cdvdt_RatePoint[i]);
-				print("dV/dt osc, V/us: " + OutRate);
-				print("dV/dt err,    %: " + dVdt_err);
-				print("V set,        V: " + VoltageArray[k]);
-				print("V osc,        V: " + v);
-				print("V err,        %: " + v_err);
-				
-				cntDone++;
-				print("-- result " + cntDone + " of " + cntTotal + " --");
-				CdVdt_StoreVoltageAndFixRate(cdvdt_RatePoint[i], OutRate, VoltageArray[k], v);
-				
-				if (anykey()){ print("Stopped from user!"); return};
-			}
-		}
-	}
-	
-	// Power disable
-	dev.c(2);
 }
