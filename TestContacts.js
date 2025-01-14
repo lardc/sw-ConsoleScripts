@@ -224,57 +224,36 @@ function Contacts_ResourceTest(Current)
 
 function Contacts_GetTS()
 {
-	return Math.floor(Date.now() / 1000)
+	return Date.now()
 }
 
 function Contacts_TestContactor()
 {
 	var i = 1
 	var PrevStartTS = 0
-	
+	dev.co(portTOCU);
+
 	while(!anykey())
 	{
-		/*
-		var TimeStartSeries = new Date();
-		var TimeEndSeries  = new Date();
-		var Milliseconds = TimeStartSeries.getMilliseconds() + 1000;
-		TimeEndSeries.setMilliseconds(Milliseconds);
-		*/
-
-		while(Contacts_GetTS() < PrevStartTS + 4)
+		while(Date.now() < PrevStartTS + 3000)
+		{
+			pinline("\rРазжатие	= " + (Date.now() - (PrevStartTS + 3000)) + "	");
 			sleep(10);
-		PrevStartTS = Contacts_GetTS()
+		}
+		pinline("\r                        	\r");
 
-		dev.co(portTOCU);
-		p("Зажатие")
+		PrevStartTS = Date.now()
+
 		dev.c(Action_ContacsOn);
 
-		/*
-		while((new Date()).getTime() < TimeEndSeries.getTime())
+		while(Date.now() < PrevStartTS + 1000)
 		{
-			pinline("\rЗажатие = " + (TimeEndSeries.getTime() - (new Date()).getTime()) + " мс	");
-			sleep(1);
-		}
-		pinline("\r                    	\r");
-
-		var Milliseconds = TimeStartSeries.getMilliseconds() + 2000;
-		TimeEndSeries.setMilliseconds(Milliseconds);
-		*/
-		
-		while(Contacts_GetTS() < PrevStartTS + 2)
+			pinline("\rЗажатие	= " + (Date.now() - (PrevStartTS + 1000)) + "	");
 			sleep(10);
-		
-		p("Разжатие")
-		dev.c(Action_ContacsOff);
-		
-		/*
-		while((new Date()).getTime() < TimeEndSeries.getTime())
-		{
-			pinline("\rРазжатие = " + (TimeEndSeries.getTime() - (new Date()).getTime()) + " мс	");
-			sleep(1);
 		}
-		pinline("\r                    	\r");
-		*/
+		pinline("\r                        	\r");
+
+		dev.c(Action_ContacsOff);
 		
 		//print("Clamp #" + i + " : " + TimeStartSeries);
 		p("Clamp # " + i);
