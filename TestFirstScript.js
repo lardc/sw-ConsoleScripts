@@ -7,7 +7,7 @@ function test_script()
 	//поиск элементов
 	for (var i = FirstTestNumber; i <= LastTestNumber; i++)
 	{
-		if((i%3 == 0)||(i%5==0))
+		if((i%3 == 0) || (i%5 == 0))
 		{
 			ResultArray.push(i);
 		}
