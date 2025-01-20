@@ -27,5 +27,6 @@ function study_abc_calc(port,param_A,param_B,param_C)
 	dev.w(130,param_B);
 	dev.w(131,param_C);
 	dev.c(60);
+	dev.c(200);
 	p("("+dev.r(60)+"-"+dev.r(130)+")"+"/"+dev.r(131)+"="+dev.r(210));
 }
