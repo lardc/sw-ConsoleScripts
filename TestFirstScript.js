@@ -30,3 +30,20 @@ function study_abc_calc(port,param_A,param_B,param_C)
 	dev.c(200);
 	p("("+dev.r(60)+"-"+dev.r(130)+")"+"/"+dev.r(131)+"="+dev.r(210));
 }
+
+function study_ssm()
+{
+	var delay = 200;
+	
+	p("Current state of LED - " + dev.r(211));
+	p("Current state of SSM - " + dev.r(212));
+	dev.c(62);
+	while(dev.r(212) != 0)
+	{
+		p("Current state of LED - " + dev.r(211));
+		p("Current state of SSM - " + dev.r(212));
+		sleep(delay);
+	}
+	p("Current state of LED - " + dev.r(211));
+	p("Current state of SSM - " + dev.r(212));
+}
