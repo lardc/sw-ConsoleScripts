@@ -35,15 +35,46 @@ function study_ssm()
 {
 	var delay = 200;
 	
+	
 	p("Current state of LED - " + dev.r(211));
 	p("Current state of SSM - " + dev.r(212));
 	dev.c(62);
+	var Time_compare_param = Date.now(); 
+	var LED_State_save = 0; // доп параметр, чтобы if внутри case не срабатывал по неск раз.
 	while(dev.r(212) != 0)
 	{
-		p("Current state of LED - " + dev.r(211));
-		p("Current state of SSM - " + dev.r(212));
-		sleep(delay);
+		switch (dev.r(212))
+		{
+			case 2:
+				if (LED_State_save == 0)
+				{
+					LED_State_save = 1;
+					Time_compare = Date.now();
+				}
+				break;
+				
+			case 3:
+				if (dev.r(211) == 0 && LED_State_save == 1)
+				{
+					p("Время горения = " + (Date.now() - Time_compare));
+					LED_State_save = 0;
+					Time_compare = Date.now()
+				}
+				break;
+			case 4:
+			if (dev.r(211) == 1 && LED_State_save == 0)
+				{
+					p("Время гаснутое = " + (Date.now() - Time_compare));
+					LED_State_save = 1;
+					Time_compare = Date.now()
+				}
+				break;
+		}
+		//p("Current state of LED - " + dev.r(211));
+		//p("Current state of SSM - " + dev.r(212));
+		//sleep(delay);
 	}
+	p("Время горения = " + (Date.now() - Time_compare))
 	p("Current state of LED - " + dev.r(211));
 	p("Current state of SSM - " + dev.r(212));
 }
