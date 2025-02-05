@@ -15,7 +15,7 @@ var ACT_JSON_TO_EP					= 342;
 
 var REG_MEM_SYMBOL					= 299;
 
-var EP_FLASH_DATA					= 20;
+var EP_FLASH_DATA					= 7;
 
 var DT_Char		= 0;
 var DT_Int8U	= 1;
@@ -262,3 +262,21 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 	}
 }
 
+function JSONRead()
+{
+	dev.c(ACT_JSON_INIT_READ);
+	FR_Reset();
+
+	var JSON = "";
+
+	while (true)
+	{
+		var symbol = ReadSymbolWrapper(ACT_JSON_TO_EP);
+
+		JSON += String.fromCharCode(symbol);
+
+		if (symbol == 0 || anykey())
+			break;
+	}
+	print(JSON);
+}
