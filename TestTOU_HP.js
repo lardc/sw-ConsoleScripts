@@ -30,7 +30,7 @@ function TOUHP_Start(N, Voltage, Current)
 	}
 }
 
-function TOUHP_Measure(Voltage, Current)
+function TOUHP_Measure(Voltage, Current, GateCurrent, GateCurrentRate)
 {
 	while(dev.r(192) != 3)
 	{
