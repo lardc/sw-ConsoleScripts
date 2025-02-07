@@ -83,6 +83,37 @@ function TEK_TriggerPulseExtendedInit(Channel, Level, Coupling, Width, Sign, Loc
 	TEK_Send("trigger:main:pulse:source ch" + Channel);
 }
 
+function TEK_MeasMaxInit(Channel, NumMeas)
+{
+	TEK_Send("measurement:meas" + NumMeas + ":source ch" + Channel);
+	TEK_Send("measurement:meas" + NumMeas + ":type maximum");
+}
+
+function TEK_MeasRiseTimeInit(Channel, NumMeas)
+{
+	TEK_Send("measurement:meas" + NumMeas + ":source ch" + Channel);
+	TEK_Send("measurement:meas" + NumMeas + ":type rise");
+}
+
+function TEK_MeasFallTimeInit(Channel, NumMeas)
+{
+	TEK_Send("measurement:meas" + NumMeas + ":source ch" + Channel);
+	TEK_Send("measurement:meas" + NumMeas + ":type fall");
+}
+
+function TEK_CursorTimeInit(Channel)
+{
+	TEK_Send("cursor:select:source ch" + Channel);
+	TEK_Send("cursor:function vbars");
+}
+
+function TEK_CursorTimeРosition(Channel, TimeCursor1, TimeCursor2)
+{
+	TEK_Send("cursor:select:source ch" + Channel);
+	TEK_Send("cursor:vbars:position1 " + TimeCursor1);
+	TEK_Send("cursor:vbars:position2 " + TimeCursor2);
+}
+
 function TEK_AcquireSample()
 {
 	TEK_Send("acquire:mode sample");
