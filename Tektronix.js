@@ -83,6 +83,37 @@ function TEK_TriggerPulseExtendedInit(Channel, Level, Coupling, Width, Sign, Loc
 	TEK_Send("trigger:main:pulse:source ch" + Channel);
 }
 
+function TEK_MeasMaxInit(Channel, NumMeas)
+{
+	TEK_Send("measurement:meas" + NumMeas + ":source ch" + Channel);
+	TEK_Send("measurement:meas" + NumMeas + ":type maximum");
+}
+
+function TEK_MeasRiseTimeInit(Channel, NumMeas)
+{
+	TEK_Send("measurement:meas" + NumMeas + ":source ch" + Channel);
+	TEK_Send("measurement:meas" + NumMeas + ":type rise");
+}
+
+function TEK_MeasFallTimeInit(Channel, NumMeas)
+{
+	TEK_Send("measurement:meas" + NumMeas + ":source ch" + Channel);
+	TEK_Send("measurement:meas" + NumMeas + ":type fall");
+}
+
+function TEK_CursorTimeInit(Channel)
+{
+	TEK_Send("cursor:select:source ch" + Channel);
+	TEK_Send("cursor:function vbars");
+}
+
+function TEK_CursorTimeРosition(Channel, TimeCursor1, TimeCursor2)
+{
+	TEK_Send("cursor:select:source ch" + Channel);
+	TEK_Send("cursor:vbars:position1 " + TimeCursor1);
+	TEK_Send("cursor:vbars:position2 " + TimeCursor2);
+}
+
 function TEK_AcquireSample()
 {
 	TEK_Send("acquire:mode sample");
@@ -138,15 +169,26 @@ function TEK_ChannelScale(Channel, Value)
 	TEK_Send("ch" + Channel + ":scale " + parseFloat(tek_fixed_scale).toExponential());
 }
 
-function TEK_Measure(ChannelID)
+function TEK_Measure(NumMeas)
 {
-	if (ChannelID > 4 || ChannelID < 1)
+	if (NumMeas > 5 || NumMeas < 1)
 	{
-		print("Invalid channel number");
+		print("Invalid meas number");
 		return 0;
 	}
 	else
-		return parseFloat(TEK_Exec("measurement:meas" + ChannelID + ":value?")).toFixed(4);
+		return parseFloat(TEK_Exec("measurement:meas" + NumMeas + ":value?"));
+}
+
+function TEK_MeasureCursor(NumberCursor)
+{
+	if (NumberCursor > 2 || NumberCursor < 1)
+	{
+		print("Invalid cursor number");
+		return 0;
+	}
+	else
+		return parseFloat(TEK_Exec("cursor:vbars:hpos" + NumberCursor + "?"));
 }
 
 function TEK_ChannelOn(ChannelID)

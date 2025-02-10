@@ -1,10 +1,8 @@
-var ACT_FLASH_DIAG_READ_SYMBOL		= 330;
 var ACT_FLASH_DIAG_INIT_READ		= 331;
 var ACT_FLASH_DIAG_SAVE				= 332;
 var ACT_FLASH_DIAG_ERASE			= 333;
 
 var ACT_FLASH_COUNTER_INIT_READ		= 334;
-var ACT_FLASH_COUNTER_READ_SYMBOL	= 335;
 var ACT_FLASH_COUNTER_SET			= 336;
 var ACT_FLASH_COUNTER_SAVE			= 337;
 var ACT_FLASH_COUNTER_ERASE			= 338;
@@ -12,9 +10,12 @@ var ACT_FLASH_COUNTER_ERASE			= 338;
 var ACT_FLASH_COUNTER_TO_EP			= 339;
 var ACT_FLASH_DIAG_TO_EP			= 340;
 
+var ACT_JSON_INIT_READ				= 341;
+var ACT_JSON_TO_EP					= 342;
+
 var REG_MEM_SYMBOL					= 299;
 
-var EP_FLASH_DATA					= 20;
+var EP_FLASH_DATA					= 7;
 
 var DT_Char		= 0;
 var DT_Int8U	= 1;
@@ -29,22 +30,13 @@ var FR_ForceEP = true;
 var FR_LocalDataCopy;
 var FR_LocalDataCounter = 0;
 
-function ReadSymbolFromRegistry(ActReadSymbol)
-{
-	dev.c(ActReadSymbol);
-	return dev.r(REG_MEM_SYMBOL);
-}
-
 function ReadSymbolWrapper(ActReadSymbol)
 {
-	if(!FR_ForceEP)
-		return ReadSymbolFromRegistry(ActReadSymbol);
-	
 	if(!FR_LocalDataCopy || FR_LocalDataCopy.length == FR_LocalDataCounter)
 	{
 		try
 		{
-			dev.c(ActReadSymbol == ACT_FLASH_DIAG_READ_SYMBOL ? ACT_FLASH_DIAG_TO_EP : ACT_FLASH_COUNTER_TO_EP);
+			dev.c(ActReadSymbol);
 			FR_LocalDataCopy = dev.raf(EP_FLASH_DATA);
 			FR_LocalDataCounter = 0;
 		}
@@ -52,8 +44,6 @@ function ReadSymbolWrapper(ActReadSymbol)
 		{
 			if(FR_ForceEP)
 				throw new Error("EP not supported");
-			else
-				return ReadSymbolFromRegistry(ActReadSymbol);
 		}
 	}
 	
@@ -146,17 +136,12 @@ function FlashWrite()
 
 function FlashReadDiag(PrintPlot)
 {
-	FlashReadAll(ACT_FLASH_DIAG_INIT_READ, ACT_FLASH_DIAG_READ_SYMBOL, PrintPlot);
+	FlashReadAll(ACT_FLASH_DIAG_INIT_READ, ACT_FLASH_DIAG_TO_EP, PrintPlot);
 }
 
 function FlashReadCounters()
 {
-	FlashReadAll(ACT_FLASH_COUNTER_INIT_READ, ACT_FLASH_COUNTER_READ_SYMBOL, false);
-}
-
-function FlashReadDiagRaw(i)
-{
-	FlashRead(i, ACT_FLASH_DIAG_INIT_READ);
+	FlashReadAll(ACT_FLASH_COUNTER_INIT_READ, ACT_FLASH_COUNTER_TO_EP, false);
 }
 
 function FlashEraseDiag()
@@ -277,9 +262,21 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 	}
 }
 
-function FlashRead(i, ActMemLabel)
+function JSONRead()
 {
-	dev.c(ActMemLabel);
-	for (var j = 0; j < i; j++)
-		p(ReadSymbolFromRegistry(ActMemLabel == ACT_FLASH_DIAG_INIT_READ ? ACT_FLASH_DIAG_READ_SYMBOL : ACT_FLASH_COUNTER_READ_SYMBOL));
+	dev.c(ACT_JSON_INIT_READ);
+	FR_Reset();
+
+	var JSON = "";
+
+	while (true)
+	{
+		var symbol = ReadSymbolWrapper(ACT_JSON_TO_EP);
+
+		JSON += String.fromCharCode(symbol);
+
+		if (symbol == 0 || anykey())
+			break;
+	}
+	print(JSON);
 }
