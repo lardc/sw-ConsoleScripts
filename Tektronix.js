@@ -169,15 +169,26 @@ function TEK_ChannelScale(Channel, Value)
 	TEK_Send("ch" + Channel + ":scale " + parseFloat(tek_fixed_scale).toExponential());
 }
 
-function TEK_Measure(ChannelID)
+function TEK_Measure(NumMeas)
 {
-	if (ChannelID > 4 || ChannelID < 1)
+	if (NumMeas > 5 || NumMeas < 1)
 	{
-		print("Invalid channel number");
+		print("Invalid meas number");
 		return 0;
 	}
 	else
-		return parseFloat(TEK_Exec("measurement:meas" + ChannelID + ":value?")).toFixed(4);
+		return parseFloat(TEK_Exec("measurement:meas" + NumMeas + ":value?"));
+}
+
+function TEK_MeasureCursor(NumberCursor)
+{
+	if (NumberCursor > 2 || NumberCursor < 1)
+	{
+		print("Invalid cursor number");
+		return 0;
+	}
+	else
+		return parseFloat(TEK_Exec("cursor:vbars:hpos" + NumberCursor + "?"));
 }
 
 function TEK_ChannelOn(ChannelID)
