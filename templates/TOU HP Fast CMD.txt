@@ -1,0 +1,60 @@
+// Пояснения
+CTOU_Init(portTOU, portTek, channelMeasureI, channelMeasureU, channelSync)
+
+// Посмотреть версию прошивки
+PrintFWInfo();
+
+// Обновление прошивки
+i("STM_FWUpdate.js");
+FWU_TOMUHP();
+
+// Скачать дамп регистров
+i("STM_FWUpdate.js");
+FWU_DumpTOMUHP();
+
+// Загрузить дамп регистров
+i("STM_FWUpdate.js");
+FWU_RestoreTOMUHP();
+
+// Измерение
+TOUHP_Measure(Voltage, Current, GateCurrent, GateCurrentRate);
+
+/// Калибровка времени задержки включения Tgd
+// (Offset: -) (K: -)
+// 600 	V: [P0: 62] [P1: 61] [P2: 60]
+// 1000 V: [P0: 65] [P1: 64] [P2: 63]
+// 1500 V: [P0: 68] [P1: 67] [P2: 66]
+i("CalTOU_HP.js");
+ctou_idmax = 100;
+ctou_idmin = 10;
+ctou_id_points = 3;
+ctou_ud = 600;
+ctou_ig = 2000;
+ctou_Rshunt_gate = 2;
+ctou_UseAvg = 0;
+CTOU_Init(5, 14, 1, 2, 3);
+// dev.nid(11);
+
+CTOU_VerifyTime();
+
+CTOU_CalibrateTgd();
+
+/// Калибровка времени задержки включения Tgt
+// (Offset: -) (K: -)
+// 600 	V: [P0: 72] [P1: 71] [P2: 70]
+// 1000 V: [P0: 75] [P1: 74] [P2: 73]
+// 1500 V: [P0: 78] [P1: 77] [P2: 76]
+i("CalTOU_HP.js");
+ctou_idmax = 100;
+ctou_idmin = 10;
+ctou_id_points = 3;
+ctou_ud = 600;
+ctou_ig = 2000;
+ctou_Rshunt_gate = 2;
+ctou_UseAvg = 0;
+CTOU_Init(5, 14, 1, 2, 3);
+// dev.nid(11);
+
+CTOU_VerifyTime();
+
+CTOU_CalibrateTgt();
