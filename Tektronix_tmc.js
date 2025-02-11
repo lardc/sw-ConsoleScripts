@@ -115,20 +115,25 @@ function TEK_tmc_Horizontal(Scale, Position)
 
 function TEK_tmc_Measure(ChannelID)
 {
-	p(tmc.q("*OPC?"));
-	p(parseFloat(tmc.q("measurement:meas" + ChannelID + ":value?").split(' ')[1]))
-	p(tmc.q("*OPC?"));
-	p(parseFloat(tmc.q("measurement:meas" + ChannelID + ":value?").split(' ')[1]))
-	TEK_tmc_Busy();
-	p(tmc.q("*OPC?"));
-	p(parseFloat(tmc.q("measurement:meas" + ChannelID + ":value?").split(' ')[1]))
+	var i = 0
+
 	if (ChannelID > 4 || ChannelID < 1)
 	{
 		print("Invalid channel number");
 		return 0;
 	}
-	else
-		return parseFloat(tmc.q("measurement:meas" + ChannelID + ":value?").split(' ')[1]);
+
+	while(tmc.q("measurement:meas" + ChannelID + ":value?").split(' ')[0] == 9.9E37)
+	{
+		//p(tmc.q("*ESR?"));
+		//p(tmc.q("ALLEV?"));
+		
+		sleep(500);
+		if(i++ >= 10)
+			break;
+	}
+
+	return parseFloat(tmc.q("measurement:meas" + ChannelID + ":value?").split(' ')[0]);
 }
 
 function TEK_tmc_Measurement(ChannelID, Position)
