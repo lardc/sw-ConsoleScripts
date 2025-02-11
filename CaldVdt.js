@@ -48,7 +48,8 @@ cdvdt_DeviderRate = 10; 					// Делитель скорости. Устано�
 // Voltage settings for unit calibration
 cdvdt_Vmin = 500;
 cdvdt_Vmax = 4500;
-cdvdt_Points = 10;
+cdvdt_Stp = 500;
+//cdvdt_Points = 10;
 
 // Measure method
 dVdt_HandCursors =		1; // Курсоры вручную
@@ -170,16 +171,14 @@ function CdVdt_SwitchToCursor()
 function CdVdt_TekMeasurement(Channel)
 {
 	TEK_Send("measurement:meas1:source ch" + Channel);
-	TEK_Send("measurement:meas1:type maximum");
+	TEK_Send("measurement:meas1:type pk2pk");
 	TEK_Send("measurement:meas2:source ch" + Channel);
 	TEK_Send("measurement:meas2:type rise");
-	TEK_Send("measurement:meas3:source ch" + Channel);
-	TEK_Send("measurement:meas3:type pk2pk");
 }
 
 function CdVdt_SwitchToMeasurement()
 {
-	TEK_Send("measurement:meas1:type maximum");
+	TEK_Send("measurement:meas1:type pk2pk");
 }
 
 function CdVdt_MeasuredVdt(Channel)
@@ -208,6 +207,13 @@ function CdVdt_CursorMeasureV()
 
 function CdVdt_MeasureVfast()
 {
+	var i = 0
+	while(TEK_Measure(1) > 10e+6)
+	{
+		sleep(300);
+		if(i++ >= 3)
+			break;
+	}
 	return Math.round(TEK_Measure(1));
 }
 
@@ -215,7 +221,7 @@ function CdVdt_MeasureRate()
 {
 	var TimeRate = TEK_Exec("measurement:meas2:value?");
 	//print("Time Rate, us " + (TimeRate  * 1e6).toFixed(2));
-	return (TEK_Measure(3) * 0.8 / TimeRate  * 1e-6).toFixed(1);
+	return (TEK_Measure(1) * 0.8 / TimeRate  * 1e-6).toFixed(1);
 }
 
 function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
@@ -237,6 +243,7 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 	var cursor_place2 = ((cdvdt_u90 - cdvdt_u50) / Rate) * 1e-6 - 3 * cdvdt_timestep;
 
 	var cdvdt_u_err = 0;
+	var cdvdt_itteration = 1;
 
 	do
 	{
@@ -262,7 +269,7 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 		cursor_place2 = cursor_place2 - cursor_place_fixed2;
 		TEK_Send("cursor:vbars:position2 " + cursor_place2);
 		cdvdt_u_hpos2 = parseFloat(TEK_Exec("cursor:vbars:hpos2?"));
-		cdvdt_u_hpos2.toFixed(1);
+		//cdvdt_u_hpos2.toFixed(1);
 
 		if (anykey()) return 0;
 
@@ -276,16 +283,24 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 		cursor_place1 = cursor_place1 - cursor_place_fixed1;
 		TEK_Send("cursor:vbars:position1 " + cursor_place1);
 		cdvdt_u_hpos1 = parseFloat(TEK_Exec("cursor:vbars:hpos1?"));
-		cdvdt_u_hpos1.toFixed(1);
+		//cdvdt_u_hpos1.toFixed(1);
 
 		if (anykey()) return 0;
+		p("pam: " + cdvdt_itteration++);
+		if (cdvdt_itteration > 20)
+		{
+			p("Неточное измерение, за 20 итераций не смог вероятно найти");
+			break;
+		}
 	}
-
+	
 	var U1 = TEK_Exec("cursor:vbars:hpos1?");
 	var U2 = TEK_Exec("cursor:vbars:hpos2?");
 	var dT = TEK_Exec("cursor:vbars:delta?");
 	var dVdt = (U2 - U1) / dT / 1e+6;
-
+	
+	p("U10% = " + (U1 / Voltage * 100).toFixed(1) + "; U90% = " + (U2 / Voltage * 100).toFixed(1));
+	
 	var dT_err_Theta = cdvdt_timescale * 0.004 * 1e+6 + 0.0001 * dT * 1e+6 + 0.0006;
 	var dT_err_Epsilon = dT_err_Theta / (dT * 1e+6);
 
@@ -387,8 +402,9 @@ function CdVdt_CellCalibrateRate(CellNumber)
 		CdVdt_TekHScale(cdvdt_chMeasure, cdvdt_CalVoltage, CdVdt_MeasureRate() * 2);
 		//TEK_TriggerInit(cdvdt_chMeasure, cdvdt_CalVoltage / 2);
 		TEK_Busy();
+		TEK_ForceTrig();
 		CdVdt_ClearDisplay();
-		
+				
 		// Start pulse
 		for(var CounterAverages = 0; CounterAverages < cdvdt_def_UseAverage; CounterAverages++)
 		{
@@ -402,7 +418,7 @@ function CdVdt_CellCalibrateRate(CellNumber)
 		}
 
 		TEK_Busy();
-		sleep(600);
+		sleep(1500);
 		var v = CdVdt_MeasureVfast();
 		TEK_Busy();
 
@@ -414,7 +430,7 @@ function CdVdt_CellCalibrateRate(CellNumber)
 				print("Enter delta time value (in us):");
 				var dt	=	readline();
 				var rate = (dV / dt).toFixed(2);
-				CdVdt_TekMeasurement(cdvdt_chMeasure);
+				CdVdt_SwitchToMeasurement();
 				sleep(1000);
 				break;
 
@@ -429,8 +445,9 @@ function CdVdt_CellCalibrateRate(CellNumber)
 			case dVdt_AutoCursor:
 				var rate = CdVdt_MeasureRate();
 				CdVdt_SwitchToCursor();
-				rate = CdVdt_MeasureAutoCursor(v, rate, 10, 90).toFixed(1);
-				CdVdt_TekMeasurement(cdvdt_chMeasure);
+				rateObject = CdVdt_MeasureAutoCursor(v, rate, 10, 90);
+				rate = rateObject.Rate.toFixed(1);
+				CdVdt_SwitchToMeasurement();
 				break;
 		}
 
@@ -534,7 +551,7 @@ function CdVdt_CollectFixedRate(Repeat)
 			sleep(100);
 	}
 	
-	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, (cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Points - 1));
+	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, cdvdt_Stp);
 	
 	var cntDone = 0;
 	var cntTotal = VoltageArray.length * cdvdt_RatePoint.length * Repeat;
@@ -600,7 +617,7 @@ function CdVdt_CollectFixedRate(Repeat)
 						print("Enter delta time value (in us):");
 						var dt	=	readline();
 						var rate = (dV / dt).toFixed(2);
-						CdVdt_TekMeasurement(cdvdt_chMeasure);
+						CdVdt_SwitchToMeasurement();
 						sleep(1000);
 						break;
 
@@ -618,7 +635,7 @@ function CdVdt_CollectFixedRate(Repeat)
 						sleep(500);
 						var rateObject = CdVdt_MeasureAutoCursor(VoltageArray[k], rate, 10, 90);
 						rate = rateObject.Rate.toFixed(1);
-						CdVdt_TekMeasurement(cdvdt_chMeasure);
+						CdVdt_SwitchToMeasurement();
 						break;
 				}
 
