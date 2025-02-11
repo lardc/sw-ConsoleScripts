@@ -257,9 +257,9 @@ function GetChannelData(Channel)
 	return res;
 }
 
-function TEK_GD_GetTimeScale()
+function TEK_GetTimeScale()
 {
-	return TEK_Exec("horizontal:main:scale?");
+	return parseFloat(TEK_Exec("horizontal:main:scale?"));
 }
 
 function TEK_CALC_dVdt(Data, LowLevel10, HighLevel90)
@@ -267,7 +267,7 @@ function TEK_CALC_dVdt(Data, LowLevel10, HighLevel90)
 	var dVdt = 0
 	var DataLimit = []
 	var Linear = [];
-	var TimeStep = TEK_GD_GetTimeScale() / 250
+	var TimeStep = TEK_GetTimeScale() / 250
 	var MaxLevel = Data[0]
 
 	var sumx = 0;
