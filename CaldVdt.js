@@ -1,7 +1,6 @@
 include("Tektronix.js")
 include("CalGeneral.js")
 include("TestdVdt.js")
-include("SiC_Calc.js")
 
 cdvdt_chMeasure = 1;
 cdvdt_Powerex = 1;
@@ -121,7 +120,10 @@ function CdVdt_Init(portdVdt, portTek, channelMeasure)
 	dev.Connect(portdVdt);
 	
 	// Init Tektronix
-	TEK_PortInit(portTek);
+	if(dVdt_Approx)
+		TEK_GD_Init(portTek)
+	else
+		TEK_PortInit(portTek);
 	
 	// Tektronix init
 	// Init channels
@@ -141,7 +143,7 @@ function CdVdt_Init(portdVdt, portTek, channelMeasure)
 	}
 	
 	// Init cursor
-	CdVdt_TekCursor(channelMeasure);
+	CdVdt_TekCursor(cdvdt_chMeasure);
 	
 	// Init measurement
 	CdVdt_TekMeasurement(cdvdt_chMeasure);
@@ -211,6 +213,8 @@ function CdVdt_MeasureVfast()
 	while(TEK_Measure(1) > 10e+6)
 	{
 		sleep(300);
+		p("Error Ud");
+
 		if(i++ >= 3)
 			break;
 	}
@@ -219,8 +223,7 @@ function CdVdt_MeasureVfast()
 
 function CdVdt_MeasureRate()
 {
-	var TimeRate = TEK_Exec("measurement:meas2:value?");
-	//print("Time Rate, us " + (TimeRate  * 1e6).toFixed(2));
+	var TimeRate = TEK_Measure(2);
 	return (TEK_Measure(1) * 0.8 / TimeRate  * 1e-6).toFixed(1);
 }
 
@@ -236,7 +239,7 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 	var cdvdt_u10_err_high = cdvdt_u10 * 1.3
 	var cdvdt_u10_err_low = cdvdt_u10 * 0.8
 
-	var cdvdt_timescale = TEK_Exec("horizontal:main:scale?");
+	var cdvdt_timescale = TEK_GD_GetTimeScale();
 	var cdvdt_timestep = cdvdt_timescale / 25;
 
 	var cursor_place1 = ((cdvdt_u10 - cdvdt_u50) / Rate) * 1e-6 - 3 * cdvdt_timestep;
@@ -269,7 +272,6 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 		cursor_place2 = cursor_place2 - cursor_place_fixed2;
 		TEK_Send("cursor:vbars:position2 " + cursor_place2);
 		cdvdt_u_hpos2 = parseFloat(TEK_Exec("cursor:vbars:hpos2?"));
-		//cdvdt_u_hpos2.toFixed(1);
 
 		if (anykey()) return 0;
 
@@ -283,13 +285,13 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 		cursor_place1 = cursor_place1 - cursor_place_fixed1;
 		TEK_Send("cursor:vbars:position1 " + cursor_place1);
 		cdvdt_u_hpos1 = parseFloat(TEK_Exec("cursor:vbars:hpos1?"));
-		//cdvdt_u_hpos1.toFixed(1);
 
 		if (anykey()) return 0;
-		p("pam: " + cdvdt_itteration++);
+		
+		cdvdt_itteration++;
 		if (cdvdt_itteration > 20)
 		{
-			p("Неточное измерение, за 20 итераций не смог вероятно найти");
+			p("Курсор далеко от требуемой границы!");
 			break;
 		}
 	}
@@ -417,8 +419,6 @@ function CdVdt_CellCalibrateRate(CellNumber)
 			}
 		}
 
-		TEK_Busy();
-		sleep(1500);
 		var v = CdVdt_MeasureVfast();
 		TEK_Busy();
 
@@ -439,7 +439,7 @@ function CdVdt_CellCalibrateRate(CellNumber)
 				break;
 
 			case dVdt_Approx:
-				var rate = SiC_CALC_dVdt(SiC_GD_GetChannelCurve(cdvdt_chMeasure),10,90).toFixed(1);
+				var rate = TEK_CALC_dVdt(GetChannelData(cdvdt_chMeasure),10,90).toFixed(1);
 				break;
 
 			case dVdt_AutoCursor:
@@ -573,7 +573,9 @@ function CdVdt_CollectFixedRate(Repeat)
 				dev.w(129, cdvdt_RatePoint[i] * cdvdt_DeviderRate)
 				
 				CdVdt_TekHScale(cdvdt_chMeasure, VoltageArray[k], cdvdt_RatePoint[i]);
-				CdVdt_ClearDisplay();
+				//CdVdt_ClearDisplay();
+				TEK_ForceTrig();
+				sleep(1000)
 				
 				// Start pulse
 				for (var CounterAverages = 0; CounterAverages < cdvdt_def_UseAverage; CounterAverages++)
@@ -601,11 +603,7 @@ function CdVdt_CollectFixedRate(Repeat)
 					}
 
 					dev.c(100);
-
-					while(TEK_Exec("TRIGger:STATE?") == "REA") sleep(50);
 				}
-				TEK_Busy();
-				sleep(500);
 				var v = CdVdt_MeasureVfast();
 				TEK_Busy();
 
@@ -626,7 +624,7 @@ function CdVdt_CollectFixedRate(Repeat)
 						break;
 
 					case dVdt_Approx:
-						var rate = SiC_CALC_dVdt(SiC_GD_GetChannelCurve(cdvdt_chMeasure),10,90).toFixed(1);
+						var rate = TEK_CALC_dVdt(GetChannelData(cdvdt_chMeasure),10,90).toFixed(1);
 						break;
 
 					case dVdt_AutoCursor:

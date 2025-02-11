@@ -212,6 +212,15 @@ function TEK_ChannelOff(ChannelID)
 		TEK_Send("sel:ch" + ChannelID + " off");
 }
 
+function TEK_GD_Init(Port)
+{
+	TEK_PortInit(Port);
+	TEK_Send("data:encdg rpb");
+	TEK_Send("data:width 1");
+	TEK_Send("data:start 1");
+	TEK_Send("data:stop 2500");
+}
+
 function TEK_PlotChannel(Channel)
 {
 	plot(GetChannelData(Channel), 1,1);
@@ -219,42 +228,102 @@ function TEK_PlotChannel(Channel)
 
 function GetChannelData(Channel) 
 {
-
 	// read basic data
 	var p_scale = TEK_Exec("ch" + Channel + ":scale?");
 	var p_position = TEK_Exec("ch" + Channel + ":position?");
-
+	
 	// init data read
 	TEK_Send("data:source ch" + Channel);
-
+	
 	// read curve
 	var data_input = TEK_Exec("curve?");
-	print("Channel " + Channel + " loaded");
+	//print("Channel " + Channel + " loaded");
 
 	// validate data
-	if(tek_measuring_device == "TPS2014")
-	{
-		if ((data_input[0] != "#") || (data_input[1] != 4) || (data_input[2] != 5) ||
-			(data_input[3] != 0) || (data_input[4] != 0) || (data_input[5] != 0))
-		{
-			print("Invalid CH" + Channel + " data.");
-			return;
-		}
-	}
-	else
-	{
-		if ((data_input[0] != "#") || (data_input[1] != 4) || (data_input[2] != 2) ||
+	if ((data_input[0] != "#") || (data_input[1] != 4) || (data_input[2] != 2) ||
 			(data_input[3] != 5) || (data_input[4] != 0) || (data_input[5] != 0))
-		{
-			print("Invalid CH" + Channel + " data.");
-			return;
-		}
+	{
+		print("Invalid CH" + Channel + " data.");
+		return;
 	}
 
 	// adjust data
 	var res = [];
 	for (var i = 6; i < 2506; ++i)
-		res[i - 6] = (((data_input[i].charCodeAt(0) - 128 - p_position * 25) * p_scale / 25)*10000).toFixed(0);
+		res[i - 6] = (data_input[i].charCodeAt(0) - 128 - p_position * 25) * p_scale / 25;
 	
+	//plot(res, 1, 1);
+
 	return res;
+}
+
+function TEK_GD_GetTimeScale()
+{
+	return TEK_Exec("horizontal:main:scale?");
+}
+
+function TEK_CALC_dVdt(Data, LowLevel10, HighLevel90)
+{
+	var dVdt = 0
+	var DataLimit = []
+	var Linear = [];
+	var TimeStep = TEK_GD_GetTimeScale() / 250
+	var MaxLevel = Data[0]
+
+	var sumx = 0;
+	var sumy = 0;
+	var sumx2 = 0;
+	var sumxy = 0;
+	var k = 0;
+	var b = 0;
+	var i_position = 0
+	var i_correct = 0;
+
+	// поиск максимального значения для выбора границ
+	for (var i = 0; i < Data.length; ++i)
+	{
+		if (Data[i] > MaxLevel)
+			MaxLevel = Data[i]
+		if (Data[i] < 0)
+			Data[i] = 0;
+	}
+
+	var LowValue = MaxLevel * LowLevel10 / 100
+	var HighValue = MaxLevel * HighLevel90 / 100
+
+	// исключаем точки которые менее или более указанных границ
+	for (var i = 0; (i < Data.length - 1) && Data[i] < MaxLevel; ++i)
+		if(Data[i] > LowValue && Data[i] < HighValue)
+		{
+			DataLimit.push(Data[i])
+		}
+		else if (Data[i] <= LowValue)
+			i_position = i;
+
+	// рассчет апроксимационной прямой
+	for (var i = 0; i < DataLimit.length - 1; i++)
+	{
+		sumx += i;
+		sumy += DataLimit[i];
+		sumx2 += i * i;
+		sumxy += i * DataLimit[i];
+	}
+
+	k = (DataLimit.length * sumxy - (sumx * sumy)) / (DataLimit.length * sumx2 - sumx * sumx);
+	b = (sumy - k * sumx) / DataLimit.length;
+
+	// построение апроксимационной прямой на графике
+	while ((k * i_correct + b) > 0)
+		i_correct -= 1;
+	i_correct += 1;
+
+	for (var i = 0; (k * i_correct + b) < MaxLevel; i_correct++)
+		Linear[i + i_position + i_correct] = k * i_correct + b;
+	
+	plot2(Data, Linear, 1, 1)
+
+	dVdt = k / TimeStep * 1e-6;
+	//p("dVdt approx("+ LowLevel10 +"-"+ HighLevel90 +") = " + (dVdt).toFixed(2) + " V/us");
+
+	return dVdt;
 }
