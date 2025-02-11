@@ -1,8 +1,6 @@
 include("Tektronix.js")
 include("CalGeneral.js")
 
-tek_measuring_device = "TPS2024";	// "TPS2014"
-
 // Channels
 UsePort = MAXPort = 1;
 MINPort = 2;
@@ -17,17 +15,8 @@ Use_Max = 0.9;
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
 function TEK_GD_Init(Port)
 {
-	if(tek_measuring_device == "TPS2014")
-	{
-		TEK_PortInit(Port);
-		TEK_Send("data:encdg srp");
-	}
-	else
-	{
-	TEK_PortInit(Port, 9600);
+	TEK_PortInit(Port);
 	TEK_Send("data:encdg rpb");
-	}
-
 	TEK_Send("data:width 1");
 	TEK_Send("data:start 1");
 	TEK_Send("data:stop 2500");
@@ -53,8 +42,6 @@ function TEK_Init(PortTek,UsePort)
 		else
 			TEK_ChannelOff(i);
 	}
-
-	
 }
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
 function SaveChannelData(NameFile, Data)
