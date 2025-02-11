@@ -191,6 +191,11 @@ function TEK_MeasureCursor(NumberCursor)
 		return parseFloat(TEK_Exec("cursor:vbars:hpos" + NumberCursor + "?"));
 }
 
+function TEK_MeasureCursorDelta()
+{
+	return parseFloat(TEK_Exec("cursor:vbars:delta?"));
+}
+
 function TEK_ChannelOn(ChannelID)
 {
 	if (ChannelID > 4 || ChannelID < 1)
