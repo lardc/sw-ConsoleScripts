@@ -169,6 +169,13 @@ function TEK_ChannelScale(Channel, Value)
 	TEK_Send("ch" + Channel + ":scale " + parseFloat(tek_fixed_scale).toExponential());
 }
 
+function TEK_ScaleVertical(ChannelID, Value, Procent)
+{
+	Procent = Procent / 100;
+	var scale = (Value / (8 * Procent));
+	TEK_Send("ch" + Channel + ":scale " + Value);
+}
+
 function TEK_Measure(NumMeas)
 {
 	if (NumMeas > 5 || NumMeas < 1)
