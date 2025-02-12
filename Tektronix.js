@@ -89,6 +89,12 @@ function TEK_MeasMaxInit(Channel, NumMeas)
 	TEK_Send("measurement:meas" + NumMeas + ":type maximum");
 }
 
+function TEK_MeasPk2PkInit(Channel, NumMeas)
+{
+	TEK_Send("measurement:meas" + NumMeas + ":source ch" + Channel);
+	TEK_Send("measurement:meas" + NumMeas + ":type pk2pk");
+}
+
 function TEK_MeasRiseTimeInit(Channel, NumMeas)
 {
 	TEK_Send("measurement:meas" + NumMeas + ":source ch" + Channel);
