@@ -127,7 +127,7 @@ function CGEN_Normalize(Data)
 // Функция знака с учётом формул МА
 Math.sign_ma = function(x)
 {
-	if (a < 0)
+	if (x < 0)
 		return -1;
 	else
 		return 1;

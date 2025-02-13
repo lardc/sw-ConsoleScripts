@@ -179,7 +179,7 @@ function TEK_ScaleVertical(ChannelID, Value, Procent)
 {
 	Procent = Procent / 100;
 	var scale = (Value / (8 * Procent));
-	TEK_Send("ch" + Channel + ":scale " + Value);
+	TEK_Send("ch" + ChannelID + ":scale " + scale);
 }
 
 function TEK_Measure(NumMeas)
