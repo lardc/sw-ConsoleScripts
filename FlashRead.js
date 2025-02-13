@@ -154,6 +154,16 @@ function FlashEraseCounters()
 	dev.c(ACT_FLASH_COUNTER_ERASE);
 }
 
+function PrintJSON()
+{
+	print(ReadJSON());
+}
+
+function SaveJSON()
+{
+	save("Ranges.js", ReadJSON());
+}
+
 function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 {
 	dev.c(ActMemLabel);
@@ -262,7 +272,7 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 	}
 }
 
-function JSONRead()
+function ReadJSON()
 {
 	dev.c(ACT_JSON_INIT_READ);
 	FR_Reset();
@@ -278,5 +288,5 @@ function JSONRead()
 		if (symbol == 0 || anykey())
 			break;
 	}
-	print(JSON);
+	return JSON;
 }
