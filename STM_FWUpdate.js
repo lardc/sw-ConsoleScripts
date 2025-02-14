@@ -246,12 +246,12 @@ function FWU_ATUHP()
 
 function FWU_DumpATUHP(Num)
 {
-	FWU_DumpCommon("ATUHP", Num, 126)
+	FWU_DumpCommon("ATUHP", Num, 126);
 }
 
 function FWU_RestoreATUHP(Num)
 {
-	FWU_RestoreCommon("ATUHP", Num)
+	FWU_RestoreCommon("ATUHP", Num);
 }
 
 // TOMU
@@ -262,12 +262,12 @@ function FWU_TOMU()
 
 function FWU_DumpTOMU()
 {
-	dev.Dump("../../hw-TOMUControlBoard/Firmware/TOMUControlBoard.regdump", 0, 126);
+	FWU_DumpCommon("TOMU", Num, 126);
 }
 
 function FWU_RestoreTOMU()
 {
-	dev.Restore("../../hw-TOMUControlBoard/Firmware/TOMUControlBoard.regdump");
+	FWU_RestoreCommon("TOMU", Num);
 }
 //------------------------
 
@@ -279,12 +279,12 @@ function FWU_TOMUHP()
 
 function FWU_DumpTOMUHP()
 {
-	dev.Dump("../../hw-TOMUHPControlBoard/tomuhp.regdump", 0, 126);
+	FWU_DumpCommon("TOMUHP", Num, 126);
 }
 
 function FWU_RestoreTOMUHP()
 {
-	dev.Restore("../../hw-TOMUHPControlBoard/tomuhp.regdump");
+	FWU_RestoreCommon("TOMUHP", Num);
 }
 //------------------------
 
@@ -296,12 +296,12 @@ function FWU_TOCUHP()
 
 function FWU_DumpTOCUHP()
 {
-	dev.Dump("../../hw-TOCUHPControlBoard/Firmware/tocuhp.regdump", 0, 126);
+	FWU_DumpCommon("TOCUHP", Num, 126);
 }
 
 function FWU_RestoreTOCUHP()
 {
-	dev.Restore("../../hw-TOCUHPControlBoard/Firmware/tocuhp.regdump");
+	FWU_RestoreCommon("TOCUHP", Num);
 }
 //------------------------
 
@@ -313,12 +313,12 @@ function FWU_LSLH()
 
 function FWU_DumpLSLH(Num)
 {
-	FWU_DumpCommon("LSLH", Num, 126)
+	FWU_DumpCommon("LSLH", Num, 126);
 }
 
 function FWU_RestoreLSLH(Num)
 {
-	FWU_RestoreCommon("LSLH", Num)
+	FWU_RestoreCommon("LSLH", Num);
 }
 //------------------------
 
@@ -330,12 +330,12 @@ function FWU_LSLPC()
 
 function FWU_DumpLSLPC()
 {
-	dev.Dump("../../hw-LSLPowerCell/Firmware/LSLPowerCell.regdump", 0, 126);
+	FWU_DumpCommon("LSLPC", Num, 126);
 }
 
 function FWU_RestoreLSLPC()
 {
-	dev.Restore("../../hw-LSLPowerCell/Firmware/LSLPowerCell.regdump");
+	FWU_RestoreCommon("LSLPC", Num);
 }
 //------------------------
 
