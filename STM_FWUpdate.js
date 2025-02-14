@@ -260,12 +260,12 @@ function FWU_TOMU()
 	FWUpdateSTM("../../hw-TOMUControlBoard/Firmware/Release/TOMUControlBoard.binary");
 }
 
-function FWU_DumpTOMU()
+function FWU_DumpTOMU(Num)
 {
 	FWU_DumpCommon("TOMU", Num, 126);
 }
 
-function FWU_RestoreTOMU()
+function FWU_RestoreTOMU(Num)
 {
 	FWU_RestoreCommon("TOMU", Num);
 }
@@ -277,12 +277,12 @@ function FWU_TOMUHP()
 	FWUpdateSTM("../../hw-TOMUHPControlBoard/Firmware/Release/TOMUHPControlBoard.binary");
 }
 
-function FWU_DumpTOMUHP()
+function FWU_DumpTOMUHP(Num)
 {
 	FWU_DumpCommon("TOMUHP", Num, 126);
 }
 
-function FWU_RestoreTOMUHP()
+function FWU_RestoreTOMUHP(Num)
 {
 	FWU_RestoreCommon("TOMUHP", Num);
 }
@@ -294,12 +294,12 @@ function FWU_TOCUHP()
 	FWUpdateSTM("../../hw-TOCUHPControlBoard/Firmware/Release/TOCUHPControlBoard.binary");
 }
 
-function FWU_DumpTOCUHP()
+function FWU_DumpTOCUHP(Num)
 {
 	FWU_DumpCommon("TOCUHP", Num, 126);
 }
 
-function FWU_RestoreTOCUHP()
+function FWU_RestoreTOCUHP(Num)
 {
 	FWU_RestoreCommon("TOCUHP", Num);
 }
@@ -328,12 +328,12 @@ function FWU_LSLPC()
 	FWUpdateSTM("../../hw-LSLPowerCell/Firmware/Release/LSLPowerCell.binary");
 }
 
-function FWU_DumpLSLPC()
+function FWU_DumpLSLPC(Num)
 {
 	FWU_DumpCommon("LSLPC", Num, 126);
 }
 
-function FWU_RestoreLSLPC()
+function FWU_RestoreLSLPC(Num)
 {
 	FWU_RestoreCommon("LSLPC", Num);
 }
