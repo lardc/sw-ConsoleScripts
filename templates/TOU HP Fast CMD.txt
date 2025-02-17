@@ -19,17 +19,49 @@ FWU_RestoreTOMUHP();
 // Измерение
 TOUHP_Measure(Voltage, Current, GateCurrent, GateCurrentRate);
 
-/// Калибровка времени задержки включения Tgd
+/// Калибровка задания тока управления Ig
+// (Offset: 16) (K: 15)
+// [P0: 19] [P1: 18] [P2: 17]
+i("CalTOU_HP.js");
+ctou_IgArray = [2000, 3000, 4000, 5000];
+ctou_Rshunt_gate = 2;
+ctou_UseAvg = 0;
+ctou_Iterations = 3;
+CTOU_Init(12, 14, 1, 2, 3);
+//dev.nid(11);
+
+CTOU_VerifyIg();
+
+CTOU_CalibrateIg();
+
+/// Калибровка задания скорости нарастания тока управления 
+// (Offset: 21) (K: 20)
+// [P0: 24] [P1: 23] [P2: 22]
+i("CalTOU_HP.js");
+ctou_IgArray = [2000, 3000, 4000, 5000];
+ctou_Rshunt_gate = 2;
+ctou_rise_time_ig = 1;
+ctou_UseAvg = 0;
+ctou_Iterations = 3;
+CTOU_Init(12, 14, 1, 2, 3);
+//dev.nid(11);
+
+CTOU_VerifyRateIg();
+
+CTOU_CalibrateRateIg();
+
+
+/// Калибровка измерения времени задержки включения Tgd
 // (Offset: -) (K: -)
 // 600 	V: [P0: 62] [P1: 61] [P2: 60]
 // 1000 V: [P0: 65] [P1: 64] [P2: 63]
 // 1500 V: [P0: 68] [P1: 67] [P2: 66]
 i("CalTOU_HP.js");
-ctou_idmax = 100;
-ctou_idmin = 10;
+ctou_idmax = 400;
+ctou_idmin = 125;
 ctou_id_points = 3;
-ctou_ud = 600;
-ctou_ig = 2000;
+ctou_ud_test = 600;
+ctou_ig_test = 2000;
 ctou_Rshunt_gate = 2;
 ctou_UseAvg = 0;
 CTOU_Init(5, 14, 1, 2, 3);
@@ -39,17 +71,17 @@ CTOU_VerifyTime();
 
 CTOU_CalibrateTgd();
 
-/// Калибровка времени задержки включения Tgt
+/// Калибровка измерения времени задержки включения Tgt
 // (Offset: -) (K: -)
 // 600 	V: [P0: 72] [P1: 71] [P2: 70]
 // 1000 V: [P0: 75] [P1: 74] [P2: 73]
 // 1500 V: [P0: 78] [P1: 77] [P2: 76]
 i("CalTOU_HP.js");
-ctou_idmax = 100;
-ctou_idmin = 10;
+ctou_idmax = 400;
+ctou_idmin = 125;
 ctou_id_points = 3;
-ctou_ud = 600;
-ctou_ig = 2000;
+ctou_ud_test = 600;
+ctou_ig_test = 2000;
 ctou_Rshunt_gate = 2;
 ctou_UseAvg = 0;
 CTOU_Init(5, 14, 1, 2, 3);
