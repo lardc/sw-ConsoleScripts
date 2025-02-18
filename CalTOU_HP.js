@@ -8,14 +8,14 @@ ctou_id_test = 50;		// in A
 ctou_ig_test = 2000; 	// in mA
 ctou_rise_time_ig = 1; 	// in us
 //
-ctou_idmin = 125;
-ctou_idmax = 400;
+ctou_idmin = 125;		// in A
+ctou_idmax = 400;		// in A
 ctou_id_points = 3;
 //
-ctou_ud_array = [600, 1000, 1500];
-ctou_ig_array = [2000, 3000, 4000, 5000];
+ctou_ud_array = [600, 1000, 1500];			// in V
+ctou_ig_array = [2000, 3000, 4000, 5000];	// in mA
 //
-ctou_Ri = 1e-3;			// Current shunt resistance
+ctou_Ri = 1e-3;			// Current shunt resistance, in Ohm
 ctou_Rshunt_gate = 2; 	// Gate current shunt resistance, in Ohm
 //
 ctou_nid = 11;			// CAN node id
