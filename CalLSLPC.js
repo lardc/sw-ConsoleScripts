@@ -7,18 +7,17 @@ include("TEK_GetData.js")
 cal_LSLPC_Compatibility = 1; // 0 - если прошивка блока на IAR, 1 - если прошивка на Atolic
 
 // Calibration setup parameters
-cal_Rshunt = 750;	// in uOhms
+cal_Rshunt = 250;	// in uOhms
 
 // Current range number
-cal_CurrentRange = 0; // 0 = Range [ <= 1000 A]; 1 = Range [ < 6500 A]
+cal_CurrentRange = 0; // 0 = Range [ <= 350 A]; 1 = Range [ < 1100 A]; 2 = Range [ < 6500 A]
 //
 cal_Points = 10;
 //
-cal_IdMin = [100, 1001];
-cal_IdMax = [1000, 6500];
+cal_IdMin = [100, 351, 1101];
+cal_IdMax = [349, 1099, 6500];
 //
 cal_Iterations = 1;
-cal_UseAvg = 1;
 
 // Counters
 cal_CntTotal = 0;
@@ -29,7 +28,9 @@ cal_chMeasureId = 1;
 
 // Results storage
 cal_Id = [];
+cal_IdRaw = [];
 cal_IdDAC = [];
+cal_IdPredictDACError = [];
 
 // Tektronix data
 cal_IdSc = [];
@@ -70,22 +71,108 @@ function CAL_Init(portDevice, portTek, channelMeasureId)
 }
 //--------------------
 
+function CAL_TekInit()
+{
+	TEK_ChannelInit(cal_chMeasureId, "1", "0.01");
+	TEK_TriggerPulseInit(cal_chMeasureId, "0.04");
+	TEK_Horizontal("1e-3", "-2e-3");
+	TEK_MeasMaxInit(cal_chMeasureId, cal_chMeasureId);
+}
+//--------------------
+
+function CAL_CheckRegulatorStatus()
+{
+	if (dev.r(49) == 0 && dev.r(50) == 0 && dev.r(51) == 0
+			 && dev.r(52) == 0 && dev.r(53) == 0 && dev.r(54) == 0)
+		false
+	else
+		true
+}
+
+function CAL_CalibrateDAC()
+{
+	if(CAL_CheckRegulatorStatus())
+	{
+		p("Regulator is active. DAC calibration unavailable");
+		return;
+	}
+
+	CAL_ResetA();
+	
+	// Tektronix init
+	CAL_TekInit();
+
+	// Reload values
+	var CurrentArray = CGEN_GetRangeLogarithm(cal_IdMin[cal_CurrentRange], cal_IdMax[cal_CurrentRange], cal_Points);
+	
+	if (CAL_CollectId(CurrentArray, cal_Iterations))
+	{
+		CAL_RefreshDACSettings();
+		CAL_SaveRawId("LSLPC_IdRaw");
+
+		// Calculate correction
+		cal_IdCorr = CGEN_GetCorrection("LSLPC_IdRaw");
+		CAL_SetCoefIdRaw(cal_IdCorr[0], cal_IdCorr[1]);
+		CAL_PrintCoefIdRaw();
+	}
+}
+//--------------------
+
+function CAL_RefreshDACSettings()
+{
+	CoefDACObject = CAL_ReadCoefDAC();
+	var K_old = CoefDACObject.K / 1e3;
+	var B_old = CoefDACObject.B;
+
+	for (var i = 0; i < cal_Id.length; i++)
+	{
+		cal_IdRaw[i] = cal_IdDAC[i] - dev.r(15);
+	}
+}
+
+function CAL_ReadCoefDAC()
+{
+	switch(cal_CurrentRange)
+	{
+		case 0:
+		{
+			K = dev.rs(20);
+			B = dev.rs(21);
+		}
+		break;
+		
+		case 1:
+		{
+			K = dev.rs(22);
+			B = dev.rs(23);
+		}
+		break;
+		
+		case 2:
+		{
+			K = dev.rs(24);
+			B = dev.rs(25);
+		}
+		break;
+	}
+	return {K : K, B : B};
+}
+
 function CAL_CalibrateId()
 {		
 	CAL_ResetA();
 	CAL_ResetIdCal();
 	
 	// Tektronix init
-	CAL_TekInit(cal_chMeasureId);
+	CAL_TekInit();
 
 	// Reload values
-	var cal_IdStp = Math.round((cal_IdMax[cal_CurrentRange] - cal_IdMin[cal_CurrentRange]) / (cal_Points - 1));
-	var CurrentArray = CGEN_GetRange(cal_IdMin[cal_CurrentRange], cal_IdMax[cal_CurrentRange], cal_IdStp);
-
+	var CurrentArray = CGEN_GetRangeLogarithm(cal_IdMin[cal_CurrentRange], cal_IdMax[cal_CurrentRange], cal_Points);
+	
 	if (CAL_CollectId(CurrentArray, cal_Iterations))
 	{
 		CAL_SaveId("LSLPC_Id");
-		CAL_SaveRawId("LSLPC_DAC_fixed");
+		CAL_SaveDACId("LSLPC_DAC_fixed");
 
 		// Plot relative error distribution
 		scattern(cal_IdSc, cal_IdErr, "Current (in A)", "Error (in %)", "Current setpoint relative error");
@@ -111,7 +198,7 @@ function CAL_VerifyId()
 	if (CAL_CollectId(CurrentArray, cal_Iterations))
 	{
 		CAL_SaveId("LSLPC_Id_fixed");
-		CAL_SaveRawId("LSLPC_DAC_fixed");
+		CAL_SaveDACId("LSLPC_DAC_fixed");
 
 		// Plot relative error distribution
 		scattern(cal_IdSc, cal_IdErr, "Current (in A)", "Error (in %)", "Current setpoint relative error");
@@ -130,7 +217,7 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 		for (var j = 0; j < CurrentValues.length; j++)
 		{
 			var AvgNum;
-			if (CurrentValues[j] * cal_Rshunt / 1000000 < 0.3)
+			if (CurrentValues[j] * cal_Rshunt / 1e6 < 0.3)
 			{
 				AvgNum = 4;
 				TEK_AcquireAvg(AvgNum);
@@ -143,7 +230,8 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 
 			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
 			//
-			CAL_TekScale(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1000000);
+			TEK_ScaleVertical(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1e6, 90);
+			TEK_TriggerPulseInit(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1e6 / 3);
 			
 			for (var k = 0; k < AvgNum; k++)
 			{
@@ -156,23 +244,20 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 			(cal_LSLPC_Compatibility == 1) ? IdSet = dev.r(128) / 10 : IdSet = dev.r(64);
 			cal_Id.push(IdSet);
 			print("Idset,     A: " + IdSet);
-			// print("IdsetRaw, A: " + (dev.r(21) * Math.pow(IdSet, dev.r(20) / 1000)).toFixed(0)); // для грубой калибровки
-
+			
 			// Scope data
-			var IdSc = (CAL_Measure(cal_chMeasureId) / cal_Rshunt * 1000000).toFixed(2);
+			var IdSc = (TEK_Measure(cal_chMeasureId) / cal_Rshunt * 1000000).toFixed(2);
 			cal_IdSc.push(IdSc);
 			print("Idtek,     A: " + IdSc);
 
 			// DAC data
-			Id_DACArray = dev.rafs(6);
-			var IdDAC = TEK_GD_MAX(Id_DACArray).Value;
+			var IdDAC = dev.r(202);
 			cal_IdDAC.push(IdDAC);
 			print("DAC,      pt: " + IdDAC);
 
 			// Relative error
-			Id_UnitArray = dev.rafs(1);
-			var IdUnit = TEK_GD_Sinus_MAX(Id_UnitArray)
-			IdUnitErr = ((IdUnit - IdSc) / IdSc * 100).toFixed(2);
+			var IdUnit = dev.r(200);
+			var IdUnitErr = ((IdUnit - IdSc) / IdSc * 100).toFixed(2);
 			cal_IdUnitErr.push(IdUnitErr);
 			print("Idunit,    A: " + IdUnit);
 			print("IdunitErr, %: " + IdUnitErr);
@@ -190,42 +275,13 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 }
 //--------------------
 
-function CAL_TekScale(Channel, Value)
-{
-	// 0.9 - use 90% of full range
-	// 8 - number of scope grids in full scale
-	var scale = (Value / (8 * 0.9));
-	TEK_Send("ch" + Channel + ":scale " + scale);
-	
-	TEK_TriggerPulseInit(cal_chMeasureId, Value / 5);
-	//while(TEK_Exec("TRIGger:STATE?") != "REA") // закомментировать для TPS2014
-		sleep(500);
-}
-//--------------------
-
-function CAL_TekInit()
-{
-	TEK_ChannelInit(cal_chMeasureId, "1", "0.01");
-	TEK_TriggerPulseInit(cal_chMeasureId, "0.04");
-	TEK_Horizontal("1e-3", "-2e-3");
-	TEK_Send("measurement:meas" + cal_chMeasureId + ":source ch" + cal_chMeasureId);
-	TEK_Send("measurement:meas" + cal_chMeasureId + ":type maximum");
-}
-//--------------------
-
-function CAL_Measure(Channel)
-{
-	//while(TEK_Exec("TRIGger:STATE?") != "REA")  // закомментировать для TPS2014
-		sleep(500);
-	return TEK_Measure(Channel);
-}
-//--------------------
-
 function CAL_ResetA()
 {	
 	// Results storage
 	cal_Id = [];
+	cal_IdRaw = [];
 	cal_IdDAC = [];
+	cal_IdPredictDACError = [];
 
 	// Tektronix data
 	cal_IdSc = [];
@@ -247,7 +303,13 @@ function CAL_SaveId(NameId)
 
 function CAL_SaveRawId(NameId)
 {
-	CGEN_SaveArrays(NameId, cal_Id, cal_IdSc, cal_IdDAC);
+	CGEN_SaveArrays(NameId, cal_IdSc, cal_IdRaw, cal_IdErr);
+}
+//--------------------
+
+function CAL_SaveDACId(NameId)
+{
+	CGEN_SaveArrays(NameId, cal_IdDAC, cal_IdSc, cal_IdPredictDACError);
 }
 //--------------------
 
@@ -260,7 +322,7 @@ function CAL_ResetIdCal()
 function CAL_SetCoefId(P2, P1, P0)
 {
 	switch(cal_CurrentRange)
-	{	
+	{
 		case 0:
 		{
 			dev.ws(31, Math.round(P2 * 1e6));
@@ -284,7 +346,35 @@ function CAL_SetCoefId(P2, P1, P0)
 			dev.ws(45, Math.round(P0) * 10);
 		}
 		break;
-	}		
+	}
+}
+//--------------------
+
+function CAL_SetCoefIdRaw(K, B)
+{
+	switch(cal_CurrentRange)
+	{
+		case 0:
+		{
+			dev.w(20, Math.round(K * 1000));
+			dev.ws(21, Math.round(B));
+		}
+		break;
+		
+		case 1:
+		{
+			dev.w(22, Math.round(K * 1000));
+			dev.ws(23, Math.round(B));
+		}
+		break;
+		
+		case 2:
+		{
+			dev.w(24, Math.round(K * 1000));
+			dev.ws(25, Math.round(B));
+		}
+		break;
+	}
 }
 //--------------------
 
@@ -316,5 +406,13 @@ function CAL_PrintCoefId()
 		}
 		break;
 	}
+}
+//--------------------
+
+function CAL_PrintCoefIdRaw()
+{
+	CoefDACObject = CAL_ReadCoefDAC();
+	print("IdDAC " + cal_CurrentRange + " K x1000		: " + CoefDACObject.K);
+	print("IdDAC " + cal_CurrentRange + " B x1			: " + CoefDACObject.B);
 }
 //--------------------

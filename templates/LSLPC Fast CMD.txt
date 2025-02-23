@@ -27,7 +27,7 @@ dev.c(1);
 i("TestLSLPC.js");
 
 // Измерение
-LSLPC_Start(200);
+LSLPC_Start(100);
 
 // Ресурсный тест
 dev.co(12);
@@ -67,3 +67,14 @@ CAL_Init(5,6,1);
 CAL_VerifyId();
 
 CAL_CalibrateId();
+
+// NEW Калибровка ЦАП
+i("CalLSLPC.js");
+cal_IdMin = [100, 351, 1101];
+cal_IdMax = [349, 1099, 6500];
+cal_CurrentRange = 0;
+cal_Points = 10;
+cal_LSLPC_Compatibility = 1;
+CAL_Init(20,21,1);
+
+CAL_CalibrateDAC();
