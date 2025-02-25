@@ -1,5 +1,6 @@
 // Пояснения
-CTOU_Init(portTOU, portTek, channelMeasureI, channelMeasureU, channelSync)
+CTOU_Init(portTOU, portTek, channelMeasureI, channelMeasureU, channelSync);
+TOUHP_Measure(Voltage, Current, GateCurrent, GateCurrentRate);
 
 // Посмотреть версию прошивки
 PrintFWInfo();
@@ -17,7 +18,8 @@ i("STM_FWUpdate.js");
 FWU_RestoreTOMUHP();
 
 // Измерение
-TOUHP_Measure(Voltage, Current, GateCurrent, GateCurrentRate);
+i("TestTOU_HP.js");
+TOUHP_Measure(600, 1250, 2000, 2000);
 
 /// Калибровка задания тока управления Ig
 // (Offset: 16) (K: 15)

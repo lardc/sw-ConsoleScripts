@@ -53,6 +53,7 @@ function TOUHP_Measure(Voltage, Current, GateCurrent, GateCurrentRate)
 	
 	if(tou_print)
 	{
+		print("Anode current, A  = " + dev.r(250));
 		print("Turn on, ns       = " + dev.r(252));
 		print("Turn on delay, ns = " + dev.r(251));
 		print("--------------");
