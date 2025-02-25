@@ -45,6 +45,7 @@ cal_CurrentRange = 0
 cal_Points = 10
 cal_Rshunt = 250
 cal_Iterations = 1
+cal_SaveImage = 0
 CAL_Init(20, 21, 1)
 
 CAL_VerifyId()
@@ -61,6 +62,7 @@ cal_CurrentRange = 1
 cal_Points = 10
 cal_Rshunt = 250
 cal_Iterations = 1
+cal_SaveImage = 0
 CAL_Init(20, 21, 1)
 
 CAL_VerifyId()

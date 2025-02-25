@@ -18,6 +18,7 @@ cal_IdMin = [100, 351, 1101];
 cal_IdMax = [349, 1099, 6500];
 //
 cal_Iterations = 1;
+cal_SaveImage = 0;
 
 // Counters
 cal_CntTotal = 0;
@@ -237,6 +238,8 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 			TEK_ScaleVertical(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1e6, 90);
 			TEK_TriggerPulseInit(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1e6 / 4);
 			
+			sleep(1000)
+
 			for (var k = 0; k < AvgNum; k++)
 			{
 				if(!LSLPC_Start(CurrentValues[j]))
@@ -248,7 +251,7 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 			cal_IdDAC.push(IdDAC);
 			//print("DAC,      pt: " + IdDAC);
 
-			sleep(1500)
+			sleep(500)
 			// Unit data
 			var IdSet;
 			(cal_LSLPC_Compatibility == 1) ? IdSet = dev.r(128) / 10 : IdSet = dev.r(64);
@@ -272,6 +275,15 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 			print("IdSetErr,  %: " + IdErr);
 			print("--------------------");
 			
+			if (cal_SaveImage)
+			{
+				var NameFile = "" + IdSet + "";
+				var SaveImage = "save:image \"A:\\" + NameFile + ".BMP\"";
+				TEK_Send(SaveImage);
+				sleep(8000);
+				TEK_Busy();
+			}
+
 			if (anykey()) return 0;
 		}
 	}
