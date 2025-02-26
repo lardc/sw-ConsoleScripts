@@ -69,6 +69,23 @@ CAL_VerifyId()
 
 CAL_CalibrateId()
 
+/// Верификация спадающий ток
+// 0 диапазон 100 - 999 А
+/ (Offset: 36) (K: 34/35)
+/ [P0: 33] [P1: 32] [P2: 31]
+i("CalLSLPC.js")
+cal_IdMin = [150, 1000]
+cal_IdMax = [999, 6500]
+cal_CurrentRange = 0
+cal_Points = 7
+cal_Rshunt = 250
+cal_Iterations = 1
+cal_SaveImage = 1
+cal_LSLPC_USE_LINEAR_DOWN = 1;
+CAL_Init(20, 21, 1)
+
+CAL_VerifyId()
+
 /// NEW КАЛИБРОВКА ЦАП
 // 0 диапазон
 i("CalLSLPC.js")

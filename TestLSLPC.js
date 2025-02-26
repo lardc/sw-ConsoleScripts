@@ -5,6 +5,7 @@ cal_LSLPC_Compatibility = 1; // 0 - если прошивка блока на IA
 
 if (cal_LSLPC_Compatibility)
 {
+	LSLPC_REG_USE_LINEAR_DOWN = 130;
 	LSLPC_REG_DEV_STATE = 192;
 	LSLPC_DS_None = 0;
 	LSLPC_DS_Fault = 1;

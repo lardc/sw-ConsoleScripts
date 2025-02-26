@@ -5,6 +5,7 @@ include("TEK_GetData.js")
 
 // Переменные совместимости
 cal_LSLPC_Compatibility = 1; // 0 - если прошивка блока на IAR, 1 - если прошивка на Atolic
+cal_LSLPC_USE_LINEAR_DOWN = 0; // спад тока идёт по линейному закону
 
 // Calibration setup parameters
 cal_Rshunt = 250;	// in uOhms
@@ -77,6 +78,18 @@ function CAL_TekInit()
 	TEK_TriggerPulseInit(cal_chMeasureId, "0.04");
 	TEK_Horizontal("1e-3", "-1e-3");
 	TEK_MeasMaxInit(cal_chMeasureId, cal_chMeasureId);
+
+	if (cal_LSLPC_USE_LINEAR_DOWN)
+	{
+		TEK_Send("ch" + cal_chMeasureId + ":position -3");
+		TEK_Horizontal("2.5e-3", "5e-3");
+		dev.w(LSLPC_REG_USE_LINEAR_DOWN, 1);
+	}
+	else
+	{
+		TEK_Horizontal("1e-3", "-1e-3");
+		dev.w(LSLPC_REG_USE_LINEAR_DOWN, 0);
+	}
 }
 //--------------------
 
@@ -235,7 +248,11 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 
 			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
 			//
-			TEK_ScaleVertical(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1e6, 90);
+			if (cal_LSLPC_USE_LINEAR_DOWN)
+				TEK_ScaleVertical(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1e6, 77.5);
+			else
+				TEK_ScaleVertical(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1e6, 90);
+			
 			TEK_TriggerPulseInit(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1e6 / 4);
 			
 			sleep(1000)
