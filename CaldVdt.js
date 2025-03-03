@@ -80,7 +80,7 @@ cdvdt_def_UseAverage = cdvdt_NO_AVERAGES;
 cdvdt_gate = [];
 
 // { rate_set: { voltage: [], rate: [] } }
-cdvdt_CollectedData = {}
+cdvdt_CollectedData = {};
 
 // Tektronix data
 cdvdt_rate_sc = [];
@@ -484,10 +484,10 @@ function CdVdt_CalibrateRate()
 	{
 		CdVdt_SaveRate("dvdt_rate", "dvdt_rate_sum");
 
-		for (var i = 0; i < cdvdt_CollectedData.length; i++)
+		for (var key in cdvdt_CollectedData)
 		{
-			var cdvdt_rate_corr = CGEN_GetNumericCorrection2(cdvdt_CollectedData[i].voltage, cdvdt_CollectedData[i].rate);
-			CdVdt_CalRate(cdvdt_rate_corr[2], cdvdt_rate_corr[1], cdvdt_rate_corr[0], cdvdt_CollectedData[i]);
+			var cdvdt_rate_corr = CGEN_GetNumericCorrection2(cdvdt_CollectedData[key].voltage, cdvdt_CollectedData[key].rate);
+			CdVdt_CalRate(cdvdt_rate_corr[2], cdvdt_rate_corr[1], cdvdt_rate_corr[0], key);
 		}
 
 		scattern(cdvdt_rate_sc, cdvdt_rate_err, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt relative error " + cdvdt_RatePoint.join(", ") + " V/us");
@@ -502,7 +502,7 @@ function CdVdt_CalibrateRate()
 
 function CdVdt_RateOffsetP2(Rate)
 {
-	switch (Rate)
+	switch (parseInt(Rate))
 	{
 		case 20:	return 500;
 		case 50:	return 503;
@@ -576,7 +576,7 @@ function CdVdt_PrintRateCal()
 	{
 		var offset = CdVdt_RateOffsetP2(cdvdt_RatePoint[i]);
 		var rate = cdvdt_RatePoint[i];
-		print(CdVdt_Fit(rate, 8) + "|" + CdVdt_Fit(dev.r(offset), 9) + "|" + CdVdt_Fit(dev.r(offset + 1), 10) + "|" + CdVdt_Fit(dev.r(offset + 2), 8))
+		print(CdVdt_Fit(rate, 8) + "|" + CdVdt_Fit(dev.rs(offset), 9) + "|" + CdVdt_Fit(dev.r(offset + 1), 10) + "|" + CdVdt_Fit(dev.rs(offset + 2), 8))
 	}
 }
 
@@ -821,6 +821,7 @@ function CdVdt_CollectFixedRate(Repeat)
 	}
 	// Power disable
 	dev.c(2);
+	return 1;
 }
 
 function CdVdt_sign(a)
@@ -944,7 +945,7 @@ function CdVdt_CalV(P2, P1, P0)
 
 function CdVdt_ResetRateCal(Rate)
 {
-	CdVdt_CalRate(0, 1, 0, Rate);
+	CdVdt_CalRate(0, 0, 0, Rate);
 }
 
 function CdVdt_ResetVCal()

@@ -92,7 +92,12 @@ function CGEN_NumericCorrectionX(arrayUnit, arrayReference, order)
 	var DotInv = numeric.inv(Dot1);
 
 	var Coefficients = numeric.dot(DotInv, Dot2);
-	return Coefficients[0];
+
+	var ResultCoefficients = [];
+	for (var i = 0; i < Coefficients.length; i++)
+		ResultCoefficients.push(Coefficients[i][0]);
+
+	return ResultCoefficients;
 }
 
 function CGEN_GetNumericCorrection(arrayUnit, arrayReference)
