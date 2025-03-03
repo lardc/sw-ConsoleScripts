@@ -37,7 +37,14 @@ function ReadSymbolWrapper(ActReadSymbol)
 		try
 		{
 			dev.c(ActReadSymbol);
-			FR_LocalDataCopy = dev.raf(EP_FLASH_DATA);
+			var ReadArrFunc = dev.raf;
+			try
+			{
+				dev.ReadFloatSilent(0);
+				ReadArrFunc = dev.raff;
+			}
+			catch(e) {}
+			FR_LocalDataCopy = ReadArrFunc(EP_FLASH_DATA);
 			FR_LocalDataCounter = 0;
 		}
 		catch(e)
