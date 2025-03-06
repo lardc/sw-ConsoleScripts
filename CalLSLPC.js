@@ -4,46 +4,46 @@ include("CalGeneral.js")
 include("TEK_GetData.js")
 
 // Переменные совместимости
-cal_LSLPC_Compatibility = 1;	// 0 - если прошивка блока на IAR, 1 - если прошивка на Atolic
-cal_LSLPC_UseLinearSlope = 0;	// спад тока идёт по линейному закону
+clslpc_Compatibility = 1;	// 0 - если прошивка блока на IAR, 1 - если прошивка на Atolic
+clslpc_UseLinearSlope = 0;	// спад тока идёт по линейному закону
 
 // Calibration setup parameters
-cal_Rshunt = 250;	// in uOhms
+clslpc_Rshunt = 250;	// in uOhms
 
 // Current range number
-cal_CurrentRange = 0; // 0 = Range [ <= 350 A]; 1 = Range [ < 1100 A]; 2 = Range [ < 6500 A]
+clslpc_CurrentRange = 0; // 0 = Range [ <= 350 A]; 1 = Range [ < 1100 A]; 2 = Range [ < 6500 A]
 //
-cal_Points = 10;
+clslpc_Points = 10;
 //
-cal_IdMin = [100, 351, 1101];
-cal_IdMax = [349, 1099, 6500];
+clslpc_IdMin = [100, 351, 1101];
+clslpc_IdMax = [349, 1099, 6500];
 //
-cal_Iterations = 1;
-cal_SaveImage = 0;
+clslpc_Iterations = 1;
+clslpc_SaveImage = 0;
 
 // Counters
-cal_CntTotal = 0;
-cal_CntDone = 0;
+clslpc_CntTotal = 0;
+clslpc_CntDone = 0;
 
 // Channels
-cal_chMeasureId = 1;
+clslpc_chMeasureId = 1;
 
 // Results storage
-cal_Id = [];
-cal_IdRaw = [];
-cal_IdDAC = [];
+clslpc_Id = [];
+clslpc_IdRaw = [];
+clslpc_IdDAC = [];
 
 // Tektronix data
-cal_IdSc = [];
+clslpc_IdSc = [];
 
 // Relative error
-cal_IdErr = [];
-cal_IdUnitErr = [];
+clslpc_IdErr = [];
+clslpc_IdUnitErr = [];
 
 // Correction
-cal_IdCorr = [];
+clslpc_IdCorr = [];
 
-function CAL_Init(portDevice, portTek, channelMeasureId)
+function CLSLPC_Init(portDevice, portTek, channelMeasureId)
 {
 	if (channelMeasureId < 1 || channelMeasureId > 4)
 	{
@@ -52,7 +52,7 @@ function CAL_Init(portDevice, portTek, channelMeasureId)
 	}
 
 	// Copy channel information
-	cal_chMeasureId = channelMeasureId;
+	clslpc_chMeasureId = channelMeasureId;
 
 	// Init device port
 	dev.Disconnect();
@@ -72,16 +72,16 @@ function CAL_Init(portDevice, portTek, channelMeasureId)
 }
 //--------------------
 
-function CAL_TekInit()
+function CLSLPC_TekInit()
 {
-	TEK_ChannelInit(cal_chMeasureId, "1", "0.01");
-	TEK_TriggerPulseInit(cal_chMeasureId, "0.04");
+	TEK_ChannelInit(clslpc_chMeasureId, "1", "0.01");
+	TEK_TriggerPulseInit(clslpc_chMeasureId, "0.04");
 	TEK_Horizontal("1e-3", "-1e-3");
-	TEK_MeasMaxInit(cal_chMeasureId, cal_chMeasureId);
+	TEK_MeasMaxInit(clslpc_chMeasureId, clslpc_chMeasureId);
 
-	if (cal_LSLPC_UseLinearSlope)
+	if (clslpc_UseLinearSlope)
 	{
-		TEK_Send("ch" + cal_chMeasureId + ":position -3");
+		TEK_Send("ch" + clslpc_chMeasureId + ":position -3");
 		TEK_Horizontal("2.5e-3", "5e-3");
 		dev.w(LSLPC_REG_USE_LINEAR_DOWN, 1);
 	}
@@ -93,7 +93,7 @@ function CAL_TekInit()
 }
 //--------------------
 
-function CAL_CheckRegulatorStatus()
+function CLSLPC_CheckRegulatorStatus()
 {
 	if (dev.r(49) != 0 || dev.r(50) != 0 || dev.r(51) != 0
 			 || dev.r(52) != 0 || dev.r(53) != 0 || dev.r(54) != 0)
@@ -102,53 +102,53 @@ function CAL_CheckRegulatorStatus()
 		return false;
 }
 
-function CAL_CalibrateDAC()
+function CLSLPC_CalibrateDAC()
 {
-	if(CAL_CheckRegulatorStatus())
+	if(CLSLPC_CheckRegulatorStatus())
 	{
 		p("Regulator is active. DAC calibration unavailable");
 		return;
 	}
 
-	CAL_ResetA();
+	CLSLPC_ResetA();
 	
 	// Tektronix init
-	CAL_TekInit();
+	CLSLPC_TekInit();
 
 	// Reload values
-	var CurrentArray = CGEN_GetRangeLogarithm(cal_IdMin[cal_CurrentRange], cal_IdMax[cal_CurrentRange], cal_Points);
+	var CurrentArray = CGEN_GetRangeLogarithm(clslpc_IdMin[clslpc_CurrentRange], clslpc_IdMax[clslpc_CurrentRange], clslpc_Points);
 	
-	if (CAL_CollectId(CurrentArray, cal_Iterations))
+	if (CLSLPC_CollectId(CurrentArray, clslpc_Iterations))
 	{
-		CAL_RefreshDACSettings();
-		CAL_SaveRawId("LSLPC_IdRaw");
+		CLSLPC_RefreshDACSettings();
+		CLSLPC_SaveRawId("LSLPC_IdRaw");
 
-		scattern(cal_IdSc, cal_IdErr, "Current (in A)", "Error (in %)", "Calibrate current setpoint relative error "
-				+ cal_IdMin[cal_CurrentRange] + " A ... " + cal_IdMax[cal_CurrentRange] + " A");
+		scattern(clslpc_IdSc, clslpc_IdErr, "Current (in A)", "Error (in %)", "Calibrate current setpoint relative error "
+				+ clslpc_IdMin[clslpc_CurrentRange] + " A ... " + clslpc_IdMax[clslpc_CurrentRange] + " A");
 
 		print("Before");
-		CAL_PrintCoefIdRaw();
+		CLSLPC_PrintCoefIdRaw();
 
 		// Calculate correction
-		cal_IdCorr = CGEN_GetCorrection("LSLPC_IdRaw");
-		CAL_SetCoefIdRaw(cal_IdCorr[0], cal_IdCorr[1]);
+		clslpc_IdCorr = CGEN_GetCorrection("LSLPC_IdRaw");
+		CLSLPC_SetCoefIdRaw(clslpc_IdCorr[0], clslpc_IdCorr[1]);
 		print("After");
-		CAL_PrintCoefIdRaw();
+		CLSLPC_PrintCoefIdRaw();
 	}
 }
 //--------------------
 
-function CAL_RefreshDACSettings()
+function CLSLPC_RefreshDACSettings()
 {
-	for (var i = 0; i < cal_Id.length; i++)
+	for (var i = 0; i < clslpc_Id.length; i++)
 	{
-		cal_IdRaw[i] = cal_IdDAC[i] - dev.r(15);
+		clslpc_IdRaw[i] = clslpc_IdDAC[i] - dev.r(15);
 	}
 }
 
-function CAL_ReadCoefDAC()
+function CLSLPC_ReadCoefDAC()
 {
-	switch(cal_CurrentRange)
+	switch(clslpc_CurrentRange)
 	{
 		case 0:
 		{
@@ -174,60 +174,60 @@ function CAL_ReadCoefDAC()
 	return {K : K, B : B};
 }
 
-function CAL_CalibrateId()
+function CLSLPC_CalibrateId()
 {		
-	CAL_ResetA();
-	CAL_ResetIdCal();
+	CLSLPC_ResetA();
+	CLSLPC_ResetIdCal();
 	
 	// Tektronix init
-	CAL_TekInit();
+	CLSLPC_TekInit();
 
 	// Reload values
-	var CurrentArray = CGEN_GetRangeLogarithm(cal_IdMin[cal_CurrentRange], cal_IdMax[cal_CurrentRange], cal_Points);
+	var CurrentArray = CGEN_GetRangeLogarithm(clslpc_IdMin[clslpc_CurrentRange], clslpc_IdMax[clslpc_CurrentRange], clslpc_Points);
 	
-	if (CAL_CollectId(CurrentArray, cal_Iterations))
+	if (CLSLPC_CollectId(CurrentArray, clslpc_Iterations))
 	{
-		CAL_SaveId("LSLPC_Id");
+		CLSLPC_SaveId("LSLPC_Id");
 
 		// Plot relative error distribution
-		scattern(cal_IdSc, cal_IdErr, "Current (in A)", "Error (in %)", "Current setpoint relative error "
-				+ cal_IdMin[cal_CurrentRange] + " A ... " + cal_IdMax[cal_CurrentRange] + " A");
+		scattern(clslpc_IdSc, clslpc_IdErr, "Current (in A)", "Error (in %)", "Current setpoint relative error "
+				+ clslpc_IdMin[clslpc_CurrentRange] + " A ... " + clslpc_IdMax[clslpc_CurrentRange] + " A");
 
 		// Calculate correction
-		cal_IdCorr = CGEN_GetCorrection2("LSLPC_Id");
-		CAL_SetCoefId(cal_IdCorr[0], cal_IdCorr[1], cal_IdCorr[2]);
-		CAL_PrintCoefId();
+		clslpc_IdCorr = CGEN_GetCorrection2("LSLPC_Id");
+		CLSLPC_SetCoefId(clslpc_IdCorr[0], clslpc_IdCorr[1], clslpc_IdCorr[2]);
+		CLSLPC_PrintCoefId();
 	}
 }
 //--------------------
 
-function CAL_VerifyId()
+function CLSLPC_VerifyId()
 {		
-	CAL_ResetA();
+	CLSLPC_ResetA();
 	
 	// Tektronix init
-	CAL_TekInit();
+	CLSLPC_TekInit();
 
 	// Reload values
-	var CurrentArray = CGEN_GetRangeLogarithm(cal_IdMin[cal_CurrentRange], cal_IdMax[cal_CurrentRange], cal_Points);
+	var CurrentArray = CGEN_GetRangeLogarithm(clslpc_IdMin[clslpc_CurrentRange], clslpc_IdMax[clslpc_CurrentRange], clslpc_Points);
 	
-	if (CAL_CollectId(CurrentArray, cal_Iterations))
+	if (CLSLPC_CollectId(CurrentArray, clslpc_Iterations))
 	{
-		CAL_SaveId("LSLPC_Id_fixed");
+		CLSLPC_SaveId("LSLPC_Id_fixed");
 
 		// Plot relative error distribution
-		scattern(cal_IdSc, cal_IdErr, "Current (in A)", "Error (in %)", "Current setpoint relative error "
-				+ cal_IdMin[cal_CurrentRange] + " A ... " + cal_IdMax[cal_CurrentRange] + " A");
-		scattern(cal_IdSc, cal_IdUnitErr, "Current (in A)", "Error (in %)", "Current unit relative error "
-				+ cal_IdMin[cal_CurrentRange] + " A ... " + cal_IdMax[cal_CurrentRange] + " A");
+		scattern(clslpc_IdSc, clslpc_IdErr, "Current (in A)", "Error (in %)", "Current setpoint relative error "
+				+ clslpc_IdMin[clslpc_CurrentRange] + " A ... " + clslpc_IdMax[clslpc_CurrentRange] + " A");
+		scattern(clslpc_IdSc, clslpc_IdUnitErr, "Current (in A)", "Error (in %)", "Current unit relative error "
+				+ clslpc_IdMin[clslpc_CurrentRange] + " A ... " + clslpc_IdMax[clslpc_CurrentRange] + " A");
 	}
 }
 //--------------------
 
-function CAL_CollectId(CurrentValues, IterationsCount)
+function CLSLPC_CollectId(CurrentValues, IterationsCount)
 {
-	cal_CntTotal = IterationsCount * CurrentValues.length;
-	cal_CntDone = 1;
+	clslpc_CntTotal = IterationsCount * CurrentValues.length;
+	clslpc_CntDone = 1;
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
@@ -235,7 +235,7 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 		{
 			TEK_ForceTrig();
 			var AvgNum;
-			if (CurrentValues[j] * cal_Rshunt / 1e6 < 0.1)
+			if (CurrentValues[j] * clslpc_Rshunt / 1e6 < 0.1)
 			{
 				AvgNum = 4;
 				TEK_AcquireAvg(AvgNum);
@@ -245,11 +245,11 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 				AvgNum = 1;
 				TEK_AcquireSample();
 			}
-			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
+			print("-- result " + clslpc_CntDone++ + " of " + clslpc_CntTotal + " --");
 			
-			TEK_ScaleVertical(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1e6,
-				cal_LSLPC_UseLinearSlope ? 77.5 : 90);
-			TEK_TriggerPulseInit(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1e6 / 4);
+			TEK_ScaleVertical(clslpc_chMeasureId, CurrentValues[j] * clslpc_Rshunt / 1e6,
+				clslpc_UseLinearSlope ? 77.5 : 90);
+			TEK_TriggerPulseInit(clslpc_chMeasureId, CurrentValues[j] * clslpc_Rshunt / 1e6 / 4);
 			sleep(1000)
 			
 			for (var k = 0; k < AvgNum; k++)
@@ -261,31 +261,31 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 			
 			// DAC data
 			var IdDAC = dev.r(202);
-			cal_IdDAC.push(IdDAC);
+			clslpc_IdDAC.push(IdDAC);
 			
 			// Unit data
-			var IdSet = (cal_LSLPC_Compatibility == 1) ? (dev.r(128) / 10) : dev.r(64);
-			cal_Id.push(IdSet);
+			var IdSet = (clslpc_Compatibility == 1) ? (dev.r(128) / 10) : dev.r(64);
+			clslpc_Id.push(IdSet);
 			print("Idset,     A: " + IdSet);
 			
 			// Scope data
-			var IdSc = (TEK_Measure(cal_chMeasureId) / cal_Rshunt * 1e6).toFixed(2);
-			cal_IdSc.push(IdSc);
+			var IdSc = (TEK_Measure(clslpc_chMeasureId) / clslpc_Rshunt * 1e6).toFixed(2);
+			clslpc_IdSc.push(IdSc);
 			print("Idtek,     A: " + IdSc);
 
 			// Relative error
-			var IdUnit = CAL_GetMeasuredCurrent();
+			var IdUnit = CLSLPC_GetMeasuredCurrent();
 			var IdUnitErr = ((IdUnit - IdSc) / IdSc * 100).toFixed(2);
-			cal_IdUnitErr.push(IdUnitErr);
+			clslpc_IdUnitErr.push(IdUnitErr);
 			print("Idunit,    A: " + IdUnit);
 			print("IdunitErr, %: " + IdUnitErr);
 
 			var IdErr = ((IdSc - IdSet) / IdSet * 100).toFixed(2);
-			cal_IdErr.push(IdErr);
+			clslpc_IdErr.push(IdErr);
 			print("IdSetErr,  %: " + IdErr);
 			print("--------------------");
 			
-			if (cal_SaveImage)
+			if (clslpc_SaveImage)
 			{
 				var NameFile = "" + IdSet + "";
 				var SaveImage = "save:image \"A:\\" + NameFile + ".BMP\"";
@@ -302,7 +302,7 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 }
 //--------------------
 
-function CAL_GetMeasuredCurrent()
+function CLSLPC_GetMeasuredCurrent()
 {
 	if(dev.r(203) == 0)
 		return dev.r(200) / 10;
@@ -311,46 +311,46 @@ function CAL_GetMeasuredCurrent()
 }
 //--------------------
 
-function CAL_ResetA()
+function CLSLPC_ResetA()
 {	
 	// Results storage
-	cal_Id = [];
-	cal_IdRaw = [];
-	cal_IdDAC = [];
+	clslpc_Id = [];
+	clslpc_IdRaw = [];
+	clslpc_IdDAC = [];
 
 	// Tektronix data
-	cal_IdSc = [];
+	clslpc_IdSc = [];
 
 	// Relative error
-	cal_IdErr = [];
-	cal_IdUnitErr = [];
+	clslpc_IdErr = [];
+	clslpc_IdUnitErr = [];
 
 	// Correction
-	cal_IdCorr = [];
+	clslpc_IdCorr = [];
 }
 //--------------------
 
-function CAL_SaveId(NameId)
+function CLSLPC_SaveId(NameId)
 {
-	CGEN_SaveArrays(NameId, cal_Id, cal_IdSc, cal_IdUnitErr);
+	CGEN_SaveArrays(NameId, clslpc_Id, clslpc_IdSc, clslpc_IdUnitErr);
 }
 //--------------------
 
-function CAL_SaveRawId(NameId)
+function CLSLPC_SaveRawId(NameId)
 {
-	CGEN_SaveArrays(NameId, cal_IdSc, cal_IdRaw, cal_IdErr);
+	CGEN_SaveArrays(NameId, clslpc_IdSc, clslpc_IdRaw, clslpc_IdErr);
 }
 //--------------------
 
-function CAL_ResetIdCal()
+function CLSLPC_ResetIdCal()
 {
-	CAL_SetCoefId(0, 1, 0);
+	CLSLPC_SetCoefId(0, 1, 0);
 }
 //--------------------
 
-function CAL_SetCoefId(P2, P1, P0)
+function CLSLPC_SetCoefId(P2, P1, P0)
 {
-	switch(cal_CurrentRange)
+	switch(clslpc_CurrentRange)
 	{
 		case 0:
 		{
@@ -379,9 +379,9 @@ function CAL_SetCoefId(P2, P1, P0)
 }
 //--------------------
 
-function CAL_SetCoefIdRaw(K, B)
+function CLSLPC_SetCoefIdRaw(K, B)
 {
-	switch(cal_CurrentRange)
+	switch(clslpc_CurrentRange)
 	{
 		case 0:
 		{
@@ -407,9 +407,9 @@ function CAL_SetCoefIdRaw(K, B)
 }
 //--------------------
 
-function CAL_PrintCoefId()
+function CLSLPC_PrintCoefId()
 {
-	switch(cal_CurrentRange)
+	switch(clslpc_CurrentRange)
 	{
 		case 0:
 		{
@@ -438,10 +438,10 @@ function CAL_PrintCoefId()
 }
 //--------------------
 
-function CAL_PrintCoefIdRaw()
+function CLSLPC_PrintCoefIdRaw()
 {
-	CoefDACObject = CAL_ReadCoefDAC();
-	print("IdDAC " + cal_CurrentRange + " K x1000		: " + CoefDACObject.K);
-	print("IdDAC " + cal_CurrentRange + " B x1		: " + CoefDACObject.B);
+	CoefDACObject = CLSLPC_ReadCoefDAC();
+	print("IdDAC " + clslpc_CurrentRange + " K x1000		: " + CoefDACObject.K);
+	print("IdDAC " + clslpc_CurrentRange + " B x1		: " + CoefDACObject.B);
 }
 //--------------------
