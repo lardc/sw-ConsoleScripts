@@ -281,7 +281,7 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 			print("Idtek,     A: " + IdSc);
 
 			// Relative error
-			var IdUnit = dev.r(200) / 10;
+			var IdUnit = CAL_GetMeasuredCurrent();
 			var IdUnitErr = ((IdUnit - IdSc) / IdSc * 100).toFixed(2);
 			cal_IdUnitErr.push(IdUnitErr);
 			print("Idunit,    A: " + IdUnit);
@@ -306,6 +306,15 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 	}
 
 	return 1;
+}
+//--------------------
+
+function CAL_GetMeasuredCurrent()
+{
+	if(dev.r(203) == 0)
+		return dev.r(200) / 10;
+	else
+		return dev.r(203) + dev.r(204) / 1000;
 }
 //--------------------
 
