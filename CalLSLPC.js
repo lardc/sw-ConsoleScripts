@@ -4,8 +4,8 @@ include("CalGeneral.js")
 include("TEK_GetData.js")
 
 // Переменные совместимости
-cal_LSLPC_Compatibility = 1; // 0 - если прошивка блока на IAR, 1 - если прошивка на Atolic
-cal_LSLPC_USE_LINEAR_DOWN = 0; // спад тока идёт по линейному закону
+cal_LSLPC_Compatibility = 1;	// 0 - если прошивка блока на IAR, 1 - если прошивка на Atolic
+cal_LSLPC_UseLinearSlope = 0;	// спад тока идёт по линейному закону
 
 // Calibration setup parameters
 cal_Rshunt = 250;	// in uOhms
@@ -79,7 +79,7 @@ function CAL_TekInit()
 	TEK_Horizontal("1e-3", "-1e-3");
 	TEK_MeasMaxInit(cal_chMeasureId, cal_chMeasureId);
 
-	if (cal_LSLPC_USE_LINEAR_DOWN)
+	if (cal_LSLPC_UseLinearSlope)
 	{
 		TEK_Send("ch" + cal_chMeasureId + ":position -3");
 		TEK_Horizontal("2.5e-3", "5e-3");
@@ -245,33 +245,26 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 				AvgNum = 1;
 				TEK_AcquireSample();
 			}
-
 			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-			//
-			if (cal_LSLPC_USE_LINEAR_DOWN)
-				TEK_ScaleVertical(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1e6, 77.5);
-			else
-				TEK_ScaleVertical(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1e6, 90);
 			
+			TEK_ScaleVertical(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1e6,
+				cal_LSLPC_UseLinearSlope ? 77.5 : 90);
 			TEK_TriggerPulseInit(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1e6 / 4);
-			
 			sleep(1000)
-
+			
 			for (var k = 0; k < AvgNum; k++)
 			{
 				if(!LSLPC_Start(CurrentValues[j]))
 					return false;
 			}
+			sleep(500)
 			
 			// DAC data
 			var IdDAC = dev.r(202);
 			cal_IdDAC.push(IdDAC);
-			//print("DAC,      pt: " + IdDAC);
-
-			sleep(500)
+			
 			// Unit data
-			var IdSet;
-			(cal_LSLPC_Compatibility == 1) ? IdSet = dev.r(128) / 10 : IdSet = dev.r(64);
+			var IdSet = (cal_LSLPC_Compatibility == 1) ? (dev.r(128) / 10) : dev.r(64);
 			cal_Id.push(IdSet);
 			print("Idset,     A: " + IdSet);
 			
