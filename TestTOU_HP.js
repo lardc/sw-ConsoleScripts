@@ -160,11 +160,7 @@ function TOCUHP_ResourceTest(Voltage, Bit, HoursTest, Sleep)
 
 // TOMU HP
 function TOMUHP_GatePulse(GateCurrentRate, GateCurrent)
-{
-	dev.w(190,1);
-	dev.c(18);
-	dev.c(19);
-	
+{	
 	dev.w(130, GateCurrent);
 	dev.w(131, GateCurrentRate);
 	
