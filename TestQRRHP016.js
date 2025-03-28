@@ -246,10 +246,7 @@ function QRR_Result()
 	print("tq,         us: " + (dev.r(213) / 10));
 	print("Idc,         A: " + dev.r(214));
 	print("dIdt,     A/us: " + (dev.r(215) / 10));
-	
-	plot(dev.rafs(1), 1, 0);
-	sleep(200);
-	plot(dev.rafs(2), 1, 0);
+	QSU_Plot();
 }
 
 function QRR_PlotDiag()
