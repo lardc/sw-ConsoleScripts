@@ -16,7 +16,7 @@ MinPort = 2;
 //
 def_UseSaveImage = true; 
 //
-SetCurrentTest = [320, 1000, 2000, 3200]; // in A  320, 500, 1000, 1500, 2000, 2500, 3000, 3200
+SetCurrentTest = [320, 1000]; // in A  320, 500, 1000, 1500, 2000, 2500, 3000, 3200
 CurrentRateN = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 CurrentRate = [1, 1.5, 2, 5, 10, 15, 20, 30, 50, 60, 100]; // in А/us  1, 1.5, 2, 5, 10, 15, 20, 30, 50, 60, 100
 IrrMeasured = [150, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50]; // in A
@@ -79,11 +79,15 @@ cal_IdcUnitErr = [];
 cal_IrcUnitErr = [];
 cal_dIdtUnitErr = [];
 
+// Correction
+Сal_IdsetCorr = []; 
+
 // Data arrays
 cdidt_scatter = [];
 
-//--------------------
-// Инициализация портов 
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Функция инициализации портов блока и осциллографа для калибровки  
+
 function CAL_Init(portDevice, portTek, channelMeasureI, channelMeasureU)
 {
 	if (channelMeasureI < 1 || channelMeasureU > 4)
@@ -112,10 +116,13 @@ function CAL_Init(portDevice, portTek, channelMeasureI, channelMeasureU)
 		else
 			TEK_ChannelOff(i);
 	}
+
+	Cal_Reg(1);
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Верификация Id,Ir,dI/dt
+
 function CAL_VerifyCurrent()
 {
 	CAL_ResetA();
@@ -132,7 +139,6 @@ function CAL_VerifyCurrent()
 		CAL_SaveIrc("QSU_Irc");
 		CAL_SavedIdt("QSU_dIdt");
 
-
 		// Plot relative error distribution
 		scattern(cal_IdcSc, cal_IdcSetErr, "Current Direct (in A)", "Error (in %)", "Current Direct Set error");
 		scattern(cal_IrcSc, cal_IrcSetErr, "Current Revers (in A)", "Error (in %)", "Current Revers Set error");
@@ -146,8 +152,9 @@ function CAL_VerifyCurrent()
 	dev.c(111);
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Верификация измерения Tq
+
 function CAL_VerifyTq()
 {		
 	CAL_ResetA();
@@ -170,8 +177,9 @@ function CAL_VerifyTq()
 	dev.c(111);
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Верификация измерения Irr,Trr и Qrr
+
 function CAL_VerifyQrr()
 {		
 	CAL_ResetA();
@@ -199,8 +207,9 @@ function CAL_VerifyQrr()
 	dev.c(111);
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Верификация измерения dV/dt
+
 function CAL_VerifydVdt()
 {
 	CAL_ResetA();
@@ -228,12 +237,38 @@ function CAL_VerifydVdt()
 	
 	dev.w(153,0);
 	dev.c(111);
+}
 
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Калибровка Idset (компенсации) 
+
+function CAL_CalibrateIdset()
+{
+	CAL_ResetA();
+	CAL_ResetIdsetCal();
+
+	// Tektronix init
+	CAL_TekInitCurrent();
+
+	if (CAL_CollectCurrent(cal_Iterations))
+	{
+		CAL_SaveIdc("QSU_Idc");
+
+		// Plot relative error distribution
+		scattern(cal_IdcSc, cal_IdcSetErr, "Current Direct (in A)", "Error (in %)", "Current Direct Set error");
+
+		// Calculate correction
+		
+		Сal_IdsetCorr = CGEN_GetCorrection2("QSU_IdSet");
+		CAL_SetCoefIdSet(Сal_IdSetCorr[0], Cal_IdSetCorr[1], Cal_IdSetCorr[2]); 
+		CAL_PrintCoefIdSet(); // Написать новые коректировки в консоль 		
+	}
 
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Сбор данных для Id,Ir и dI/dt
+
 function CAL_CollectCurrent(IterationsCount)
 {
 	cal_CntTotal = SetCurrentTest.length * CurrentRateN.length * IterationsCount;
@@ -245,6 +280,7 @@ function CAL_CollectCurrent(IterationsCount)
 		{
 			for (var k = 0; k < SetCurrentTest.length; k++)
 			{	
+
 				TEK_Send("horizontal:scale "  + ((SetCurrentTest[k] / CurrentRate[j]) * 1e-6) * 0.4);
 				CAL_TekScale(cal_chMeasureI, SetCurrentTest[k] * cal_Rshunt / 1e6 * 2);
 				sleep(1000);
@@ -342,8 +378,9 @@ function CAL_CollectCurrent(IterationsCount)
 	return 1;
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Сбор данных для Tq
+
 function CAL_CollectTq(IterationsCount)
 {
 	cal_CntTotal = CurrentRateN.length * IterationsCount;
@@ -400,8 +437,9 @@ function CAL_CollectTq(IterationsCount)
 	return 1;
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Сбор данных для Irr, Trr и Qrr
+
 function CAL_CollectQrr(IterationsCount)
 {
 	cal_CntTotal = SetCurrentTest.length * CurrentRateN.length * IterationsCount;
@@ -497,8 +535,9 @@ function CAL_CollectQrr(IterationsCount)
 	return 1;
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Сбор данных для dV/dt 
+
 function CAL_CollectdVdt(IterationsCount)
 {
 	CdVdt_ResetA();
@@ -570,9 +609,10 @@ function CAL_CollectdVdt(IterationsCount)
 
 	return 1;		
 }
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Устаревшая функция
 // Сбор данных по напряжению источника формирователя блоков DCU/RCU 
+
 function QRR_TestPSVoltage()
 {
 	cdvdt_scatter = [];
@@ -628,17 +668,19 @@ function QRR_TestPSVoltage()
 	save("data/didt_404.csv", cdidt_scatter);	
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Устаревшая функция
 // Выставление горизонтальной развертки
+
 function CAL_QRRHorizontalScale(Current,CurrentRate)
 {
 	TEK_Horizontal(CAL_QRRTimeScale(Current,CurrentRate), (Current / 2) / CurrentRate * 1e-6);
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Устаревшая функция
 // Расчет значения горизонтальной развертки
+
 function CAL_QRRTimeScale(Current,CurrentRate)
 {
 	OSC_K = 2;
@@ -646,9 +688,10 @@ function CAL_QRRTimeScale(Current,CurrentRate)
 	return OSC_TimeScale * OSC_K
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Устаревшая функция
 // Расчет погрешности Id и dI/dt
+
 function CAL_MeasureIrate(RateSet, CurrentSet)
 {
 	var RateScope = (TEK_Measure(cal_chMeasureI) * 0.8 / cal_Rshunt * 1e6 / TEK_Exec("measurement:meas2:value?") * 1e-6).toFixed(3);	
@@ -666,9 +709,10 @@ function CAL_MeasureIrate(RateSet, CurrentSet)
 	print("didt error, % = " + RateErr);	
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Устаревшая функция
 // Нахождение dI/dt по курсорам
+
 function CAL_QRRdidt(Current,CurrentRate)
 {
 	var ctou_tgd_u = 0;
@@ -766,8 +810,9 @@ function CAL_QRRdidt(Current,CurrentRate)
 	
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Нахождение Id,Ir и dI/dt по полученным данным из осц.
+
 function CAL_MeasureCurrent(Channel)
 {
 	var CurrentScale = 0, Current = 0; 
@@ -802,8 +847,9 @@ function CAL_MeasureCurrent(Channel)
 	return ReturnValues;
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Нахождение Irr,Trr и Qrr по полученным данным из осц.
+
 function CAL_MeasureQrr(Channel)
 {
 	var CurrentScale = 0, Current = 0, IntegratedCurrent = 0;
@@ -890,8 +936,10 @@ function CAL_MeasureQrr(Channel)
 	
 	return ReturnValues;
 }
-//--------------------
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Нахождение Tq по полученным данным из осц.
+
 function CAL_MeasureTq(Channel)
 {
 	TEK_Send("cursor:select:source ch" + Channel);
@@ -899,8 +947,9 @@ function CAL_MeasureTq(Channel)
 	return TEK_Exec("cursor:vbars:delta?") * 1e6;
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Сброс данных
+
 function CAL_ResetA()
 {	
 	// Results storage
@@ -941,45 +990,56 @@ function CAL_ResetA()
 	cal_IrcUnitErr = [];
 	cal_dIdtUnitErr = [];
 
+	// Correction
+	Сal_IdsetCorr = [];
+
 	// Data arrays
 	cdidt_scatter = [];
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 //Функции сохранения данных
 
 function CAL_SaveIdc(NameIdc)
 {
 	CGEN_SaveArrays(NameIdc, cal_IdcSet, cal_IdcUnit, cal_IdcSc, cal_IdcSetErr, cal_IdcUnitErr);
 }
+
 //--------------------
+
 function CAL_SaveIrc(NameIrc)
 {
 	CGEN_SaveArrays(NameIrc, cal_IrcSet, cal_IrcUnit, cal_IrcSc, cal_IrcSetErr, cal_IrcUnitErr);
 }
+
 //--------------------
+
 function CAL_SavedIdt(NamedIdt)
 {
 	CGEN_SaveArrays(NamedIdt, cal_dIdtSet, cal_dIdtUnit, cal_dIdtSc, cal_dIdtSetErr, cal_dIdtUnitErr);
 }
+
 //--------------------
 
 function CAL_SaveIrr(NameIrr)
 {
 	CGEN_SaveArrays(NameIrr, cal_Irr, cal_IrrSc, cal_IrrErr);
 }
+
 //--------------------
 
 function CAL_SaveTrr(NameTrr)
 {
 	CGEN_SaveArrays(NameTrr, cal_Trr, cal_TrrSc, cal_TrrErr);
 }
+
 //--------------------
 
 function CAL_SaveQrr(NameQrr)
 {
 	CGEN_SaveArrays(NameQrr, cal_Qrr, cal_QrrSc, cal_QrrErr);
 }
+
 //--------------------
 
 function CAL_SaveTq(NameTq)
@@ -987,8 +1047,9 @@ function CAL_SaveTq(NameTq)
 	CGEN_SaveArrays(NameTq, cal_Tq, cal_TqSc, cal_TqErr);
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Функции настройки осц.
+
 function CAL_TekInitCurrent()
 {
 	TEK_Horizontal("1e-6", "0");
@@ -1005,6 +1066,7 @@ function CAL_TekInitCurrent()
 	TEK_Send("data:stop 2500");
 
 }
+
 //--------------------
 
 function CAL_TekInitQrr()
@@ -1027,6 +1089,7 @@ function CAL_TekInitQrr()
 	TEK_Send("data:start 1");
 	TEK_Send("data:stop 2500");
 }
+
 //--------------------
 
 function CAL_TekInitTq()
@@ -1042,6 +1105,7 @@ function CAL_TekInitTq()
 	TEK_TriggerInit(cal_chMeasureU, "-50");
 	TEK_Send("trigger:main:edge:slope raise");
 }
+
 //--------------------
 
 function CAL_TekInitdVdt()
@@ -1060,6 +1124,7 @@ function CAL_TekInitdVdt()
 	TEK_Send("trigger:main:edge:slope raise");
 
 }
+
 //--------------------
 
 function CAL_TekScale(Channel, Value)
@@ -1067,6 +1132,7 @@ function CAL_TekScale(Channel, Value)
 	Value = Value / 6;
 	TEK_Send("ch" + Channel + ":scale " + Value);
 }
+
 //--------------------
 
 function CAL_HorizontalScale(CurrentRateN)
@@ -1119,4 +1185,31 @@ function CAL_HorizontalScale(CurrentRateN)
 			break;
 	}
 }
-//--------------------
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Функция сброса корректировок Idset
+
+function CAL_ResetIdsetCal()
+{
+	CAL_SetCoefIdSet(0, 1, 0);
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Функция записи корректировок Idset
+
+function CAL_SetCoefIdSet(P2, P1, P0)
+{
+	dev.ws(79, Math.round(P2 * 1e6));
+	dev.w(78, Math.round(P1 * 1000));
+	dev.ws(77, Math.round(P0));	
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Функция вызова значений регистров для Idset
+
+function CAL_PrintCoefIdSet()
+{
+	print("Idset P2 x1e6	: " + dev.rs(79));
+	print("Idset P1 x1000	: " + dev.rs(78));
+	print("Idset P0 		: " + dev.rs(77));
+}
