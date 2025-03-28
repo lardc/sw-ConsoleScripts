@@ -13,7 +13,7 @@ channelMeasureU: Канад измерения напряжения на осц�
 Cal_Reg_En()
 	
 //Одиночное формирование
-QRR_Start(0,320,4,100,10);
+QRR_Start(0,1000,4,500,20);
 QRR_Start(Mode, IDC, IDCFallRate, OSV, OSVRate)		
 Mode:
 	#define MODE_QRR_ONLY	0
@@ -29,10 +29,16 @@ QrrGOST = 1;
 // Прямой ток для верификации 
 DirectCurrentTest = 1000;
 
+qrr_single = 1;
+
+//Верификация Id/Ir/dIdt
+CAL_VerifyCurrent();
 //Верификация QRR  
 CAL_VerifyQrr();
 //Верификация TQ  
-CAL_VerifyTq();				
+CAL_VerifyTq();
+// Верификация dV/dt
+CAL_VerifydVdt();				
 
 //Ресурсный тест
 DRCU_Test(1000);
