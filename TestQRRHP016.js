@@ -422,3 +422,30 @@ function QSU_TestCom()
 	}
 }
 //------------------------
+
+function QSU_Plot(Divisor)
+{
+	var a, b;
+
+	a = new Array();
+	b = new Array();
+
+	while(true)
+	{
+		var a1 = dev.rafs(1);
+		var b1 = dev.rafs(2);
+		
+		a = a.concat(a1);
+		b = b.concat(b1);
+
+		if(a1.length == 0)
+		break;
+	}
+	var CurrentDiv = 10;
+	if (typeof Divisor != 'undefined')
+		CurrentDiv = Divisor;		
+plot2(a, b, 1, 0);
+
+}
+
+//------------------------
