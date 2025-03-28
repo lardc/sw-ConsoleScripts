@@ -79,7 +79,7 @@ cdvdt_def_UseAverage = cdvdt_NO_AVERAGES;
 
 cdvdt_gate = [];
 
-// { rate_set: { voltage: [], rate: [] } }
+// { rate_set: { voltage: [], rate: [], rate_err: [] } }
 cdvdt_CollectedData = {};
 
 // Tektronix data
@@ -486,7 +486,7 @@ function CdVdt_CalibrateRate()
 
 		for (var key in cdvdt_CollectedData)
 		{
-			var cdvdt_rate_corr = CGEN_GetNumericCorrection2(cdvdt_CollectedData[key].voltage, cdvdt_CollectedData[key].rate);
+			var cdvdt_rate_corr = CGEN_GetNumericCorrection2(cdvdt_CollectedData[key].voltage, cdvdt_CollectedData[key].rate_err);
 			CdVdt_CalRate(cdvdt_rate_corr[2], cdvdt_rate_corr[1], cdvdt_rate_corr[0], key);
 		}
 
@@ -540,7 +540,7 @@ function CdVdt_CalibrateV()
 		CdVdt_SaveV("dvdt_v","dvdt_v_sum");
 
 		var cdvdt_v_corr = CGEN_GetNumericCorrection2(cdvdt_v_set, cdvdt_v_sc);
-		CdVdt_CalV(cdvdt_v_corr[0], cdvdt_v_corr[1], cdvdt_v_corr[2]);
+		CdVdt_CalV(cdvdt_v_corr[2], cdvdt_v_corr[1], cdvdt_v_corr[0]);
 
 		scattern(cdvdt_v_sc, cdvdt_v_err, "Voltage (in V)", "Error relative Voltage (in %)", "Ud relative error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
 		scattern(cdvdt_v_sc, cdvdt_v_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "Ud summary error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
@@ -569,7 +569,7 @@ function CdVdt_Fit(arg, length)
 
 function CdVdt_PrintRateCal()
 {
-	print("  Rate  | P2 x1e6 | P1 x1000 |   P0   ");
+	print("  Rate  | P2 x1e7 | P1 x1e4 | P0 x10  ");
 	print("--------------------------------------");
 
 	for (var i = 0; i < cdvdt_RatePoint.length; i++)
@@ -585,7 +585,7 @@ function CdVdt_PrintVCal()
 	print(" P2 x1e6 | P1 x1000 |   P0   ");
 	print("-----------------------------");
 
-	print(CdVdt_Fit(dev.r(0)), 9) + "|" + CdVdt_Fit(dev.r(1), 10) + "|" + CdVdt_Fit(dev.r(2), 8);
+	print(CdVdt_Fit(dev.rs(0), 9) + "|" + CdVdt_Fit(dev.r(1), 10) + "|" + CdVdt_Fit(dev.rs(2), 8));
 }
 
 // Вывод графика оценки нелинейности, относительно апроксимационной прямой
@@ -638,6 +638,9 @@ function CdVdt_NonlinearityCell(X, Y, CellNumber, cdvdt_SelectedRange)
 function CdVdt_CollectFixedRate(Repeat)
 {
 	CdVdt_ResetA();
+
+	var csu_offset = dev.r(3);
+	dev.w(3, 0);
 
 	// Re-enable power
 	if(dev.r(192) != DS_Ready)
@@ -792,6 +795,7 @@ function CdVdt_CollectFixedRate(Repeat)
 
 				cdvdt_CollectedData[cdvdt_RatePoint[i]].voltage.push(VoltageArray[k]);
 				cdvdt_CollectedData[cdvdt_RatePoint[i]].rate.push(rate);
+				cdvdt_CollectedData[cdvdt_RatePoint[i]].rate_err.push(dVdt_err);
 
 				// Summary error
 				E0dvdt = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ETosc, 2) + Math.pow(EProbe, 2));
@@ -801,7 +805,6 @@ function CdVdt_CollectFixedRate(Repeat)
 				E0V = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(EProbe, 2));
 				V_err_sum = (CdVdt_sign(V_err)*(Math.abs(V_err) + E0V)).toFixed(1)
 				cdvdt_v_err_sum.push(V_err_sum);
-
 
 				print("  " + cdvdt_RatePoint[i] + (cdvdt_RatePoint[i] < 100 ? " " : "") + (cdvdt_RatePoint[i] < 1000 ? " " : "") + " | " + rate + (rate < 100 ? " " : "") + (rate < 1000 ? " " : "") + "| " + (dVdt_err >= 0 ? " " : "") + dVdt_err + (Math.abs(dVdt_err) < 10 ? " " : "") + " |  " + VoltageArray[k] + (VoltageArray[k] < 100 ? " " : "") + (VoltageArray[k] < 1000 ? " " : "") + " | " + v + (v < 100 ? " " : "") + (v < 1000 ? " " : "") + "  | " + (V_err >= 0 ? " " : "") + V_err);
 
@@ -819,6 +822,8 @@ function CdVdt_CollectFixedRate(Repeat)
 			}
 		}
 	}
+
+	dev.ws(3, csu_offset);
 	// Power disable
 	dev.c(2);
 	return 1;
@@ -925,15 +930,15 @@ function CdVdt_ResetA()
 	cdvdt_v_err_sum = [];
 
 	for (var i = 0; i < cdvdt_RatePoint.length; i++)
-		cdvdt_CollectedData[cdvdt_RatePoint[i]] = { "voltage": [], "rate": [] }
+		cdvdt_CollectedData[cdvdt_RatePoint[i]] = { "voltage": [], "rate": [], "rate_err": [] }
 }
 
 function CdVdt_CalRate(P2, P1, P0, Rate)
 {
 	var offset = CdVdt_RateOffsetP2(Rate);
-	dev.ws(offset, Math.round(P2 * 1e6));
-	dev.w(offset + 1, Math.round(P1 * 1000));
-	dev.ws(offset + 2, Math.round(P0));
+	dev.ws(offset, Math.round(P2 * 1e7));
+	dev.ws(offset + 1, Math.round(P1 * 10000));
+	dev.ws(offset + 2, Math.round(P0 * 10));
 }
 
 function CdVdt_CalV(P2, P1, P0)
