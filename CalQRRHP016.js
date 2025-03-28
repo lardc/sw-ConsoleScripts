@@ -82,6 +82,8 @@ cal_dIdtUnitErr = [];
 // Data arrays
 cdidt_scatter = [];
 
+//--------------------
+// Инициализация портов 
 function CAL_Init(portDevice, portTek, channelMeasureI, channelMeasureU)
 {
 	if (channelMeasureI < 1 || channelMeasureU > 4)
@@ -111,7 +113,9 @@ function CAL_Init(portDevice, portTek, channelMeasureI, channelMeasureU)
 			TEK_ChannelOff(i);
 	}
 }
+
 //--------------------
+// Верификация Id,Ir,dI/dt
 function CAL_VerifyCurrent()
 {
 	CAL_ResetA();
@@ -141,8 +145,9 @@ function CAL_VerifyCurrent()
 	//dev.w(153,0);
 	dev.c(111);
 }
-//--------------------
 
+//--------------------
+// Верификация измерения Tq
 function CAL_VerifyTq()
 {		
 	CAL_ResetA();
@@ -164,8 +169,9 @@ function CAL_VerifyTq()
 	dev.w(153,0);
 	dev.c(111);
 }
-//--------------------
 
+//--------------------
+// Верификация измерения Irr,Trr и Qrr
 function CAL_VerifyQrr()
 {		
 	CAL_ResetA();
@@ -192,8 +198,9 @@ function CAL_VerifyQrr()
 	dev.w(153,0);
 	dev.c(111);
 }
-//--------------------
 
+//--------------------
+// Верификация измерения dV/dt
 function CAL_VerifydVdt()
 {
 	CAL_ResetA();
@@ -225,7 +232,8 @@ function CAL_VerifydVdt()
 
 }
 
-
+//--------------------
+// Сбор данных для Id,Ir и dI/dt
 function CAL_CollectCurrent(IterationsCount)
 {
 	cal_CntTotal = SetCurrentTest.length * CurrentRateN.length * IterationsCount;
@@ -335,7 +343,7 @@ function CAL_CollectCurrent(IterationsCount)
 }
 
 //--------------------
-
+// Сбор данных для Tq
 function CAL_CollectTq(IterationsCount)
 {
 	cal_CntTotal = CurrentRateN.length * IterationsCount;
@@ -391,8 +399,9 @@ function CAL_CollectTq(IterationsCount)
 
 	return 1;
 }
-//--------------------
 
+//--------------------
+// Сбор данных для Irr, Trr и Qrr
 function CAL_CollectQrr(IterationsCount)
 {
 	cal_CntTotal = SetCurrentTest.length * CurrentRateN.length * IterationsCount;
@@ -487,8 +496,9 @@ function CAL_CollectQrr(IterationsCount)
 
 	return 1;
 }
-//--------------------
 
+//--------------------
+// Сбор данных для dV/dt 
 function CAL_CollectdVdt(IterationsCount)
 {
 	CdVdt_ResetA();
@@ -561,7 +571,8 @@ function CAL_CollectdVdt(IterationsCount)
 	return 1;		
 }
 //--------------------
-
+// Устаревшая функция
+// Сбор данных по напряжению источника формирователя блоков DCU/RCU 
 function QRR_TestPSVoltage()
 {
 	cdvdt_scatter = [];
@@ -617,11 +628,17 @@ function QRR_TestPSVoltage()
 	save("data/didt_404.csv", cdidt_scatter);	
 }
 
+//--------------------
+// Устаревшая функция
+// Выставление горизонтальной развертки
 function CAL_QRRHorizontalScale(Current,CurrentRate)
 {
 	TEK_Horizontal(CAL_QRRTimeScale(Current,CurrentRate), (Current / 2) / CurrentRate * 1e-6);
 }
 
+//--------------------
+// Устаревшая функция
+// Расчет значения горизонтальной развертки
 function CAL_QRRTimeScale(Current,CurrentRate)
 {
 	OSC_K = 2;
@@ -629,6 +646,9 @@ function CAL_QRRTimeScale(Current,CurrentRate)
 	return OSC_TimeScale * OSC_K
 }
 
+//--------------------
+// Устаревшая функция
+// Расчет погрешности Id и dI/dt
 function CAL_MeasureIrate(RateSet, CurrentSet)
 {
 	var RateScope = (TEK_Measure(cal_chMeasureI) * 0.8 / cal_Rshunt * 1e6 / TEK_Exec("measurement:meas2:value?") * 1e-6).toFixed(3);	
@@ -646,6 +666,9 @@ function CAL_MeasureIrate(RateSet, CurrentSet)
 	print("didt error, % = " + RateErr);	
 }
 
+//--------------------
+// Устаревшая функция
+// Нахождение dI/dt по курсорам
 function CAL_QRRdidt(Current,CurrentRate)
 {
 	var ctou_tgd_u = 0;
@@ -743,6 +766,8 @@ function CAL_QRRdidt(Current,CurrentRate)
 	
 }
 
+//--------------------
+// Нахождение Id,Ir и dI/dt по полученным данным из осц.
 function CAL_MeasureCurrent(Channel)
 {
 	var CurrentScale = 0, Current = 0; 
@@ -777,6 +802,8 @@ function CAL_MeasureCurrent(Channel)
 	return ReturnValues;
 }
 
+//--------------------
+// Нахождение Irr,Trr и Qrr по полученным данным из осц.
 function CAL_MeasureQrr(Channel)
 {
 	var CurrentScale = 0, Current = 0, IntegratedCurrent = 0;
@@ -864,15 +891,16 @@ function CAL_MeasureQrr(Channel)
 	return ReturnValues;
 }
 //--------------------
-
+// Нахождение Tq по полученным данным из осц.
 function CAL_MeasureTq(Channel)
 {
 	TEK_Send("cursor:select:source ch" + Channel);
 	sleep(500);
 	return TEK_Exec("cursor:vbars:delta?") * 1e6;
 }
-//--------------------
 
+//--------------------
+// Сброс данных
 function CAL_ResetA()
 {	
 	// Results storage
@@ -916,8 +944,9 @@ function CAL_ResetA()
 	// Data arrays
 	cdidt_scatter = [];
 }
-//--------------------
 
+//--------------------
+//Функции сохранения данных
 
 function CAL_SaveIdc(NameIdc)
 {
@@ -959,7 +988,7 @@ function CAL_SaveTq(NameTq)
 }
 
 //--------------------
-
+// Функции настройки осц.
 function CAL_TekInitCurrent()
 {
 	TEK_Horizontal("1e-6", "0");
