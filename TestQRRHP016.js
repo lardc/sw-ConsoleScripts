@@ -157,8 +157,8 @@ function QRR_Status()
 	print("[FCROVU]");
 	if (dev.r(1) == 0)
 	{	
-		QSU_NodeStatus(7, 192);
-		print("Fault ex. r.:	" + QSU_ReadReg(7, 199));
+		QSU_NodeStatus(12, 192);
+		print("Fault ex. r.:	" + QSU_ReadReg(12, 199));
 	}
 	else
 		print("Emulation");
