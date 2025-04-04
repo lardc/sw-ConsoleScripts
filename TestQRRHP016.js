@@ -9,20 +9,20 @@ qrr_print = 1;
 CALIBRATION_PROCESS = 1;
 
 
-function Cal_Reg_En()
+function Cal_Reg(En)
 {
 	if(dev.r(2) == 0)
-		QSU_WriteReg(160, 140, 1);
+		QSU_WriteReg(160, 140, En);
 	if(dev.r(3) == 0)
-		QSU_WriteReg(161, 140, 1);
+		QSU_WriteReg(161, 140, En);
 	if(dev.r(4) == 0)
-		QSU_WriteReg(162, 140, 1);
+		QSU_WriteReg(162, 140, En);
 	if(dev.r(5) == 0)
-		QSU_WriteReg(170, 140, 1);
+		QSU_WriteReg(170, 140, En);
 	if(dev.r(6) == 0)
-		QSU_WriteReg(171, 140, 1);
+		QSU_WriteReg(171, 140, En);
 	if(dev.r(7) == 0)
-		QSU_WriteReg(171, 140, 1);
+		QSU_WriteReg(171, 140, En);
 }
 // QRR
 function QRR_Start(Mode, IDC, IDCFallRate, OSV, OSVRate)
