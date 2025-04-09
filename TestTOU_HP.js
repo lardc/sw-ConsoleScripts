@@ -38,6 +38,9 @@ function TOUHP_Measure(Voltage, Current, GateCurrent, GateCurrentRate)
 		
 		if(dev.r(192) == 1)
 			return;
+		else if(dev.r(192) == 0)
+			dev.c(1);
+		if(anykey()) break;
 	}
 		
 	dev.w(128, Voltage);

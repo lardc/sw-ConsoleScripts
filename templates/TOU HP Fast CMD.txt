@@ -108,3 +108,32 @@ CTOU_Init(5, 14, 1, 2, 3);
 CTOU_VerifyTime();
 
 CTOU_CalibrateTgt();
+
+/// Верификация анодного тока по битам
+i("CalTOU_HP.js");
+ctou_verify_i_bit = 1;
+ctou_ud_test = 1500;
+ctou_idmin = 125;
+ctou_idmax = 2500;
+ctou_idstp = 31;
+ctou_Ri = 0.001;
+CTOU_Init(3, 7, 1, 2, 3);
+dev.nid(11);
+
+CTOU_VerifyId();
+
+/// Калибровка анодного тока
+i("CalTOU_HP.js");
+ctou_verify_i_bit = 0;
+ctou_ud_test = 1500;
+ctou_idmin = 125;
+ctou_idmax = 2500;
+ctou_id_points = 10;
+ctou_Ri = 0.001;
+CTOU_Init(3, 7, 1, 2, 3);
+dev.nid(11);
+
+CTOU_VerifyId();
+
+CTOU_СalibrateId();
+
