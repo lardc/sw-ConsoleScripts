@@ -153,10 +153,8 @@ function CCS_ClampCollectAutomatic()
 	}
 	
 	if(mode_terminal == 'a')
-	{
 		TEK_PortInit(PortNumberTerminal, 9600);
-		re = new RegExp("[0-9]+");
-	}
+	
 	var force_in = CGEN_GetRange(force_min, force_max, force_step);
 	var force_input, force_unit, force_scope;
 	print("----------------------------------")
@@ -220,16 +218,23 @@ function CCS_ClampCollectAutomatic()
 		force_unit = dev.r(110) * 100;
 		if(mode_terminal == 'a')
 		{
+			var RegexCheck = new RegExp("^=[0-9]+\\(kg\\)");
+			var RegexExtract = new RegExp("[0-9]+");
+			
 			while(true)
 			{
 				try
 				{
-					force_scope = parseInt(re.exec(TEK_Exec('')).join(""), 10);
-					break;
+					var ReadStr = TEK_Exec('');
+					if(RegexCheck.test(ReadStr))
+					{
+						force_scope = parseInt(RegexExtract.exec(ReadStr).join(""), 10);
+						break;
+					}
 				}
 				catch(e)
 				{
-					sleep(50);
+					sleep(10);
 				}
 			}
 		}
@@ -278,8 +283,7 @@ function CCS_ClampCollectAutomatic()
 			return false;
 		}
 	}
-	if(mode_terminal == 'a')
-		delete(re);
+	
 	mode_force = temp_force;
 	mode_terminal = temp_terminal;
 	return true;
