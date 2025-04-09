@@ -222,14 +222,15 @@ function CCS_ClampCollectAutomatic()
 		{
 			while(true)
 			{
-				var ScopeStr = TEK_Exec('');
-				if(ScopeStr)
+				try
 				{
-					force_scope = parseInt(re.exec(ScopeStr).join(""), 10);
+					force_scope = parseInt(re.exec(TEK_Exec('')).join(""), 10);
 					break;
 				}
-				else
+				catch(e)
+				{
 					sleep(50);
+				}
 			}
 		}
 		else if (mode_terminal == 's')
