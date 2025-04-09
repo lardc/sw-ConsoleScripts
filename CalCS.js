@@ -219,7 +219,19 @@ function CCS_ClampCollectAutomatic()
 		pl(dev.rafs(1));
 		force_unit = dev.r(110) * 100;
 		if(mode_terminal == 'a')
-			force_scope = (parseInt(re.exec(TEK_Exec('')).join(""),10));
+		{
+			while(true)
+			{
+				var ScopeStr = TEK_Exec('');
+				if(ScopeStr)
+				{
+					force_scope = parseInt(re.exec(ScopeStr).join(""), 10);
+					break;
+				}
+				else
+					sleep(50);
+			}
+		}
 		else if (mode_terminal == 's')
 		{
 			print("Enter force value from the weight indicator (in kg):");
