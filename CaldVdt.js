@@ -539,7 +539,7 @@ function CdVdt_CalibrateV()
 	{
 		CdVdt_SaveV("dvdt_v","dvdt_v_sum");
 
-		var cdvdt_v_corr = CGEN_GetNumericCorrection2(cdvdt_v_set, cdvdt_v_sc);
+		var cdvdt_v_corr = CGEN_GetNumericCorrection2(cdvdt_v_sc, cdvdt_v_set);
 		CdVdt_CalV(cdvdt_v_corr[2], cdvdt_v_corr[1], cdvdt_v_corr[0]);
 
 		scattern(cdvdt_v_sc, cdvdt_v_err, "Voltage (in V)", "Error relative Voltage (in %)", "Ud relative error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
