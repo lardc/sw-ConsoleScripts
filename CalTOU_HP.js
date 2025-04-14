@@ -11,7 +11,8 @@ ctou_rise_time_ig = 1; 	// in us
 ctou_idmin = 125;		// in A
 ctou_idmax = 400;		// in A
 ctou_id_points = 3;
-ctou_idstp = 1.25;
+ctou_r_0_bit = 480;		// Resistance 0 bit, in Ohm
+ctou_k_idstp = 10;
 //
 ctou_ud_array = [600, 1000, 1500];			// in V
 ctou_ig_array = [2000, 3000, 4000, 5000];	// in mA
@@ -319,6 +320,8 @@ function CTOU_VerifyId()
 
 	// Collect data
 	if(ctou_verify_i_bit)
+		var ctou_idstp_min = (ctou_ud_test / ctou_r_0_bit);
+		var ctou_idstp = ctou_idstp_min * ctou_k_idstp;
 		var CurrentArray = CGEN_GetRange(ctou_idmin, ctou_idmax, ctou_idstp);
 	else
 		var CurrentArray = CGEN_GetRangeLogarithm(ctou_idmin, ctou_idmax, ctou_id_points);
