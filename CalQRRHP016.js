@@ -13,6 +13,7 @@ DirectVoltageRateTest = 20; // in V/us
 //
 UnitDCUEn = 3;
 UnitRCUEn = 3;
+MaxTimeRCU = 300;
 //
 MaxPort = 1;
 MinPort = 2;
@@ -21,7 +22,7 @@ def_UseSaveImage = true;
 //
 SetCurrentTest = [320, 500, 1000, 1500, 2000, 2500, 3000, 3200]; // in A  320, 500, 1000, 1500, 2000, 2500, 3000, 3200
 CurrentRateN = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-CurrentRate = [ 1, 1.5, 2, 5, 10, 15, 20, 30, 50, 60, 100]; // in А/us  1, 1.5, 2, 5, 10, 15, 20, 30, 50, 60, 100
+CurrentRate = [1, 1.5, 2, 5, 10, 15, 20, 30, 50, 60, 100]; // in А/us  1, 1.5, 2, 5, 10, 15, 20, 30, 50, 60, 100
 IrrMeasured = [150, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50]; // in A
 SetVoltage = [402, 1000, 1800];	// in V 402, 1000, 2000, 3000, 4355
 SetVoltageRate = [20, 50, 100, 200]; // in V/us 20, 50, 100, 200
@@ -93,6 +94,7 @@ cal_fIdcScCal = [];
 cal_fIdcSetErrCal = [];
 
 cal_IrcSetCal = [];
+cal_IrcSetCalFull = [];
 cal_IrcScCal = [];
 cal_IrcSetErrCal = [];
 
@@ -148,7 +150,7 @@ function CAL_Init(portDevice, portTek, channelMeasureI, channelMeasureU)
 //-------------------------------------------------------------------------------------------------------------------------------------------
 // Верификация Id,Ir,dI/dt
 
-function CAL_VerifyCurrent()
+function CAL_VerifyCurrent(Rate)
 {
 	CAL_ResetA();
 
@@ -158,15 +160,15 @@ function CAL_VerifyCurrent()
 	// Tektronix init
 	CAL_TekInitCurrent();
 
-	if (CAL_CollectCurrent(cal_Iterations))
+	if (CAL_CollectCurrent(Rate, cal_Iterations))
 	{
 		// Plot relative error distribution
-		scattern(cal_IdcSc, cal_IdcSetErr, "Current Direct (in A)", "Error (in %)", "Current Direct Set error");
-		scattern(cal_IrcSc, cal_IrcSetErr, "Current Revers (in A)", "Error (in %)", "Current Revers Set error");
-		scattern(cal_IdcSc, cal_IdcUnitErr, "Current Direct (in A)", "Error (in %)", "Current Direct Measure error");
-		scattern(cal_IrcSc, cal_IrcUnitErr, "Current Revers (in A)", "Error (in %)", "Current Revers Measure error");
-		scattern(cal_IdcSet, cal_dIdtSetErr, "Set Current (in A)", "Error (in %)", "dIdt Set error");
-		scattern(cal_dIdtSc, cal_dIdtUnitErr, "dIdt (in A/us)", "Error (in %)", "dIdt Measure error");
+		scattern(cal_IdcSc, cal_IdcSetErr, "Current Direct (in A)", "Error (in %)", "Current Direct Set error " + Rate + " Rate");
+		scattern(cal_IrcSc, cal_IrcSetErr, "Current Revers (in A)", "Error (in %)", "Current Revers Set error " + Rate + " Rate");
+		scattern(cal_IdcSc, cal_IdcUnitErr, "Current Direct (in A)", "Error (in %)", "Current Direct Measure error " + Rate + " Rate");
+		scattern(cal_IrcSc, cal_IrcUnitErr, "Current Revers (in A)", "Error (in %)", "Current Revers Measure error " + Rate + " Rate");
+		scattern(cal_IdcSet, cal_dIdtSetErr, "Set Current (in A)", "Error (in %)", "dIdt Set error " + Rate + " Rate");
+		scattern(cal_dIdtSc, cal_dIdtUnitErr, "dIdt (in A/us)", "Error (in %)", "dIdt Measure error " + Rate + " Rate");
 	}	
 
 	dev.w(153,0);
@@ -429,10 +431,10 @@ function CAL_CalibrateIrSet()
 //-------------------------------------------------------------------------------------------------------------------------------------------
 // Калибровка dI/dtSet 
 
-function CAL_CalibratedIdtSet()
+function CAL_CalibratedIdtSet(Rate)
 {
 	CAL_ResetA();
-	CAL_ResetdIdtSetCal();
+	CAL_ResetdIdtSetCal(Rate);
 
 	dev.w(153,1);
 	dev.c(110);
@@ -440,7 +442,7 @@ function CAL_CalibratedIdtSet()
 	// Tektronix init
 	CAL_TekInitCurrent();
 
-	if (CAL_CollectdIdtCal(cal_Iterations))
+	if (CAL_CollectdIdtCal(Rate, cal_Iterations))
 	{
 		CAL_SavedIdtSet("QSU_dIdt");
 
@@ -450,8 +452,9 @@ function CAL_CalibratedIdtSet()
 		// Calculate correction
 		
 		Сal_dIdtSetCorr = CGEN_GetCorrection2("QSU_dIdt");
-		CAL_SetCoefdIdtSet(Сal_dIdtSetCorr[0], Сal_dIdtSetCorr[1], Сal_dIdtSetCorr[2]); 
-		CAL_PrintCoefdIdtSet(); 		
+
+		CAL_SetCoefdIdtSet(Сal_dIdtSetCorr[0], Сal_dIdtSetCorr[1], Сal_dIdtSetCorr[2], Rate); 
+		CAL_PrintCoefdIdtSet(Rate); 		
 	}
 
 }
@@ -459,114 +462,181 @@ function CAL_CalibratedIdtSet()
 //-------------------------------------------------------------------------------------------------------------------------------------------
 // Сбор данных для верификации Id,Ir и dI/dt
 
-function CAL_CollectCurrent(IterationsCount)
+function CAL_CollectCurrent(Rate,IterationsCount)
 {
-	cal_CntTotal = SetCurrentTest.length * CurrentRateN.length * IterationsCount;
+	cal_CntTotal = SetCurrentTest.length * IterationsCount;
 	cal_CntDone = 1;
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
-		for (var j = 0; j < CurrentRateN.length; j++)
-		{
-			for (var k = 0; k < SetCurrentTest.length; k++)
-			{	
+		for (var k = 0; k < SetCurrentTest.length; k++)
+		{	
+			TEK_Send("horizontal:scale "  + ((SetCurrentTest[k] / CurrentRate[Rate]) * 1e-6) * 0.4);
+			CAL_TekScale(cal_chMeasureI, SetCurrentTest[k] * cal_Rshunt / 1e6 * 2);
+			sleep(1000);		
 
-				TEK_Send("horizontal:scale "  + ((SetCurrentTest[k] / CurrentRate[j]) * 1e-6) * 0.5);
-				CAL_TekScale(cal_chMeasureI, SetCurrentTest[k] * cal_Rshunt / 1e6 * 2);
-				sleep(1000);
-
-				if((SetCurrentTest[k] / CurrentRate[j]) >= 500)
-				{	
-					print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-					break;
-				}		
-				else
-				{
-					qrr_print = 0;
-					print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-					QRR_Start(0, SetCurrentTest[k], CurrentRateN[j], DirectVoltageTest, DirectVoltageRateTest);
-					qrr_print = 1;
-				}
+			qrr_print = 0;
+			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
+			QRR_Start(0, SetCurrentTest[k], Rate, DirectVoltageTest, DirectVoltageRateTest);
+			qrr_print = 1;
 			
-				sleep(1000);
+			sleep(1000);
 
-				// Set data
+			// Set data
 			
-				var IdcSet = dev.r(129);
+			var IdcSet = dev.r(129);
 
-				var IrcSet = -(IdcSet);
+			if((SetCurrentTest[k] / CurrentRate[Rate]) >= MaxTimeRCU)
+				var IrcSet = -(CurrentRate[Rate] * MaxTimeRCU).toFixed(2);
+			else	
+				var IrcSet = -dev.r(129).toFixed(2);
 
-				cal_IdcSet.push(IdcSet);
-				cal_IrcSet.push(IrcSet);
+			cal_IdcSet.push(IdcSet);
+			cal_IrcSet.push(IrcSet);
 
-				var dIdtSet = CurrentRate[j];
-				cal_dIdtSet.push(dIdtSet);
+			var dIdtSet = CurrentRate[Rate];
+			cal_dIdtSet.push(dIdtSet);
 
-				// Unit data
+			// Unit data
 			
-				var IdcUnit = dev.r(214);
-				cal_IdcUnit.push(IdcUnit);
+			var IdcUnit = dev.r(214);
+			cal_IdcUnit.push(IdcUnit);
 			
-				var IrcUnit = -(dev.r(211) / 10);
-				cal_IrcUnit.push(IrcUnit);
+			var IrcUnit = -(dev.r(211) / 10);
+			cal_IrcUnit.push(IrcUnit);
 
-				var dIdtUnit = dev.r(215) / 10;
-				cal_dIdtUnit.push(dIdtUnit);
+			var dIdtUnit = dev.r(215) / 10;
+			cal_dIdtUnit.push(dIdtUnit);
 
-				// Scope data
-				var ScopeData = CAL_MeasureCurrent(cal_chMeasureI);
-				var IdcSc = parseFloat(ScopeData[0]).toFixed(2);
-				var IrcSc = parseFloat(ScopeData[1]).toFixed(2);
-				var dIdtSc = parseFloat(ScopeData[2]).toFixed(2);
+			// Scope data
+			var ScopeData = CAL_MeasureCurrent(cal_chMeasureI);
+			var IdcSc = parseFloat(ScopeData[0]).toFixed(2);
+			var IrcSc = parseFloat(ScopeData[1]).toFixed(2);
+			var dIdtSc = parseFloat(ScopeData[2]).toFixed(2);
 
-				cal_IdcSc.push(IdcSc);
-				cal_IrcSc.push(IrcSc);
-				cal_dIdtSc.push(dIdtSc);
+			cal_IdcSc.push(IdcSc);
+			cal_IrcSc.push(IrcSc);
+			cal_dIdtSc.push(dIdtSc);
 
-				// Relative Set error
-				var IdcSetErr = ((IdcSet - IdcSc) / IdcSc * 100).toFixed(2);
-				var IrcSetErr = ((IrcSet - IrcSc) / IrcSc * 100).toFixed(2);
-				var dIdtSetErr = ((dIdtSet - dIdtSc) / dIdtSc * 100).toFixed(2);
+			// Relative Set error
+			var IdcSetErr = ((IdcSet - IdcSc) / IdcSc * 100).toFixed(2);
+			var IrcSetErr = ((IrcSet - IrcSc) / IrcSc * 100).toFixed(2);
+			var dIdtSetErr = ((dIdtSet - dIdtSc) / dIdtSc * 100).toFixed(2);
 			
-				cal_IdcSetErr.push(IdcSetErr);
-				cal_IrcSetErr.push(IrcSetErr);
-				cal_dIdtSetErr.push(dIdtSetErr);
+			cal_IdcSetErr.push(IdcSetErr);
+			cal_IrcSetErr.push(IrcSetErr);
+			cal_dIdtSetErr.push(dIdtSetErr);
 
-				// Relative Unit error
-				var IdcUnitErr = ((IdcUnit - IdcSc) / IdcSc * 100).toFixed(2);
-				var IrcUnitErr = ((IrcUnit - IrcSc) / IrcSc * 100).toFixed(2);
-				var dIdtUnitErr = ((dIdtUnit - dIdtSc) / dIdtSc * 100).toFixed(2);
+			// Relative Unit error
+			var IdcUnitErr = ((IdcUnit - IdcSc) / IdcSc * 100).toFixed(2);
+			var IrcUnitErr = ((IrcUnit - IrcSc) / IrcSc * 100).toFixed(2);
+			var dIdtUnitErr = ((dIdtUnit - dIdtSc) / dIdtSc * 100).toFixed(2);
 			
-				cal_IdcUnitErr.push(IdcUnitErr);
-				cal_IrcUnitErr.push(IrcUnitErr);
-				cal_dIdtUnitErr.push(dIdtUnitErr);
+			cal_IdcUnitErr.push(IdcUnitErr);
+			cal_IrcUnitErr.push(IrcUnitErr);
+			cal_dIdtUnitErr.push(dIdtUnitErr);
 			
-				// Print results
-				print("");
-				print("IdcSet,		A: " + IdcSet);
-				print("IdcUnit,	A: " + IdcUnit);
-				print("IdcSc,		A: " + IdcSc);
-				print("IdcSetErr,	%: " + IdcSetErr);
-				print("IdcUnitErr,	%: " + IdcUnitErr);
-				print("");
-				print("IrcSet,		A: " + IrcSet);
-				print("IrcUnit,	A: " + IrcUnit);
-				print("IrcSc,		A: " + IrcSc);
-				print("IrcSetErr,	%: " + IrcSetErr);
-				print("IrcUnitErr,	%: " + IrcUnitErr);
-				print("");
-				print("dIdtSet,	A/us: " + dIdtSet);
-				print("dIdtUnit,	A/us: " + dIdtUnit);
-				print("dIdtSc,		A/us: " + dIdtSc);
-				print("dIdtSetErr,	%: " + dIdtSetErr);
-				print("dIdtUnitErr,	%: " + dIdtUnitErr);
-				print("--------------------");
+			// Print results
+			print("");
+			print("IdcSet,		A: " + IdcSet);
+			print("IdcUnit,	A: " + IdcUnit);
+			print("IdcSc,		A: " + IdcSc);
+			print("IdcSetErr,	%: " + IdcSetErr);
+			print("IdcUnitErr,	%: " + IdcUnitErr);
+			print("");
+			print("IrcSet,		A: " + IrcSet);
+			print("IrcUnit,	A: " + IrcUnit);
+			print("IrcSc,		A: " + IrcSc);
+			print("IrcSetErr,	%: " + IrcSetErr);
+			print("IrcUnitErr,	%: " + IrcUnitErr);
+			print("");
+			print("dIdtSet,	A/us: " + dIdtSet);
+			print("dIdtUnit,	A/us: " + dIdtUnit);
+			print("dIdtSc,		A/us: " + dIdtSc);
+			print("dIdtSetErr,	%: " + dIdtSetErr);
+			print("dIdtUnitErr,	%: " + dIdtUnitErr);
+			print("--------------------");
 			
-				if (anykey()) return 0;
-			}
+			if (anykey()) return 0;
 		}
 	}
 	return 1;
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Верификации Id,Ir и dI/dt для одного формирования 
+
+function CAL_CollectCurrentSingl(Current,Rate)
+{
+	TEK_Send("horizontal:scale "  + ((Current / CurrentRate[Rate]) * 1e-6) * 0.4);
+	CAL_TekScale(cal_chMeasureI, Current * cal_Rshunt / 1e6 * 2);
+	sleep(1000);
+
+	qrr_print = 0;
+	QRR_Start(0, Current, CurrentRateN[Rate], DirectVoltageTest, DirectVoltageRateTest);
+	qrr_print = 1;
+		
+	sleep(1000);
+
+	// Set data
+			
+	var IdcSet = dev.r(129);
+
+	if((Current / CurrentRate[Rate]) >= MaxTimeRCU)
+		var IrcSet = -(CurrentRate[Rate] * MaxTimeRCU).toFixed(2);
+	else	
+		var IrcSet = -dev.r(129).toFixed(2);
+
+	var dIdtSet = CurrentRate[Rate];
+
+	// Unit data
+			
+	var IdcUnit = dev.r(214);
+			
+	var IrcUnit = -(dev.r(211) / 10);
+
+	var dIdtUnit = dev.r(215) / 10;
+
+	// Scope data
+	var ScopeData = CAL_MeasureCurrent(cal_chMeasureI);
+	var IdcSc = parseFloat(ScopeData[0]).toFixed(2);
+	var IrcSc = parseFloat(ScopeData[1]).toFixed(2);
+	var dIdtSc = parseFloat(ScopeData[2]).toFixed(2);
+
+	// Relative Set error
+	var IdcSetErr = ((IdcSet - IdcSc) / IdcSc * 100).toFixed(2);
+	var IrcSetErr = ((IrcSet - IrcSc) / IrcSc * 100).toFixed(2);
+	var dIdtSetErr = ((dIdtSet - dIdtSc) / dIdtSc * 100).toFixed(2);
+			
+	// Relative Unit error
+	var IdcUnitErr = ((IdcUnit - IdcSc) / IdcSc * 100).toFixed(2);
+	var IrcUnitErr = ((IrcUnit - IrcSc) / IrcSc * 100).toFixed(2);
+	var dIdtUnitErr = ((dIdtUnit - dIdtSc) / dIdtSc * 100).toFixed(2);
+					
+	// Print results
+	print("");
+	print("IdcSet,		A: " + IdcSet);
+	print("IdcUnit,	A: " + IdcUnit);
+	print("IdcSc,		A: " + IdcSc);
+	print("IdcSetErr,	%: " + IdcSetErr);
+	print("IdcUnitErr,	%: " + IdcUnitErr);
+	print("");
+	print("IrcSet,		A: " + IrcSet);
+	print("IrcUnit,	A: " + IrcUnit);
+	print("IrcSc,		A: " + IrcSc);
+	print("IrcSetErr,	%: " + IrcSetErr);
+	print("IrcUnitErr,	%: " + IrcUnitErr);
+	print("");
+	print("dIdtSet,	A/us: " + dIdtSet);
+	print("dIdtUnit,	A/us: " + dIdtUnit);
+	print("dIdtSc,		A/us: " + dIdtSc);
+	print("dIdtSetErr,	%: " + dIdtSetErr);
+	print("dIdtUnitErr,	%: " + dIdtUnitErr);
+	print("");
+	print(QSU_ReadReg(170,152));
+	print(QSU_ReadReg(170,153));
+	print(QSU_ReadReg(170,201));
+	print("--------------------");
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -587,18 +657,10 @@ function CAL_CollectfId(IterationsCount)
 				CAL_TekScale(cal_chMeasureI, SetCurrentTest[k] * cal_Rshunt / 1e6 * 1.2);
 				sleep(1000);
 
-				if((SetCurrentTest[k] / CurrentRate[j]) >= 500)
-				{	
-					print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-					break;
-				}		
-				else
-				{
-					qrr_print = 0;
-					print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-					QRR_Start(0, SetCurrentTest[k], CurrentRateN[j], DirectVoltageTest, DirectVoltageRateTest);
-					qrr_print = 1;
-				}
+				qrr_print = 0;
+				print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
+				QRR_Start(0, SetCurrentTest[k], CurrentRateN[j], DirectVoltageTest, DirectVoltageRateTest);
+				qrr_print = 1;
 			
 				sleep(1000);
 
@@ -644,19 +706,11 @@ function CAL_CollectIdCal(IterationsCount)
 				CAL_TekScale(cal_chMeasureI, SetCurrentTest[k] * cal_Rshunt / 1e6 * 2);
 				sleep(1000);
 
-				if((SetCurrentTest[k] / CurrentRate[j]) >= 500)
-				{	
-					print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-					break;
-				}		
-				else
-				{
-					qrr_print = 0;
-					print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-					QRR_Start(0, SetCurrentTest[k], CurrentRateN[j], DirectVoltageTest, DirectVoltageRateTest);
-					qrr_print = 1;
-				}
-			
+				qrr_print = 0;
+				print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
+				QRR_Start(0, SetCurrentTest[k], CurrentRateN[j], DirectVoltageTest, DirectVoltageRateTest);
+				qrr_print = 1;
+		
 				sleep(1000);
 
 				// Set data
@@ -701,19 +755,11 @@ function CAL_CollectfIdCal(IterationsCount)
 				CAL_TekScale(cal_chMeasureI, SetCurrentTest[k] * cal_Rshunt / 1e6 * 1.2);
 				sleep(1000);
 
-				if((SetCurrentTest[k] / CurrentRate[j]) >= 500)
-				{	
-					print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-					break;
-				}		
-				else
-				{
-					qrr_print = 0;
-					print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-					QRR_Start(0, SetCurrentTest[k], CurrentRateN[j], DirectVoltageTest, DirectVoltageRateTest);
-					qrr_print = 1;
-				}
-			
+				qrr_print = 0;
+				print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
+				QRR_Start(0, SetCurrentTest[k], CurrentRateN[j], DirectVoltageTest, DirectVoltageRateTest);
+				qrr_print = 1;
+				
 				sleep(1000);
 
 				// Set data
@@ -754,28 +800,29 @@ function CAL_CollectIrCal(IterationsCount)
 			for (var k = 0; k < SetCurrentTest.length; k++)
 			{	
 
-				TEK_Send("horizontal:scale "  + ((SetCurrentTest[k] / CurrentRate[j]) * 1e-6) * 0.7);
+				TEK_Send("horizontal:scale "  + ((SetCurrentTest[k] / CurrentRate[j]) * 1e-6) * 0.4);
 				CAL_TekScale(cal_chMeasureI, SetCurrentTest[k] * cal_Rshunt / 1e6 * 2);
 				sleep(1000);
 
-				if((SetCurrentTest[k] / CurrentRate[j]) >= 500)
-				{	
-					print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-					break;
-				}		
-				else
-				{
-					qrr_print = 0;
-					print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-					QRR_Start(0, SetCurrentTest[k], CurrentRateN[j], DirectVoltageTest, DirectVoltageRateTest);
-					qrr_print = 1;
-				}
+				qrr_print = 0;
+				print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
+				QRR_Start(0, SetCurrentTest[k], CurrentRateN[j], DirectVoltageTest, DirectVoltageRateTest);
+				qrr_print = 1;
 			
 				sleep(1000);
 
 				// Set data
-				var IrcSetCal = (dev.r(129) / UnitRCUEn).toFixed(2);
-				cal_IrcSetCal.push(IrcSetCal);
+				if((SetCurrentTest[k] / CurrentRate[j]) >= MaxTimeRCU)
+				{
+					var IrcSetCal = (CurrentRate[j] * MaxTimeRCU / UnitRCUEn).toFixed(2);
+					var IrcSetCalFull = (dev.r(129) / UnitRCUEn).toFixed(2);
+					cal_IrcSetCal.push(IrcSetCalFull);
+				}
+				else	
+				{	
+					var IrcSetCal = (dev.r(129) / UnitRCUEn).toFixed(2);
+					cal_IrcSetCal.push(IrcSetCal);
+				}
 
 				var IrcScCal = (-(TEK_Measure(MinPort) * 1e3) / UnitRCUEn).toFixed(2);
 				cal_IrcScCal.push(IrcScCal);
@@ -785,6 +832,7 @@ function CAL_CollectIrCal(IterationsCount)
 
 				// Print results
 				print("");
+				print("IrcSetFull,		A: " + IrcSetCalFull);
 				print("IrcSet,		A: " + IrcSetCal);
 				print("IrcSc,		A: " + IrcScCal);
 				print("IrcSetErr,	%: " + IrcSetErrCal);
@@ -799,60 +847,50 @@ function CAL_CollectIrCal(IterationsCount)
 //-------------------------------------------------------------------------------------------------------------------------------------------
 // Сбор данных для калибровки dI/dt
 
-function CAL_CollectdIdtCal(IterationsCount)
+function CAL_CollectdIdtCal(Rate, IterationsCount)
 {
-	cal_CntTotal = SetCurrentTest.length * CurrentRateN.length * IterationsCount;
+	cal_CntTotal = (SetCurrentTest.length * IterationsCount);
 	cal_CntDone = 1;
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
-		for (var j = 0; j < CurrentRateN.length; j++)
-		{
-			for (var k = 0; k < SetCurrentTest.length; k++)
-			{	
+		for (var k = 0; k < SetCurrentTest.length; k++)
+		{	
 
-				TEK_Send("horizontal:scale "  + ((SetCurrentTest[k] / CurrentRate[j]) * 1e-6) * 0.8);
-				CAL_TekScale(cal_chMeasureI, SetCurrentTest[k] * cal_Rshunt / 1e6 * 2);
-				sleep(1000);
+			TEK_Send("horizontal:scale "  + ((SetCurrentTest[k] / CurrentRate[Rate]) * 1e-6) * 0.4);
+			CAL_TekScale(cal_chMeasureI, SetCurrentTest[k] * cal_Rshunt / 1e6 * 2);
+			sleep(1000);
 
-				if((SetCurrentTest[k] / CurrentRate[j]) >= 500)
-				{	
-					print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-					break;
-				}		
-				else
-				{
-					qrr_print = 0;
-					print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-					QRR_Start(0, SetCurrentTest[k], CurrentRateN[j], DirectVoltageTest, DirectVoltageRateTest);
-					qrr_print = 1;
-				}
+			qrr_print = 0;
+			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
+			QRR_Start(0, SetCurrentTest[k], CurrentRateN[Rate], DirectVoltageTest, DirectVoltageRateTest);
+			qrr_print = 1;
 			
-				sleep(1000);
+			sleep(1000);
 
-				// Set data
+			// Set data
 
-				var IdcSet = (dev.r(129) / UnitDCUEn).toFixed(2);
-				cal_IdcSet.push(IdcSet);
+			var IdcSet = (dev.r(129) / UnitDCUEn).toFixed(2);
+			cal_IdcSet.push(IdcSet);
 
-				var dIdtSetCal = CurrentRate[j];
-				cal_dIdtSetCal.push(dIdtSetCal);
+			var dIdtSetCal = CurrentRate[Rate];
+			cal_dIdtSetCal.push(dIdtSetCal);
 
-				var ScopeData = CAL_MeasureCurrent(cal_chMeasureI);
-				var dIdtScCal = parseFloat(ScopeData[2]).toFixed(2);
-				cal_dIdtScCal.push(dIdtScCal);
+			var ScopeData = CAL_MeasureCurrent(cal_chMeasureI);
+			var dIdtScCal = parseFloat(ScopeData[2]).toFixed(2);
+			cal_dIdtScCal.push(dIdtScCal);
 
-				var dIdtSetErrCal = (((dIdtSetCal - dIdtScCal) / dIdtScCal * 100) / 2).toFixed(2);
-				cal_dIdtSetErrCal.push(dIdtSetErrCal);
+			var dIdtSetErrCal = (((dIdtSetCal - dIdtScCal) / dIdtScCal * 100) / 2).toFixed(2);
+			cal_dIdtSetErrCal.push(dIdtSetErrCal);
 
-				// Print results
-				print("");
-				print("dIdtSet,	A/us: " + dIdtSetCal);
-				print("dIdtSc,		A/us: " + dIdtScCal);
-				print("dIdtSetErr,	%: " + dIdtSetErrCal);
+			// Print results
+			print("");
+			print("dIdtSet,	A/us: " + dIdtSetCal);
+			print("dIdtSc,		A/us: " + dIdtScCal);
+			print("dIdtSetErr,	%: " + dIdtSetErrCal);
 
-				if (anykey()) return 0;
-			}
+			if (anykey()) return 0;
+			
 		}		
 	}
 	return 1;
@@ -1317,7 +1355,7 @@ function CAL_MeasureCurrent(Channel)
 
 	//Get dIdtSc
 	ChannelData("Current016", Channel)
-	Use_Data2("Current016", "UseCurrent016", 0.5, 0.5)
+	Use_Data2("Current016", "UseCurrent016", 0.8, 0.8)
 	ResultdIdtSc = Use_Time("UseCurrent016")
 
 	var ReturnValues = [];
@@ -1482,6 +1520,7 @@ function CAL_ResetA()
 	cal_fIdcSetErrCal = [];
 
 	cal_IrcSetCal = [];
+	cal_IrcSetCalFull = [];
 	cal_IrcScCal = [];
 	cal_IrcSetErrCal = [];
 
@@ -1538,7 +1577,7 @@ function CAL_SaveIrHSS(NameIrHSS)
 //--------------------
 function CAL_SavedIdtSet(NamedIdtSet)
 {
-	CGEN_SaveArrays(NamedIdtSet, cal_IdcSet, cal_dIdtSetErrCal , cal_dIdtScCal);//cal_dIdtSetCal
+	CGEN_SaveArrays(NamedIdtSet, cal_IdcSet, cal_dIdtSetErrCal, cal_dIdtScCal);//, cal_dIdtSetCal
 }
 
 //--------------------
@@ -1768,9 +1807,9 @@ function CAL_ResetIrSetCal()
 //--------------------
 // Функция сброса корректировок dIdtSet
 
-function CAL_ResetdIdtSetCal()
+function CAL_ResetdIdtSetCal(Rate)
 {
-	CAL_SetCoefdIdtSet(0, 0, 0);
+	CAL_SetCoefdIdtSet(0, 0, 0, Rate);
 }
 
 //--------------------
@@ -1780,9 +1819,9 @@ function CAL_ResetdIdtSetCal()
 
 function CAL_SetCoefIdSet(P2, P1, P0)
 {
-	dev.ws(79, Math.round(P2 * 1e6));
-	dev.w(78, Math.round(P1 * 1000));
-	dev.ws(77, Math.round(P0));	
+	dev.ws(109, Math.round(P2 * 1e6));
+	dev.w(108, Math.round(P1 * 1000));
+	dev.ws(107, Math.round(P0));	
 }
 
 //--------------------
@@ -1799,8 +1838,8 @@ function CAL_SetCoefIHSS(P1, P0)
 
 function CAL_SetCoeffIdSet(P1, P0)
 {
-	dev.w(74, Math.round(P1 * 1000));
-	dev.ws(73, Math.round(P0));	
+	dev.w(104, Math.round(P1 * 1000));
+	dev.ws(103, Math.round(P0));	
 }
 
 //--------------------
@@ -1808,30 +1847,85 @@ function CAL_SetCoeffIdSet(P1, P0)
 
 function CAL_SetCoefIrSet(P1, P0)
 {
-	dev.w(76, Math.round(P1 * 1000));
-	dev.ws(75, Math.round(P0));	
+	dev.w(106, Math.round(P1 * 1000));
+	dev.ws(105, Math.round(P0));	
 }
 
 //--------------------
 // Функция записи корректировок dIdtSet
 
-function CAL_SetCoefdIdtSet(P2, P1, P0)
+function CAL_SetCoefdIdtSet(P2, P1, P0, Rate)
 {
-	dev.ws(72, Math.round(P2 * 1e6));
-	dev.w(71, Math.round(P1 * 1000));
-	dev.ws(70, Math.round(P0));	
+
+	switch(Rate)
+	{
+	case 0:
+		dev.ws(72, Math.round(P2 * 1e7));
+		dev.w(71, Math.round(P1 * 1e4));
+		dev.ws(70, Math.round(P0 * 10));	
+		break;
+	case 1:
+		dev.ws(75, Math.round(P2 * 1e7));
+		dev.w(74, Math.round(P1 * 1e4));
+		dev.ws(73, Math.round(P0 * 10));	
+		break;
+	case 2:
+		dev.ws(78, Math.round(P2 * 1e7));
+		dev.w(77, Math.round(P1 * 1e4));
+		dev.ws(76, Math.round(P0 * 10));	
+		break;
+	case 3:
+		dev.ws(81, Math.round(P2 * 1e7));
+		dev.w(80, Math.round(P1 * 1e4));
+		dev.ws(79, Math.round(P0 * 10));	
+		break;
+	case 4:
+		dev.ws(84, Math.round(P2 * 1e7));
+		dev.w(83, Math.round(P1 * 1e4));
+		dev.ws(82, Math.round(P0 * 10));	
+		break;
+	case 5:
+		dev.ws(87, Math.round(P2 * 1e7));
+		dev.w(86, Math.round(P1 * 1e4));
+		dev.ws(85, Math.round(P0 * 10));	
+		break;
+	case 6:
+		dev.ws(90, Math.round(P2 * 1e7));
+		dev.w(89, Math.round(P1 * 1e4));
+		dev.ws(88, Math.round(P0 * 10));	
+		break;
+	case 7:
+		dev.ws(93, Math.round(P2 * 1e7));
+		dev.w(92, Math.round(P1 * 1e4));
+		dev.ws(91, Math.round(P0 * 10));	
+		break;
+	case 8:
+		dev.ws(96, Math.round(P2 * 1e7));
+		dev.w(95, Math.round(P1 * 1e4));
+		dev.ws(94, Math.round(P0 * 10));	
+		break;
+	case 9:
+		dev.ws(99, Math.round(P2 * 1e7));
+		dev.w(98, Math.round(P1 * 1e4));
+		dev.ws(97, Math.round(P0 * 10));	
+		break;
+	case 10:
+		dev.ws(102, Math.round(P2 * 1e7));
+		dev.w(101, Math.round(P1 * 1e4));
+		dev.ws(100, Math.round(P0 * 10));	
+		break;
+	}	
 }
 
 //--------------------
-
 //-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция вызова значений регистров для IdSet
 
 function CAL_PrintCoefIdSet()
 {
-	print("IdSet P2 x1e6	: " + dev.rs(79));
-	print("IdSet P1 x1000	: " + dev.rs(78));
-	print("IdSet P0 		: " + dev.rs(77));
+	print("IdSet P2 x1e6	: " + dev.rs(109));
+	print("IdSet P1 x1000	: " + dev.rs(108));
+	print("IdSet P0 		: " + dev.rs(107));
 }
 
 //--------------------
@@ -1848,8 +1942,8 @@ function CAL_PrintCoefIHSS()
 
 function CAL_PrintCoeffIdSet()
 {
-	print("fIdSet P1 x1000	: " + dev.rs(74));
-	print("fIdSet P0 		: " + dev.rs(73));
+	print("fIdSet P1 x1000	: " + dev.rs(104));
+	print("fIdSet P0 		: " + dev.rs(103));
 }
 
 //--------------------
@@ -1857,18 +1951,19 @@ function CAL_PrintCoeffIdSet()
 
 function CAL_PrintCoefIrSet()
 {
-	print("IrSet K x1000	: " + dev.rs(76));
-	print("IrSet OFFSET 	: " + dev.rs(75));
+	print("IrSet K x1000	: " + dev.rs(106));
+	print("IrSet OFFSET 	: " + dev.rs(105));
 }
 
 //--------------------
 // Функция вызова значений регистров для dI/dtSet
 
-function CAL_PrintCoefdIdtSet()
+function CAL_PrintCoefdIdtSet(Rate)
 {
-	print("dIdtSet P2 x1e6	: " + dev.rs(72));
-	print("dIdtSet P1 x1000	: " + dev.rs(71));
-	print("dIdtSet P0 		: " + dev.rs(70));
+	Reg = 70 + (Rate * 3);
+	print("dIdtSet " + Reg + ": P0 		: " + dev.rs(Reg));
+	print("dIdtSet " + (Reg + 1) + ": P1  x1000	: " + dev.rs(Reg + 1));
+	print("dIdtSet " + (Reg + 2) + ": P2 x1e6	: " + dev.rs(Reg + 2));
 }
 
 //--------------------
