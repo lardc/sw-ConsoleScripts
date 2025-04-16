@@ -112,10 +112,11 @@ CTOU_CalibrateTgt();
 /// Верификация анодного тока по битам
 i("CalTOU_HP.js");
 ctou_verify_i_bit = 1;
-ctou_ud_test = 1500;
+ctou_ud_test = 600;
 ctou_idmin = 125;
 ctou_idmax = 2500;
-ctou_idstp = 31;
+ctou_r_0_bit = 480;
+ctou_k_idstp = 10; // множитель минимального шага Id
 ctou_Ri = 0.001;
 CTOU_Init(3, 7, 1, 2, 3);
 dev.nid(11);
