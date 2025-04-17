@@ -9,6 +9,7 @@ PrintFWInfo();
 // Обновление прошивки
 i("STM_FWUpdate.js");
 FWU_TOMUHP();
+FWU_TOCUHP();
 
 // Скачать дамп регистров
 i("STM_FWUpdate.js");
@@ -123,10 +124,30 @@ dev.nid(11);
 
 CTOU_VerifyId();
 
-/// Калибровка анодного тока
+/// Калибровка задания анодного тока
+// (Offset: -) (K: -)
+// 600 	V: [P0: 38] [P1: 37] [P2: 36]
+// 1000 V: [P0: 41] [P1: 40] [P2: 39]
+// 1500 V: [P0: 44] [P1: 43] [P2: 42]
 i("CalTOU_HP.js");
 ctou_verify_i_bit = 0;
-ctou_ud_test = 1500;
+ctou_ud_test = 600;
+ctou_idmin = 125;
+ctou_idmax = 2500;
+ctou_id_points = 10;
+ctou_Ri = 0.001;
+CTOU_Init(3, 7, 1, 2, 3);
+dev.nid(11);
+
+CTOU_VerifyId();
+
+CTOU_СalibrateIdset();
+
+/// Калибровка измерения анодного тока
+// (Offset: 46) (K: 45)
+// [P0: 47] [P1: 48] [P2: 49]
+i("CalTOU_HP.js");
+ctou_ud_test = 600;
 ctou_idmin = 125;
 ctou_idmax = 2500;
 ctou_id_points = 10;

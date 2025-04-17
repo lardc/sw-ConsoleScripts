@@ -83,7 +83,7 @@ ctou_tgt_err = [];
 ctou_tgd_err_sum = [];
 ctou_tgt_err_sum = [];
 ctou_ig_set_err_sum = [];
-ctou_id_err_sum = [];
+ctou_id_set_err_sum = [];
 
 // Correction
 ctou_id_corr = [];
@@ -119,11 +119,14 @@ function CTOU_Init(portTOU, portTek, channelMeasureI, channelMeasureU, channelSy
 	dev.Connect(portTOU);
 }
 
-function CTOU_СalibrateId()
+function CTOU_СalibrateIdset()
 {	
+	// dev.nid(ctou_nid);
+ 	// CTOMU_CommutationControl(0);
+	
 	// Collect data
 	CTOU_ResetA();
-	CTOU_ResetIdCal();
+	CTOU_ResetIdsetCal();
 	
 	// Tektronix init
 	CTOU_IdTekInit();
@@ -133,27 +136,52 @@ function CTOU_СalibrateId()
 
 	if (CTOU_IdCollect(CurrentArray, ctou_Iterations))
 	{
-		CTOU_SaveId("touhp_id");
 		CTOU_SaveIdset("touhp_idset");
 
 		// Plot relative error distribution
-		scattern(ctou_id_sc, ctou_id_err, "Current (in A)", "Error (in %)", "Current relative error");
-		sleep(200);
 		scattern(ctou_id_set, ctou_idset_err, "Current (in A)", "Error (in %)", "Current setpoint relative error");
+		scattern(ctou_id_set, ctou_id_set_err_sum, "Id (in A)", "Error (in %)", "Current setpoint summary error");
 
+		// Calculate correction
+		ctou_id_set_corr = CGEN_GetCorrection2("touhp_idset");
+		CTOU_CalId_Set(ctou_id_set_corr[0], ctou_id_set_corr[1], ctou_id_set_corr[2]);
+		CTOU_PrintIdSetCal();
+	}
+
+	// CTOMU_CommutationControl(1);
+}
+
+function CTOU_СalibrateId()
+{
+	// Collect data
+	CTOU_ResetA();
+	CTOU_ResetIdCal();
+
+	// Tektronix init
+	CTOU_IdTekInit();
+
+	// Reload values
+	var CurrentArray = CGEN_GetRangeLogarithm(ctou_idmin, ctou_idmax, ctou_id_points);
+
+	if (CTOU_IdCollect(CurrentArray, ctou_Iterations))
+	{
+		CTOU_SaveId("touhp_id");
+
+		// Plot relative error distribution
+		scattern(ctou_id_sc, ctou_id_err, "Current (in A)", "Error (in %)", "Current relative error");
+		
 		// Calculate correction
 		ctou_id_corr = CGEN_GetCorrection2("touhp_id");
 		CTOU_CalId(ctou_id_corr[0], ctou_id_corr[1], ctou_id_corr[2]);
 		CTOU_PrintIdCal();
-		
-		ctou_id_set_corr = CGEN_GetCorrection2("touhp_idset");
-		CTOU_CalId_Set(ctou_id_set_corr[0], ctou_id_set_corr[1], ctou_id_set_corr[2]);
-		CTOU_PrintIdSetCal();
 	}
 }
 
 function CTOU_СalibrateUd()
 {	
+	// dev.nid(ctou_nid);
+ 	// CTOMU_CommutationControl(1);
+
 	// Collect data
 	CTOU_ResetA();
 	CTOU_ResetUdCal();
@@ -312,6 +340,9 @@ function CTOU_CalibrateTgt()
 
 function CTOU_VerifyId()
 {	
+	// dev.nid(ctou_nid);
+ 	// CTOMU_CommutationControl(0);
+
 	// Collect data
 	CTOU_ResetA();
 	
@@ -336,15 +367,20 @@ function CTOU_VerifyId()
 		scattern(ctou_id_set, ctou_idset_err, "Id (in A)", "Error (in %)", "Current setpoint relative error");
 		
 		// Plot summary error distribution
-		scattern(ctou_id_set, ctou_id_err_sum, "Id (in A)", "Error (in %)", "Current setpoint summary error");
+		scattern(ctou_id_set, ctou_id_set_err_sum, "Id (in A)", "Error (in %)", "Current setpoint summary error");
 
 		if(ctou_verify_i_bit)	
 		scattern(ctou_id_bit_sum, ctou_id_sc, "Bit", "Id (in A)", "Id / Bit");
 	}
+
+	// CTOMU_CommutationControl(1);
 }
 
 function CTOU_VerifyUd()
 {	
+	// dev.nid(ctou_nid);
+ 	// CTOMU_CommutationControl(1);
+
 	// Collect data
 	CTOU_ResetA();
 	
@@ -763,7 +799,7 @@ function CTOU_IdCollect(CurrentValues, IterationsCount)
 			// Summary error
 			var E0_id_set = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(Eshunt, 2));
 			var id_set_err_sum = (Math.sign_ma(id_set_err) * (Math.abs(id_set_err) + E0_id_set)).toFixed(2);
-			ctou_id_err_sum.push(id_set_err_sum);
+			ctou_id_set_err_sum.push(id_set_err_sum);
 			print("Id_Sum_Err, %: " + id_set_err_sum);
 			print("--------------------");
 
@@ -1188,7 +1224,7 @@ function CTOU_ResetA()
 	ctou_ig_set_err_sum = [];
 	ctou_tgd_err_sum = [];
 	ctou_tgt_err_sum = [];
-	ctou_id_err_sum = [];
+	ctou_id_set_err_sum = [];
 
 	id_bit_csv_array = [];
 	ctou_id_bit_sum = [];
@@ -1268,7 +1304,7 @@ function CTOU_PrintIdCal()
 {
 	print("I P2 x1e6  : " + dev.rs(49));
 	print("I P1 x1000 : " + dev.r(48));
-	print("I P0 x1000 : " + dev.rs(47));
+	print("I P0 	  : " + dev.rs(47));
 }
 
 function CTOU_PrintUdCal()
@@ -1360,10 +1396,15 @@ function CTOU_PrintTgtCal()
 	}
 }
 
-function CTOU_ResetIdCal()
+function CTOU_ResetIdsetCal()
 {
 	CTOU_CalId(0, 1, 0);
 	CTOU_CalId_Set(0, 1, 0);
+}
+
+function CTOU_ResetIdCal()
+{
+	CTOU_CalId(0, 1, 0);
 }
 
 function CTOU_ResetUdCal()
@@ -1524,3 +1565,25 @@ function CTOU_ReadRegisterNID(NID, Register)
 	dev.nid(NID);
 	return dev.r(Register);
 }
+
+ function CTOU_CalUdApllySettings()
+ {
+ 	dev.w(180, ctou_TOCUHP_nid);
+ 	dev.w(183, 200);
+ 	dev.c(40);
+ 
+ 	sleep(10);
+ }
+ 
+ function CTOMU_CommutationControl(Control)
+ {
+ 	if(Control)
+ 	{
+ 		dev.w(14, 0);
+ 		dev.w(190, 0);
+ 		dev.c(21);
+ 		dev.c(22);
+ 	}
+ 	else
+ 		dev.w(14, 1);
+ }
