@@ -15,7 +15,7 @@ var ACT_JSON_TO_EP					= 342;
 
 var REG_MEM_SYMBOL					= 299;
 
-var EP_FLASH_DATA					= 7;
+var EP_FLASH_DATA					= 20;
 
 var DT_Char		= 0;
 var DT_Int8U	= 1;
@@ -292,7 +292,7 @@ function ReadJSON()
 
 		JSON += String.fromCharCode(symbol);
 
-		if (symbol == 0 || anykey())
+		if (symbol == 0 || symbol == 0xFFFF || anykey())
 			break;
 	}
 	return JSON;
