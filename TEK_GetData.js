@@ -1,5 +1,11 @@
 include("Tektronix.js")
 include("CalGeneral.js")
+include("SiC_GetData.js")
+
+tek_measuring_device = "TPS2024";	// "TPS2014"
+
+tek_gd_filter_points = 5;
+tek_gd_filter_factor = 0.5;
 
 // Channels
 UsePort = MAXPort = 1;
@@ -12,11 +18,22 @@ Cal_RCU = 1;
 Use_Min = 0.5;
 Use_Max = 0.9;
 
+//
+Mute = 1;
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
 function TEK_GD_Init(Port)
 {
-	TEK_PortInit(Port);
+	if(tek_measuring_device == "TPS2014")
+	{
+		TEK_PortInit(Port);
+		TEK_Send("data:encdg srp");
+	}
+	else
+	{
+	TEK_PortInit(Port, 9600);
 	TEK_Send("data:encdg rpb");
+	}
+
 	TEK_Send("data:width 1");
 	TEK_Send("data:start 1");
 	TEK_Send("data:stop 2500");
@@ -42,18 +59,37 @@ function TEK_Init(PortTek,UsePort)
 		else
 			TEK_ChannelOff(i);
 	}
+
+	
 }
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
+// Сохраниение данных в файл
 function SaveChannelData(NameFile, Data)
 {
 save(cgen_correctionDir + "/" + NameFile + ".csv", Data);
 }
-
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
+// Получение данных из Тектроникса
 function ChannelData(NameFile, Channel)
 {
 	var Data = [];
 	Data = (GetChannelData(Channel));
 	SaveChannelData(NameFile, Data);
+}
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
+// График данных из Тектроникса
+function ChannelDataPlot(Channel,Name)
+{
+	var Data = [];
+	var Time = SiC_GD_GetTimeScale() / 250 * 1e9  / 1000;
+	Data = GetChannelData(Channel);
+	// for (var i = 0; i < Data.length; i++)	
+	// {	
+		// Time.push(i);
+// 
+	// }	 
+	// scattern(Time, Data, "Number", "Value x10", X);
+	plotn(Data, Time, "Number", "Value x10", Name);
 }
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
 // Выбор отрезка данных по выбранным процентам (однополюсный)
@@ -72,16 +108,20 @@ function Use_Data(InNameFile, OutNameFile)
 		if (Load[i] == Measure.toFixed(0) || (Load[i]-1) == Measure.toFixed(0)|| (Load[i]+1) == Measure.toFixed(0))
 			{
 			Min_i = i;
-			p("Min_i " + Min_i);
-			p("Min_i_L " + Load[Min_i]);
+			if(!Mute)
+			{	
+				p("Min_i " + Min_i);
+				p("Min_i_L " + Load[Min_i]);
+			}	
 			break;
 			}
 	}
-	p("Measure " + Measure);
+	if(!Mute)
+		p("Measure " + Measure);
+
 	for (var i = Min_i; i < Load.length; ++i)
 	{
 		if (Load[i] <= Measure * Use_Max && Load[i+1] <= Measure * Use_Max && Load[i+2] <= Measure * Use_Max && Load[i+3] <= Measure * Use_Max && Load[i+4] <= Measure * Use_Max) 
-		//if (Load[i] <= 400)
 		{ 
 			Start = i;
 			//p("Start " + Start);
@@ -124,26 +164,34 @@ function Use_Data2(InNameFile, OutNameFile, Use_Max, Use_Min)
 		if (Load[i] == MeasureMax.toFixed(0) || (Load[i]-1) == MeasureMax.toFixed(0) || (Load[i]+1) == MeasureMax.toFixed(0))
 			{
 			Min_i = i;
-			p("Min_i " + Min_i);
-			p("Min_i_L " + Load[Min_i]);
+			if(!Mute)
+			{
+				p("Min_i " + Min_i);
+				p("Min_i_L " + Load[Min_i]);
+			}	
 			break;
 			}
 	}
-	p("MeasureMax " + MeasureMax);
+	if(!Mute)
+		p("MeasureMax " + MeasureMax);
 
-	for (var i = Load.length ; i > 0  ; --i)
+	for (var i = Load.length ; i > 0 ; --i)
 	{
 		if (Load[i] == MeasureMin.toFixed(0) || (Load[i]-1) == MeasureMin.toFixed(0) || (Load[i]+1) == MeasureMin.toFixed(0))
 			{
 			Max_i = i;
-			p("Max_i " + Max_i);
-			p("Max_i_L " + Load[Max_i]);
+			if(!Mute)
+			{
+				p("Max_i " + Max_i);
+				p("Max_i_L " + Load[Max_i]);
+			}	
 			break;
 			}
 	}
-	p("MeasureMin " + MeasureMin);
+	if(!Mute)
+		p("MeasureMin " + MeasureMin);
 
-	for (var i = Min_i; i < Load.length; ++i)
+	for (var i = Min_i; i < Max_i; ++i)
 	{
 		if (Load[i] <= MeasureMax * Use_Max && Load[i+1] <= MeasureMax * Use_Max && Load[i+2] <= MeasureMax * Use_Max && Load[i+3] <= MeasureMax * Use_Max && Load[i+4] <= MeasureMax * Use_Max) 
 		//if (Load[i] <= 400)
@@ -153,7 +201,7 @@ function Use_Data2(InNameFile, OutNameFile, Use_Max, Use_Min)
 			break;
 		}
 	}	
-	for (var i = Load.length ; i > 0 ; --i)	
+	for (var i = Max_i ; i > Min_i ; --i)	
 	{
 		if (Load[i] >= MeasureMin * Use_Min && Load[i-1] >= MeasureMin * Use_Min && Load[i-2] >= MeasureMin * Use_Min && Load[i-3] >= MeasureMin * Use_Min && Load[i-4] >= MeasureMin * Use_Min)
 		{	
@@ -179,18 +227,25 @@ function Use_Time(InNameFile)
 	Use_Load =[];
 
 	var p_h_scale = TEK_Exec("HORizontal:scale?");
-	T = (p_h_scale * 1e6) / 250; 
-	p("p_h_scale " + p_h_scale * 1e6);
-	p("T " + T);
+	T = (p_h_scale * 1e6) / 250;
+	if(!Mute)
+	{		 
+		p("p_h_scale " + p_h_scale * 1e6);
+		p("T " + T);
+	}	
 	Load = load(cgen_correctionDir + "/" + InNameFile + ".csv");
 	Min = Load[Load.length - 1]/10;
-	p("Min " + Min);
+	if(!Mute)
+		p("Min " + Min);
 	Max = Load[0]/10;
-	p("Max " + Max);
+	if(!Mute)
+		p("Max " + Max);
 	dI = Max - Min
-	p("dI " + dI);
+	if(!Mute)
+		p("dI " + dI);
 	dT = (Load.length) * T;
-	p("dT " + dT)
+	if(!Mute)
+		p("dT " + dT)
 	RateScope = (dI / dT).toFixed(3);
 	return RateScope;
 }
@@ -266,7 +321,8 @@ function TEK_GD_Sinus_MAX(Data)
 
 	return (AverageValue / SamplingAvgNum);
 }
-
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
+//
 function TEK_GD_MAX(Data)
 {
 	var value = Data[0];
@@ -280,4 +336,45 @@ function TEK_GD_MAX(Data)
 		}
 	
 	return {Value : value, Index : index};
+}
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
+// Фильтр для данных с выводом в строку
+function TEK_GD_Filter(Data, ScaleI)
+{
+	var filtered_avg = [];
+	var filtered_spl = [];
+	var filter_data = [];
+	
+	// avg filtering
+	for (var i = 0; i < (Data.length - Math.pow(tek_gd_filter_points, 2)); ++i)
+	{
+		var avg_point = 0;
+		for (var j = i; j < (i + Math.pow(tek_gd_filter_points, 2)); j += tek_gd_filter_points)
+			avg_point += Data[j];
+		filtered_avg[i] = avg_point / tek_gd_filter_points;
+	}
+	
+	// current shunt scale
+	var scale
+	if (typeof ScaleI === 'undefined')
+		scale = 1;
+	else
+		scale = ScaleI;
+	
+	// spline filtering
+	for (var i = 0; i < (filtered_avg.length - 3); ++i)
+	{
+		filtered_spl[i] =	Math.pow(1 - tek_gd_filter_factor, 3) * filtered_avg[i] +
+							3 * tek_gd_filter_factor * Math.pow(1 - tek_gd_filter_factor, 2) * filtered_avg[i + 1] +
+							3 * Math.pow(tek_gd_filter_factor, 2) * (1 - tek_gd_filter_factor) * filtered_avg[i + 2] +
+							Math.pow(tek_gd_filter_factor, 3) * filtered_avg[i + 3];
+		
+		filtered_spl[i] *= scale;
+		filter_data.push(filtered_spl[i].toFixed(2));	
+	}
+	
+//	plot(filtered_spl, 1, 1);
+//	save(cgen_correctionDir + "/" + "123" + ".csv", filter_data); 
+
+	return filtered_spl;
 }
