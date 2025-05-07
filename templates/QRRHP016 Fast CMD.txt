@@ -10,8 +10,10 @@ channelMeasureI: Канал измерения тока на осциллогр�
 channelMeasureU: Канад измерения напряжения на осциллографе
 
 //Включение на всех активных блоках режима для калибровки
-Cal_Reg_En()
-	
+Cal_Reg(1); 
+//1 - калибровка;
+//0 - обычный режим;	
+
 //Одиночное формирование
 QRR_Start(0,1000,4,500,20);
 QRR_Start(Mode, IDC, IDCFallRate, OSV, OSVRate)		
@@ -32,13 +34,34 @@ DirectCurrentTest = 1000;
 qrr_single = 1;
 
 //Верификация Id/Ir/dIdt
-CAL_VerifyCurrent();
+CAL_VerifyCurrent(4,0);
+
+//Верификация Id/Ir/dIdt одного формирования
+CAL_CollectCurrentSingl(320,4)
+
+//Верификация fId
+CAL_VerifyfId();
+
 //Верификация QRR  
 CAL_VerifyQrr();
+
 //Верификация TQ  
 CAL_VerifyTq();
+
 // Верификация dV/dt
-CAL_VerifydVdt();				
+CAL_VerifydVdt();	
+
+//Калибровка Idset	
+CAL_CalibrateIdSet();
+
+//Калибровка fIdset	
+CAL_CalibratefIdSet();
+
+//Калибровка Irset
+CAL_CalibrateIrSet();
+
+//Калибровка dIdtset
+CAL_CalibratedIdtSet(4);
 
 //Ресурсный тест
 DRCU_Test(1000);
