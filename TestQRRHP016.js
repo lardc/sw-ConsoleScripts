@@ -23,6 +23,7 @@ function Cal_Reg(En)
 		QSU_WriteReg(171, 140, En);
 	if(dev.r(7) == 0)
 		QSU_WriteReg(171, 140, En);
+	dev.w(140,En);
 }
 // QRR
 function QRR_Start(Mode, IDC, IDCFallRate, OSV, OSVRate)
