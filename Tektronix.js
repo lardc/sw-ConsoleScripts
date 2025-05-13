@@ -239,7 +239,7 @@ function TEK_PlotChannel(Channel)
 	plot(GetChannelData(Channel), 1,1);
 }
 
-function GetChannelData(Channel) 
+function TEK_GetChannelData(Channel) 
 {
 	// read basic data
 	var p_scale = TEK_Exec("ch" + Channel + ":scale?");
@@ -333,7 +333,7 @@ function TEK_CALC_dVdt(Data, LowLevel10, HighLevel90)
 	for (var i = 0; (k * i_correct + b) < MaxLevel; i_correct++)
 		Linear[i + i_position + i_correct] = k * i_correct + b;
 	
-	plot2(Data, Linear, 1, 1)
+	//plot2(Data, Linear, 1, 1)
 
 	dVdt = k / TimeStep * 1e-6;
 	//p("dVdt approx("+ LowLevel10 +"-"+ HighLevel90 +") = " + (dVdt).toFixed(2) + " V/us");
