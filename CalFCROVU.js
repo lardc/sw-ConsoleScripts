@@ -10,14 +10,15 @@ cfdvdt_MeasureMethod = cfdVdt_Approx;
 
 // DeviceState
 DS_None = 0;
-//DS_Fault = 1;
-//DS_Disabled = 2;
+DS_Fault = 1;
+DS_Disabled = 2;
 DS_Ready = 3;
 
 // Definition section (modification is dangerous)
-cfdvdt_def_VGateMin = 1750;
+cfdvdt_def_VGateMin = 1580;
 cfdvdt_def_VGateMax = 4700;
-cfdvdt_def_SetpointCount = 10;
+cfdvdt_step_Setpoint = 10
+cfdvdt_def_SetpointCount = 4;
 Time = 40;
 
 // Use averages in OSC
@@ -30,17 +31,19 @@ cfdvdt_def_UseAverage = cfdvdt_AVERAGES_4;
 cfdvdt_RatePoint = [20, 50, 100, 200]
 cfdvdt_Current = [399, 799, 1199, 1599]
 
+cal_Iterations = 1;
+
 // Definition range config
 cfdvdt_def_NO_RANGE = 3; 		// for compibility old pcb
 cfdvdt_def_SetpointStartAddr = {}
 cfdvdt_def_SetpointStartAddr[cfdvdt_def_NO_RANGE] = 20;
 //
-cfdvdt_CalVoltage = 500;
+cfdvdt_CalVoltage = 400;
 cfdvdt_SelectedRange = cfdvdt_def_NO_RANGE;
-cfdvdt_HVProbeScale = "100"	// Коэффициент деления щупа
+cfdvdt_HVProbeScale = "1000"	// Коэффициент деления щупа
 cfdvdt_DeviderRate = 10; 	// Делитель скорости
 
-cfdvdt_def_UseSaveImage = true;
+cfdvdt_def_UseSaveImage = false;
 
 // Results storage
 cfdvdt_scatter = [];
@@ -69,9 +72,12 @@ function CfdVdt_Init(portfdVdt, portTek, channelMeasure)
 	dev.Connect(portfdVdt);
 	
 	// Init Tektronix
-	SiC_GD_Init(portTek);
-	//TEK_PortInit(portTek);
-	//TEK_Send("data:encdg srp");
+	TEK_PortInit(portTek);
+	TEK_Send("data:encdg srp");
+
+	TEK_Send("data:width 1");	
+	TEK_Send("data:start 1");
+	TEK_Send("data:stop 2500");
 	
 	// Tektronix init
 	// Init channels
@@ -94,8 +100,8 @@ function CfdVdt_Init(portfdVdt, portTek, channelMeasure)
 	CfdVdt_TekMeasurement(channelMeasure);
 }
 
-// Калибровка
-function CfdVdt_FixRate() 
+// Калибровка скорости нарастания
+function CfdVdt_CalibrateRate() 
 {
 	// Re-enable power
 	if(dev.r(192) == DS_None)
@@ -117,22 +123,21 @@ function CfdVdt_FixRate()
 	// Base DataTable address
 	var BaseDTAddress = cfdvdt_def_SetpointStartAddr[cfdvdt_SelectedRange];
 	GateFixV = 0;
-	CfdVdt_ApproxRate();
+
+	CfdVdt_ApproxRate(cal_Iterations);			
+	print("-----------------------");
 	for (var i = 0; i < cfdvdt_RatePoint.length; i++)
 	{
 		GateFixV = Cal_AproxRate[2] + cfdvdt_RatePoint[i] * Cal_AproxRate[1] + cfdvdt_RatePoint[i] * cfdvdt_RatePoint[i] * Cal_AproxRate[0];
 		// Write to DataTable
 		dev.w(BaseDTAddress + i * 2, GateFixV);
 		dev.w(BaseDTAddress + i * 2 + 1, cfdvdt_RatePoint[i] * 10);
-
-		print("Vgt,     mV: " + GateFixV);
-		print("dV/dt, V/us: " + cfdvdt_RatePoint[i]);
-		print("-- result " + (i + 1) + " of " + cfdvdt_RatePoint.length + " --");
 	}	
+	CfdVdt_PrintSetpoints()
 }
 
-//Верификация
-function CfdVdt_CollectFixedRate(Repeat)
+//Верификация скорости нарастания
+function CfdVdt_VerifyRate()
 {
 	CfdVdt_ResetA();
 
@@ -157,7 +162,7 @@ function CfdVdt_CollectFixedRate(Repeat)
 	var Voltage = cfdvdt_CalVoltage;
 	
 	var cntDone = 0;
-	var cntTotal = cfdvdt_RatePoint.length * Repeat;
+	var cntTotal = cfdvdt_RatePoint.length * cfdvdt_Current.length * cal_Iterations;
 
 	CfdVdt_TekVScale(cfdvdt_chMeasure, Voltage);
 	TEK_TriggerInit(cfdvdt_chMeasure, Voltage / 2);
@@ -167,14 +172,14 @@ function CfdVdt_CollectFixedRate(Repeat)
 	print("  set  |  osc  |  err  ");
 	print("-----------------------");
 
-	for (var counter = 0; counter < Repeat; counter++)
+	for (var counter = 0; counter < cal_Iterations; counter++)
 	{
 		for (var i = 0; i < cfdvdt_Current.length ; i++)
 		{
 			print("Current = " + cfdvdt_Current[i]);
 			for (var l = 0; l < cfdvdt_RatePoint.length; l++)
 			{
-				cfdvdt_rateset.push(cfdvdt_RatePoint[i]);
+				cfdvdt_rateset.push(cfdvdt_RatePoint[l]);
 				CfdVdt_TekHScale(Voltage, cfdvdt_RatePoint[l]);
 				CfdVdt_ClearDisplay();
 				sleep(1000);
@@ -194,7 +199,7 @@ function CfdVdt_CollectFixedRate(Repeat)
 						var rate = CfdVdt_MeasureRate();
 						break;
 					case cfdVdt_Approx:
-						var rate = SiC_CALC_dVdt(SiC_GD_GetChannelCurve(cfdvdt_chMeasure),10,90).toFixed(1);
+						var rate = TEK_CALC_dVdt(TEK_GetChannelData(cfdvdt_chMeasure),10,90).toFixed(1);
 						break;
 				}
 				fdVdt_err = ((rate - cfdvdt_RatePoint[l]) / cfdvdt_RatePoint[l] * 100).toFixed(1);
@@ -217,63 +222,68 @@ function CfdVdt_CollectFixedRate(Repeat)
 			}
 		}
 	}
-	// Power disable
-	dev.c(2);
 	scattern(cfdvdt_rateset, cfdvdt_rateerr, "Set dU/dt (in V/us)", "Error (in %)", "dU/dt setpoint relative error");
 }
 
 function CfdVdt_ApproxRate()
 {
 	CfdVdt_ResetA();
-	var GateSetpointV = CGEN_GetRange(cfdvdt_def_VGateMin, cfdvdt_def_VGateMax, Math.round((cfdvdt_def_VGateMax - cfdvdt_def_VGateMin) / (cfdvdt_def_SetpointCount - 1)));
+	var GateSetpointV = CGEN_GetRange(cfdvdt_def_VGateMin, cfdvdt_def_VGateMax, Math.round((cfdvdt_def_VGateMax - cfdvdt_def_VGateMin) / (cfdvdt_step_Setpoint - 1)));
+	var cntDone = 0;
+	var cntTotal = cfdvdt_RatePoint.length * GateSetpointV.length * cal_Iterations;
 
 	CfdVdt_TekVScale(cfdvdt_chMeasure, cfdvdt_CalVoltage);
 	TEK_TriggerInit(cfdvdt_chMeasure, cfdvdt_CalVoltage / 2);
 
-	for (var l = 0; l < cfdvdt_Current.length; l++)
+	for (var counter = 0; counter < cal_Iterations; counter++)
 	{
-		for (var i = 0; i < GateSetpointV.length; i++)
+		for (var l = 0; l < cfdvdt_Current.length; l++)
 		{
-			// Force triggering
-			CfdVdt_ClearDisplay();
-			sleep(1500);
-
-			// Coarse horizontal setting
-			if (i == 0)
-			{ 
-				TEK_Horizontal("5e-6", "0");
-				sleep(500);
-			}
-
-			// Start pulse
-			fdVdt_DiagPulse(GateSetpointV[i],cfdvdt_Current[l], Time);
-			sleep(1000);
-		
-			// Fine horizontal setting
-			CfdVdt_TekHScale(cfdvdt_CalVoltage, CfdVdt_MeasureRate());
-		
-			CfdVdt_ClearDisplay();
-			sleep(1000);
-			// Start pulse
-			for(var CounterAverages = 0; CounterAverages < cfdvdt_def_UseAverage; CounterAverages++)
+			for (var i = 0; i < GateSetpointV.length; i++)
 			{
+				// Force triggering
+				CfdVdt_ClearDisplay();
+				sleep(1500);
+
+				// Coarse horizontal setting
+				if (i == 0)
+				{ 
+					TEK_Horizontal("5e-6", "0");
+					sleep(500);
+				}
+
+				// Start pulse
 				fdVdt_DiagPulse(GateSetpointV[i],cfdvdt_Current[l], Time);
-				sleep(500);
+				sleep(1000);
+		
+				// Fine horizontal setting
+				CfdVdt_TekHScale(cfdvdt_CalVoltage, CfdVdt_MeasureRate());
+		
+				CfdVdt_ClearDisplay();
+				sleep(1000);
+				// Start pulse
+				for(var CounterAverages = 0; CounterAverages < cfdvdt_def_UseAverage; CounterAverages++)
+				{
+					fdVdt_DiagPulse(GateSetpointV[i],cfdvdt_Current[l], Time);
+					sleep(500);
+				}
+		
+				var rate = TEK_CALC_dVdt(TEK_GetChannelData(cfdvdt_chMeasure),10,90).toFixed(1);
+
+				cfdvdt_gate.push(GateSetpointV[i]);
+				cfdvdt_ratesc.push(rate);
+				csv_array.push(rate + ";" + GateSetpointV[i])
+				cntDone++;
+
+				print("-----------------------");
+				print("-- result " + cntDone + " of " + cntTotal + " --");
+				print("Vgt,     mV: " + GateSetpointV[i]);
+				print("dV/dt, V/us: " + rate);
+		
+				if (anykey()) return 1;
 			}
-		
-			var rate = SiC_CALC_dVdt(SiC_GD_GetChannelCurve(cfdvdt_chMeasure),10,90).toFixed(1);
-
-			cfdvdt_gate.push(GateSetpointV[i]);
-			cfdvdt_ratesc.push(rate);
-			csv_array.push(rate + ";" + GateSetpointV[i])
-
-			print("Vgt,     mV: " + GateSetpointV[i]);
-			print("dV/dt, V/us: " + rate);
-			print("-- result " + (i + 1) + " of " + GateSetpointV.length + " --");
-		
-			if (anykey()) return 1;
 		}
-	}
+	}	
 	save(cgen_correctionDir + "/" + "CfdVdtRate" + ".csv", csv_array);
 	scattern(cfdvdt_gate, cfdvdt_ratesc, "Gate voltage (in mV)", "Rate voltage (in V/us)", "Проверка на линейную зависимость параметров");
 	Cal_AproxRate = CGEN_GetCorrection2("CfdVdtRate");
@@ -342,16 +352,6 @@ function CfdVdt_TekHScale(Voltage, Rate)
 	TEK_Horizontal(RiseTime.toExponential(), "0");
 	TEK_Busy();
 }
-// лишняя функция
-function CfdVdt_ChannelInit(Channel, Probe, Scale)
-{
-	TEK_Send("ch" + Channel + ":bandwidth on");
-	TEK_Send("ch" + Channel + ":coupling dc");
-	TEK_Send("ch" + Channel + ":invert off");
-	TEK_Send("ch" + Channel + ":position -4");
-	TEK_Send("ch" + Channel + ":probe " + Probe);
-	TEK_Send("ch" + Channel + ":scale " + Scale);
-}
 
 function CfdVdt_TekMeasurement(Channel)
 {
@@ -376,9 +376,4 @@ function CfdVdt_ResetA()
 	cfdvdt_rateerr = [];
 	cfdvdt_gate = [];
 	csv_array = [];
-}
-
-function CfdVdt_SaveA(Name)
-{
-	save("data/dvdt_" + Name + ".csv", cfdvdt_scatter);
 }
