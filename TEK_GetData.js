@@ -1,6 +1,6 @@
 include("Tektronix.js")
 include("CalGeneral.js")
-include("SiC_GetData.js")
+
 
 tek_measuring_device = "TPS2024";	// "TPS2014"
 
@@ -73,7 +73,7 @@ save(cgen_correctionDir + "/" + NameFile + ".csv", Data);
 function ChannelData(NameFile, Channel)
 {
 	var Data = [];
-	Data = (GetChannelData(Channel));
+	Data = (TEK_GetChannelData(Channel));
 	SaveChannelData(NameFile, Data);
 }
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -81,8 +81,8 @@ function ChannelData(NameFile, Channel)
 function ChannelDataPlot(Channel,Name)
 {
 	var Data = [];
-	var Time = SiC_GD_GetTimeScale() / 250 * 1e9  / 1000;
-	Data = GetChannelData(Channel);
+	var Time = TEK_GetTimeScale() / 250 * 1e9  / 1000;
+	Data = TEK_GetChannelData(Channel);
 	// for (var i = 0; i < Data.length; i++)	
 	// {	
 		// Time.push(i);
