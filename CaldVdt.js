@@ -1,7 +1,6 @@
 include("Tektronix.js")
 include("CalGeneral.js")
 include("TestdVdt.js")
-include("SiC_Calc.js")
 
 cdvdt_chMeasure = 1;
 cdvdt_Powerex = 0;
@@ -413,7 +412,7 @@ function CdVdt_CellCalibrateRate(CellNumber)
 				break;
 
 			case dVdt_Approx:
-				var rate = SiC_CALC_dVdt(SiC_GD_GetChannelCurve(cdvdt_chMeasure),10,90).toFixed(1);
+				var rate = TEK_CALC_dVdt(TEK_GetChannelData(cdvdt_chMeasure),10,90).toFixed(1);
 				break;
 
 			case dVdt_AutoCursor:
@@ -759,7 +758,7 @@ function CdVdt_CollectFixedRate(Repeat)
 						break;
 
 					case dVdt_Approx:
-						var rate = SiC_CALC_dVdt(SiC_GD_GetChannelCurve(cdvdt_chMeasure),10,90).toFixed(1);
+						var rate = TEK_CALC_dVdt(TEK_GetChannelData(cdvdt_chMeasure),10,90).toFixed(1);
 						break;
 
 					case dVdt_AutoCursor:
