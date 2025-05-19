@@ -221,7 +221,12 @@ function FWU_DumpCommon(Name, Num, FinishReg)
 	else
 	{
 		var NumStr = "00" + Num
-		NumStr = NumStr.substr(NumStr.length - 3)
+		
+		if (NumStr[NumStr.length - 2] == ".")
+			NumStr = NumStr.substr(NumStr.length - 5) 
+		else
+			NumStr = NumStr.substr(NumStr.length - 3)
+		
 		dev.Dump("../../sw-ConsoleScripts/regdump/" + Name + "_" + NumStr + ".regdump", 0, FinishReg)
 	}
 }
@@ -339,37 +344,20 @@ function FWU_RestoreLSLPC(Num)
 }
 //------------------------
 
-// DCU
-function FWU_DCU()
+// DRCU
+function FWU_DRCU()
 {
 	FWUpdateSTM("../../hw-DRCUControlBoard/Firmware/Release/DRCUControlBoard.binary");
 }
 
-function FWU_DumpDCU(Num)
+function FWU_DumpDRCU(Num)
 {
-	FWU_DumpCommon("DCU", Num, 126);
+	FWU_DumpCommon("DRCU", Num, 126);
 }
 
-function FWU_RestoreDCU(Num)
+function FWU_RestoreDRCU(Num)
 {
-	FWU_RestoreCommon("DCU", Num);
-}
-//------------------------
-
-// RCU
-function FWU_RCU()
-{
-	FWUpdateSTM("../../hw-DRCUControlBoard/Firmware/Release/DRCUControlBoard.binary");
-}
-
-function FWU_DumpRCU(Num)
-{
-	FWU_DumpCommon("RCU", Num, 126);
-}
-
-function FWU_RestoreDCU(Num)
-{
-	FWU_RestoreCommon("RCU", Num);
+	FWU_RestoreCommon("DRCU", Num);
 }
 //------------------------
 
