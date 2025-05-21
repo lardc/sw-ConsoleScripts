@@ -1,21 +1,21 @@
 include("PrintStatus.js")
 
 // Global definitions
-GateCurrentRate = 1000;
-GateCurrent = 1000;
+GateCurrentRate = 2000;
+GateCurrent = 2000;
 //
 tou_print = 1;
 PulseToPulseDelay = 2000;
 //
 
 // TOU HP
-function TOUHP_Start(N, Voltage, Current)
+function TOUHP_Start(N, Voltage, Current, GateCurrent, GateCurrentRate)
 {
 	for(i = 0; i < N; i++)
 	{
 		print("#" + i);
 		
-		TOUHP_Measure(Voltage, Current);
+		TOUHP_Measure(Voltage, Current, GateCurrent, GateCurrentRate);
 
 		if(dev.r(193) || dev.r(196))
 		{
@@ -168,4 +168,29 @@ function TOMUHP_GatePulse(GateCurrentRate, GateCurrent)
 	dev.w(131, GateCurrentRate);
 	
 	dev.c(110);
+}
+
+function TOU_to24Bit()
+{
+	// Считываем переменные с регистров
+	number = (dev.r(209) << 12) | dev.r(208)
+
+	// Конвертируем число в 32-битное беззнаковое целое
+	bits = (number >>> 0).toString(2);
+	
+	// Берем последние 24 бита
+	bits = bits.slice(-24);
+	
+	// Дополняем нулями слева
+	while (bits.length < 24)
+		bits = '0' + bits;
+
+	// Добавляем пробелы через каждые 4 символа
+	result = '';
+	for (var i = 0; i < bits.length; i += 4) {
+		result += bits.substring(i, i + 4) + ' ';
+	}
+	
+	print(" Tgd - 90% Ud | Tgt - 10% Ud ");
+	print(result);
 }
