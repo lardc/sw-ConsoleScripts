@@ -1,4 +1,4 @@
-//Скрипт для Калибровки и Верификации блока DCU
+//Скрипт для Калибровки и Верификации блока RCU
 //Подключение библиотек
 
 include("TestDRCU.js")
@@ -12,7 +12,7 @@ Cal_Rshunt = 1000;	// uOhm
 Cal_Points = 10;
 Cal_Iterations = 1;
 Cal_IterationsPack = 0;
-Cal_UseAvg = 1;
+Cal_UseAvg = 0;
 
 // CurrentArray
 Cal_IdMin = 100;	
@@ -518,6 +518,7 @@ function CAL_CollectIrate(CurrentValues, IterationsCount, CurrentRateNTest)
 				}
 				for (var m = 0; m < AvgNum; m++)
 				{
+					sleep(500)
 					if(!DRCU_Pulse(CurrentValues[j], CurrentRateN[CurrentRateNTest]))
 						return 0;
 				}
@@ -579,6 +580,7 @@ function CAL_CollectIrate50_90(CurrentValues, IterationsCount, CurrentRateNTest)
 				}
 				for (var m = 0; m < AvgNum; m++)
 				{
+					sleep(500);
 					if(!DRCU_Pulse(CurrentValues[j], CurrentRateN[CurrentRateNTest]))
 						return 0;
 				}
@@ -724,9 +726,11 @@ function CAL_CompensationIrate(CurrentValues, CurrentRateNTest, NameIintPS, Name
 			p("-------------");
 			
 			for (var n = 0; n < AvgNum; n++)
+			{	
+				sleep(500);
 				if(!DRCU_Pulse(CurrentValues[j], CurrentRateN[CurrentRateNTest]))
 					return 0;				
-
+			}
 			
 			var IrateSc = CAL_MeasureIrate(CurrentRate[CurrentRateNTest],CurrentValues[j]);
 			
@@ -852,7 +856,7 @@ function CAL_CompensationIrate50_90(CurrentValues, CurrentRateNTest, NameIintPS,
 function CAL_CompensationIratecorr(NameIintPS, NameVintPS, NameVintPScorr, CurrentRateNTest)
 {
 	CAL_ResetA();
-	P4_corr = (dev.r(43 + 4 * CurrentRateNTest));
+	P4_corr = (dev.rs(43 + 4 * CurrentRateNTest));
 	var LoadI = [];
 	var LoadV = [];
 	var Csv_array = [];

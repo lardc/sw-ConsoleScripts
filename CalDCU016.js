@@ -95,6 +95,8 @@ if (ChannelMeasureId < 1 || ChannelMeasureId > 4)
 			TEK_ChannelOff(i);
 	}
 	Cal_IdStp = (Cal_IdMax - Cal_IdMin ? Cal_IdMax - Cal_IdMin : 1) / Cal_Points;
+
+	dev.w(140,1);
 }
 
 //--------------------
