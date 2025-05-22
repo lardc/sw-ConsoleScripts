@@ -88,7 +88,8 @@ function CLSLPC_TekInit()
 	else
 	{
 		TEK_Horizontal("1e-3", "-1e-3");
-		dev.w(LSLPC_REG_USE_LINEAR_DOWN, 0);
+		if (clslpc_Compatibility)
+			dev.w(LSLPC_REG_USE_LINEAR_DOWN, 0);
 	}
 }
 //--------------------
@@ -259,9 +260,13 @@ function CLSLPC_CollectId(CurrentValues, IterationsCount)
 			}
 			sleep(500)
 			
-			// DAC data
-			var IdDAC = dev.r(202);
-			clslpc_IdDAC.push(IdDAC);
+			if (clslpc_Compatibility)
+			{
+				// DAC data
+				var IdDAC = dev.r(202);
+				clslpc_IdDAC.push(IdDAC);
+				print("DAC,      A: " + IdDAC);
+			}
 			
 			// Unit data
 			var IdSet = (clslpc_Compatibility == 1) ? (dev.r(128) / 10) : dev.r(64);
@@ -273,12 +278,15 @@ function CLSLPC_CollectId(CurrentValues, IterationsCount)
 			clslpc_IdSc.push(IdSc);
 			print("Idtek,     A: " + IdSc);
 
-			// Relative error
-			var IdUnit = CLSLPC_GetMeasuredCurrent();
-			var IdUnitErr = ((IdUnit - IdSc) / IdSc * 100).toFixed(2);
-			clslpc_IdUnitErr.push(IdUnitErr);
-			print("Idunit,    A: " + IdUnit);
-			print("IdunitErr, %: " + IdUnitErr);
+			if (clslpc_Compatibility)
+			{
+				// Relative error
+				var IdUnit = CLSLPC_GetMeasuredCurrent();
+				var IdUnitErr = ((IdUnit - IdSc) / IdSc * 100).toFixed(2);
+				clslpc_IdUnitErr.push(IdUnitErr);
+				print("Idunit,    A: " + IdUnit);
+				print("IdunitErr, %: " + IdUnitErr);
+			}
 
 			var IdErr = ((IdSc - IdSet) / IdSet * 100).toFixed(2);
 			clslpc_IdErr.push(IdErr);
