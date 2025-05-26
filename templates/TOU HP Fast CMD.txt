@@ -2,6 +2,7 @@
 CTOU_Init(portTOU, portTek, channelMeasureI, channelMeasureU, channelSync);
 TOUHP_Measure(Voltage, Current, GateCurrent, GateCurrentRate);
 TOMUHP_GatePulse(GateCurrentRate, GateCurrent);
+TOUHP_Start(N, Voltage, Current, GateCurrent, GateCurrentRate);
 
 // Посмотреть версию прошивки
 PrintFWInfo();
@@ -14,15 +15,21 @@ FWU_TOCUHP();
 // Скачать дамп регистров
 i("STM_FWUpdate.js");
 FWU_DumpTOMUHP();
+FWU_DumpTOCUHP();
 
 // Загрузить дамп регистров
 i("STM_FWUpdate.js");
 FWU_RestoreTOMUHP();
+FWU_RestoreTOCUHP();
 
 // Измерение
 i("TestTOU_HP.js");
-TOUHP_Measure(600, 1250, 2000, 2000);
+TOUHP_Measure(1000, 1250, 2000, 2000);
+TOUHP_Start(10, 600, 1250, 2000, 2000);
 TOMUHP_GatePulse(2000, 2000);
+
+// Вывод битов со счетчиков (биты инвертированы относительно осцилла по 8 байт)
+TOU_to24Bit();
 
 /// Калибровка измерения времени задержки включения Tgd
 // (Offset: -) (K: -)
@@ -30,11 +37,12 @@ TOMUHP_GatePulse(2000, 2000);
 // 1000 V: [P0: 65] [P1: 64] [P2: 63]
 // 1500 V: [P0: 68] [P1: 67] [P2: 66]
 i("CalTOU_HP.js");
-ctou_idmax = 400;
+ctou_idmax = 1000;
 ctou_idmin = 125;
-ctou_id_points = 5;
-ctou_ud_test = 600;
-ctou_ig_test = 2000;
+ctou_id_points = 3;
+ctou_ud_test = 1000;
+ctou_ig_test = 5000; 
+ctou_rate_ig_test_arr = [500, 2000, 3000, 5000];
 ctou_Rshunt_gate = 1;
 ctou_tgd_flag = 1;
 ctou_tgt_flag = 0;
@@ -53,11 +61,12 @@ CTOU_CalibrateTgd();
 // 1000 V: [P0: 75] [P1: 74] [P2: 73]
 // 1500 V: [P0: 78] [P1: 77] [P2: 76]
 i("CalTOU_HP.js");
-ctou_idmax = 400;
+ctou_idmax = 1000;
 ctou_idmin = 125;
-ctou_id_points = 3;
-ctou_ud_test = 600;
-ctou_ig_test = 2000;
+ctou_id_points = 5;
+ctou_ud_test = 1000;
+ctou_ig_test = 5000; 
+ctou_rate_ig_test_arr = [500, 1000, 2000, 3000, 4000, 5000];
 ctou_Rshunt_gate = 1;
 ctou_tgd_flag = 0;
 ctou_tgt_flag = 1;
@@ -78,7 +87,7 @@ ctou_ud_array = [600, 1000, 1500]; // для верификации
 ctou_udmin = 600;
 ctou_udmax = 1500;
 ctou_ud_points = 8;
-ctou_id_test = [125, 1000, 2500];
+ctou_id_test_arr = [125, 1000, 2500];
 ctou_TOCUHP_nid = 180;
 ctou_UseAvg = 0;
 ctou_Iterations = 1;
@@ -97,7 +106,7 @@ ctou_ud_array = [600, 1000, 1500]; // для верификации
 ctou_udmin = 600;
 ctou_udmax = 1500;
 ctou_ud_points = 8;
-ctou_id_test = [125, 1000, 2500];
+ctou_id_test_arr = [125, 1000, 2500];
 ctou_UseAvg = 0;
 ctou_Iterations = 1;
 CTOU_Init(3, 7, 1, 2, 3);
