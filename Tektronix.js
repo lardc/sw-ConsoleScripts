@@ -120,6 +120,12 @@ function TEK_CursorTimeРosition(Channel, TimeCursor1, TimeCursor2)
 	TEK_Send("cursor:vbars:position2 " + TimeCursor2);
 }
 
+function TEK_Cursor2TimeРosition(Channel, TimeCursor2)
+{
+	TEK_Send("cursor:select:source ch" + Channel);
+	TEK_Send("cursor:vbars:position2 " + TimeCursor2);
+}
+
 function TEK_AcquireSample()
 {
 	TEK_Send("acquire:mode sample");
@@ -275,7 +281,7 @@ function TEK_GetTimeScale()
 	return parseFloat(TEK_Exec("horizontal:main:scale?"));
 }
 
-function TEK_GetTimePosition
+function TEK_GetTimePosition()
 {
 	return parseFloat(TEK_Exec("horizontal:main:position?"));
 }
