@@ -1,21 +1,21 @@
 include("PrintStatus.js")
 
 // Global definitions
-GateCurrentRate = 1000;
-GateCurrent = 1000;
+GateCurrentRate = 2000;
+GateCurrent = 2000;
 //
 tou_print = 1;
 PulseToPulseDelay = 2000;
 //
 
 // TOU HP
-function TOUHP_Start(N, Voltage, Current)
+function TOUHP_Start(N, Voltage, Current, GateCurrent, GateCurrentRate)
 {
 	for(i = 0; i < N; i++)
 	{
 		print("#" + i);
 		
-		TOUHP_Measure(Voltage, Current);
+		TOUHP_Measure(Voltage, Current, GateCurrent, GateCurrentRate);
 
 		if(dev.r(193) || dev.r(196))
 		{
@@ -30,7 +30,7 @@ function TOUHP_Start(N, Voltage, Current)
 	}
 }
 
-function TOUHP_Measure(Voltage, Current)
+function TOUHP_Measure(Voltage, Current, GateCurrent, GateCurrentRate)
 {
 	while(dev.r(192) != 3)
 	{
@@ -38,6 +38,9 @@ function TOUHP_Measure(Voltage, Current)
 		
 		if(dev.r(192) == 1)
 			return;
+		else if(dev.r(192) == 0)
+			dev.c(1);
+		if(anykey()) break;
 	}
 		
 	dev.w(128, Voltage);
@@ -53,6 +56,7 @@ function TOUHP_Measure(Voltage, Current)
 	
 	if(tou_print)
 	{
+		print("Anode current, A  = " + dev.r(250));
 		print("Turn on, ns       = " + dev.r(252));
 		print("Turn on delay, ns = " + dev.r(251));
 		print("--------------");
@@ -88,10 +92,13 @@ function TOCUHP_Pulse(N, Voltage, Bit)
 			
 			while(dev.r(192) == 4){sleep(50)}
 			
-			print("N          = " + i)
-			print("Voltage, V = " + dev.r(200));
-			print("-----------");
-			
+			if (tou_print)
+			{
+				print("N          = " + i)
+				print("Voltage, V = " + dev.r(200));
+				print("-----------");
+			}
+
 			if(anykey())
 				break;
 		}
@@ -100,15 +107,90 @@ function TOCUHP_Pulse(N, Voltage, Bit)
 		PrintStatus();
 }
 
+function TOCUHP_Pulse_Hz(Voltage, Bit, Hertz, Minutes)
+{
+	var period_ms = (1 / Hertz) * 1000;
+	var start = new Date();
+	var stop = new Date();
+	var minutes = start.getMinutes() + Minutes;
+	stop.setMinutes(minutes);
+	var i = 1;
+	print("Начало теста: " + new Date());
+
+	while((new Date()).getTime() < stop.getTime())
+	{
+		var start_pulse = new Date();
+		var stop_pulse = new Date();
+		var milliseconds = start_pulse.getMilliseconds() + period_ms;
+		stop_pulse.setMilliseconds(milliseconds);
+
+		print("Импульс № " + i);
+		TOCUHP_Pulse(1, Voltage, Bit);
+
+		while((new Date()).getTime() < stop_pulse.getTime())
+		{
+			if (anykey()) return;
+			sleep(1);
+		}
+
+		i++;
+
+		if (anykey()) break;
+	}
+	p("Конец теста: " + new Date());
+}
+
+function TOCUHP_ResourceTest(Voltage, Bit, HoursTest, Sleep)
+{
+	var i = 1;
+	var end = new Date();
+	var start = new Date();
+	var hours = start.getHours() + HoursTest;
+	end.setHours(hours);
+
+	while((new Date()).getTime() < end.getTime())
+	{
+		TOCUHP_Pulse(1, Voltage, Bit);
+
+		var left_time = new Date(end.getTime() - (new Date()).getTime());
+		print("#" + i + " Осталось " + (left_time.getHours() - 3) + " ч и " + left_time.getMinutes() + " мин");
+		sleep(Sleep);
+		if (anykey()) break;
+
+		i++;
+	}
+}
+
 // TOMU HP
 function TOMUHP_GatePulse(GateCurrentRate, GateCurrent)
-{
-	dev.w(190,1);
-	dev.c(18);
-	dev.c(19);
-	
+{	
 	dev.w(130, GateCurrent);
 	dev.w(131, GateCurrentRate);
 	
 	dev.c(110);
+}
+
+function TOU_to24Bit()
+{
+	// Считываем переменные с регистров
+	number = (dev.r(209) << 12) | dev.r(208)
+
+	// Конвертируем число в 32-битное беззнаковое целое
+	bits = (number >>> 0).toString(2);
+	
+	// Берем последние 24 бита
+	bits = bits.slice(-24);
+	
+	// Дополняем нулями слева
+	while (bits.length < 24)
+		bits = '0' + bits;
+
+	// Добавляем пробелы через каждые 4 символа
+	result = '';
+	for (var i = 0; i < bits.length; i += 4) {
+		result += bits.substring(i, i + 4) + ' ';
+	}
+	
+	print(" Tgd - 90% Ud | Tgt - 10% Ud ");
+	print(result);
 }

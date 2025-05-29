@@ -1,37 +1,38 @@
 include("PrintStatus.js")
 
 // Переменные совместимости
-cal_LSLPC_Compatibility = 0; // 0 - если прошивка блока на IAR, 1 - если прошивка на Atolic
+cal_LSLPC_Compatibility = 1; // 0 - если прошивка блока на IAR, 1 - если прошивка на Atolic
 
 if (cal_LSLPC_Compatibility)
 {
-	REG_DEV_STATE = 192;
-	DS_None = 0;
-	DS_Fault = 1;
-	DS_Disabled = 2;
-	DS_Ready = 3;
-	DS_ConfigReady = 4;
-	DS_InProcess = 5;
+	LSLPC_REG_USE_LINEAR_DOWN = 130;
+	LSLPC_REG_DEV_STATE = 192;
+	LSLPC_DS_None = 0;
+	LSLPC_DS_Fault = 1;
+	LSLPC_DS_Disabled = 2;
+	LSLPC_DS_Ready = 3;
+	LSLPC_DS_ConfigReady = 4;
+	LSLPC_DS_InProcess = 5;
 }
 else
 {
-	REG_DEV_STATE = 96;
-	DS_None = 0;
-	DS_Fault = 1;
-	DS_Disabled = 2;
-	DS_BatteryCharging = 3;
-	DS_Ready = 4;
-	DS_ConfigReady = 7;
-	DS_InProcess = 8;
+	LSLPC_REG_DEV_STATE = 96;
+	LSLPC_DS_None = 0;
+	LSLPC_DS_Fault = 1;
+	LSLPC_DS_Disabled = 2;
+	LSLPC_DS_BatteryCharging = 3;
+	LSLPC_DS_Ready = 4;
+	LSLPC_DS_ConfigReady = 7;
+	LSLPC_DS_InProcess = 8;
 }
 
-function LSLPC_Start(Current)
+function LSLPC_SineConfig(Current)
 {
 	// Enable power
-	if(dev.r(REG_DEV_STATE) == DS_None)
+	if(dev.r(LSLPC_REG_DEV_STATE) == LSLPC_DS_None)
 	{
 		dev.c(1);
-		while (dev.r(REG_DEV_STATE) != DS_Ready)
+		while (dev.r(LSLPC_REG_DEV_STATE) != LSLPC_DS_Ready)
 		{
 			sleep(1000);
 			if(anykey())
@@ -39,16 +40,16 @@ function LSLPC_Start(Current)
 		}
 	}
 
-	if (dev.r(REG_DEV_STATE) == DS_Fault)	
+	if (dev.r(LSLPC_REG_DEV_STATE) == LSLPC_DS_Fault)	
 	{
 		p("Fault");
 		return false;
 	}
 
 	if(cal_LSLPC_Compatibility == 0)
-		if(dev.r(REG_DEV_STATE) == DS_BatteryCharging)
+		if(dev.r(LSLPC_REG_DEV_STATE) == LSLPC_DS_BatteryCharging)
 		{
-			while (dev.r(REG_DEV_STATE) != DS_Ready)
+			while (dev.r(LSLPC_REG_DEV_STATE) != LSLPC_DS_Ready)
 			{
 				sleep(1000);
 				if(anykey())
@@ -58,34 +59,44 @@ function LSLPC_Start(Current)
 
 
 	cal_LSLPC_Compatibility == 1 ? dev.w(128, Current * 10) : dev.w(64, Current);
+	sleep(100)
 	dev.c(100);
 	
-	while(dev.r(REG_DEV_STATE) != DS_ConfigReady)
+	while(dev.r(LSLPC_REG_DEV_STATE) != LSLPC_DS_ConfigReady)
 	{
 		sleep(1000);
 		if(anykey())
 			return false;
 		
-		if(dev.r(REG_DEV_STATE) == DS_Fault)
+		if(dev.r(LSLPC_REG_DEV_STATE) == LSLPC_DS_Fault)
 		{
 			PrintStatus();
 			return false;
 		}
 	}
 	
-	dev.c(101);
+	return true;
+}
+
+function LSLPC_Start(Current)
+{
+	LSLPC_SineConfig(Current);
 	
+	dev.c(101);
 	sleep(20);
 	
-	while(dev.r(REG_DEV_STATE) != DS_Ready)
+	while(dev.r(LSLPC_REG_DEV_STATE) != LSLPC_DS_Ready)
 	{
 		sleep(100);
 		
-		if(dev.r(REG_DEV_STATE) == DS_Fault)
+		if(dev.r(LSLPC_REG_DEV_STATE) == LSLPC_DS_Fault)
 		{
 			PrintStatus();
 			return false;
 		}
+
+		if(anykey())
+			return false;
 	}
 	
 	return true;

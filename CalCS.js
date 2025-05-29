@@ -38,12 +38,13 @@ ccs_tempread_err2 = [];
 force_min = 5;
 force_max = 95;
 force_step = 5;
-PortNumberTerminal = 7;
+PortNumberTerminal = 2;
 
 mode_force = 'q';			// 'a' for an automatic force value input mode, 's' - for a semi-automatic mode
 mode_terminal = 'q';		// 'a' for an automatic mode, 's' - for a semi-automatic mode
- 
-function CCS_ADCOffsetCalibrate()
+plot_print = 0;
+
+function CCS_ClampADCOffsetCalibrate()
 {
 	var num = 50;
 	var offset, sum = 0;
@@ -153,10 +154,8 @@ function CCS_ClampCollectAutomatic()
 	}
 	
 	if(mode_terminal == 'a')
-	{
 		TEK_PortInit(PortNumberTerminal, 9600);
-		re = new RegExp("[0-9]+");
-	}
+	
 	var force_in = CGEN_GetRange(force_min, force_max, force_step);
 	var force_input, force_unit, force_scope;
 	print("----------------------------------")
@@ -216,10 +215,31 @@ function CCS_ClampCollectAutomatic()
 		}
 		
 		sleep(2000);
-		pl(dev.rafs(1));
+		if(plot_print)
+			pl(dev.rafs(1));
 		force_unit = dev.r(110) * 100;
 		if(mode_terminal == 'a')
-			force_scope = (parseInt(re.exec(TEK_Exec('')).join(""),10));
+		{
+			var RegexCheck = new RegExp("^=[0-9]+\\(kg\\)");
+			var RegexExtract = new RegExp("[0-9]+");
+			
+			while(true)
+			{
+				try
+				{
+					var ReadStr = TEK_Exec('');
+					if(RegexCheck.test(ReadStr))
+					{
+						force_scope = parseInt(RegexExtract.exec(ReadStr).join(""), 10);
+						break;
+					}
+				}
+				catch(e)
+				{
+					sleep(10);
+				}
+			}
+		}
 		else if (mode_terminal == 's')
 		{
 			print("Enter force value from the weight indicator (in kg):");
@@ -265,8 +285,7 @@ function CCS_ClampCollectAutomatic()
 			return false;
 		}
 	}
-	if(mode_terminal == 'a')
-		delete(re);
+	
 	mode_force = temp_force;
 	mode_terminal = temp_terminal;
 	return true;

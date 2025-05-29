@@ -4,44 +4,46 @@ include("CalGeneral.js")
 include("TEK_GetData.js")
 
 // Переменные совместимости
-cal_LSLPC_Compatibility = 1; // 0 - если прошивка блока на IAR, 1 - если прошивка на Atolic
+clslpc_Compatibility = 1;	// 0 - если прошивка блока на IAR, 1 - если прошивка на Atolic
+clslpc_UseLinearSlope = 0;	// спад тока идёт по линейному закону
 
 // Calibration setup parameters
-cal_Rshunt = 750;	// in uOhms
+clslpc_Rshunt = 250;	// in uOhms
 
 // Current range number
-cal_CurrentRange = 0; // 0 = Range [ <= 1000 A]; 1 = Range [ < 6500 A]
+clslpc_CurrentRange = 0; // 0 = Range [ <= 350 A]; 1 = Range [ < 1100 A]; 2 = Range [ < 6500 A]
 //
-cal_Points = 10;
+clslpc_Points = 10;
 //
-cal_IdMin = [100, 1001];
-cal_IdMax = [1000, 6500];
+clslpc_IdMin = [100, 351, 1101];
+clslpc_IdMax = [349, 1099, 6500];
 //
-cal_Iterations = 1;
-cal_UseAvg = 1;
+clslpc_Iterations = 1;
+clslpc_SaveImage = 0;
 
 // Counters
-cal_CntTotal = 0;
-cal_CntDone = 0;
+clslpc_CntTotal = 0;
+clslpc_CntDone = 0;
 
 // Channels
-cal_chMeasureId = 1;
+clslpc_chMeasureId = 1;
 
 // Results storage
-cal_Id = [];
-cal_IdDAC = [];
+clslpc_Id = [];
+clslpc_IdRaw = [];
+clslpc_IdDAC = [];
 
 // Tektronix data
-cal_IdSc = [];
+clslpc_IdSc = [];
 
 // Relative error
-cal_IdErr = [];
-cal_IdUnitErr = [];
+clslpc_IdErr = [];
+clslpc_IdUnitErr = [];
 
 // Correction
-cal_IdCorr = [];
+clslpc_IdCorr = [];
 
-function CAL_Init(portDevice, portTek, channelMeasureId)
+function CLSLPC_Init(portDevice, portTek, channelMeasureId)
 {
 	if (channelMeasureId < 1 || channelMeasureId > 4)
 	{
@@ -50,7 +52,7 @@ function CAL_Init(portDevice, portTek, channelMeasureId)
 	}
 
 	// Copy channel information
-	cal_chMeasureId = channelMeasureId;
+	clslpc_chMeasureId = channelMeasureId;
 
 	// Init device port
 	dev.Disconnect();
@@ -70,118 +72,236 @@ function CAL_Init(portDevice, portTek, channelMeasureId)
 }
 //--------------------
 
-function CAL_CalibrateId()
-{		
-	CAL_ResetA();
-	CAL_ResetIdCal();
-	
-	// Tektronix init
-	CAL_TekInit(cal_chMeasureId);
-
-	// Reload values
-	var cal_IdStp = Math.round((cal_IdMax[cal_CurrentRange] - cal_IdMin[cal_CurrentRange]) / (cal_Points - 1));
-	var CurrentArray = CGEN_GetRange(cal_IdMin[cal_CurrentRange], cal_IdMax[cal_CurrentRange], cal_IdStp);
-
-	if (CAL_CollectId(CurrentArray, cal_Iterations))
-	{
-		CAL_SaveId("LSLPC_Id");
-		CAL_SaveRawId("LSLPC_DAC_fixed");
-
-		// Plot relative error distribution
-		scattern(cal_IdSc, cal_IdErr, "Current (in A)", "Error (in %)", "Current setpoint relative error");
-
-		// Calculate correction
-		cal_IdCorr = CGEN_GetCorrection2("LSLPC_Id");
-		CAL_SetCoefId(cal_IdCorr[0], cal_IdCorr[1], cal_IdCorr[2]);
-		CAL_PrintCoefId();
-	}
-}
-//--------------------
-
-function CAL_VerifyId()
-{		
-	CAL_ResetA();
-	
-	// Tektronix init
-	CAL_TekInit();
-
-	// Reload values
-	var CurrentArray = CGEN_GetRangeLogarithm(cal_IdMin[cal_CurrentRange], cal_IdMax[cal_CurrentRange], cal_Points);
-
-	if (CAL_CollectId(CurrentArray, cal_Iterations))
-	{
-		CAL_SaveId("LSLPC_Id_fixed");
-		CAL_SaveRawId("LSLPC_DAC_fixed");
-
-		// Plot relative error distribution
-		scattern(cal_IdSc, cal_IdErr, "Current (in A)", "Error (in %)", "Current setpoint relative error");
-		scattern(cal_IdSc, cal_IdUnitErr, "Current (in A)", "Error (in %)", "Current unit relative error");
-	}
-}
-//--------------------
-
-function CAL_CollectId(CurrentValues, IterationsCount)
+function CLSLPC_TekInit()
 {
-	cal_CntTotal = IterationsCount * CurrentValues.length;
-	cal_CntDone = 1;
+	TEK_ChannelInit(clslpc_chMeasureId, "1", "0.01");
+	TEK_TriggerPulseInit(clslpc_chMeasureId, "0.04");
+	TEK_Horizontal("1e-3", "-1e-3");
+	TEK_MeasMaxInit(clslpc_chMeasureId, clslpc_chMeasureId);
 
-	var AvgNum;
-	if (cal_UseAvg)
+	if (clslpc_UseLinearSlope)
 	{
-		AvgNum = 4;
-		TEK_AcquireAvg(AvgNum);
+		TEK_Send("ch" + clslpc_chMeasureId + ":position -3");
+		TEK_Horizontal("2.5e-3", "5e-3");
+		dev.w(LSLPC_REG_USE_LINEAR_DOWN, 1);
 	}
 	else
 	{
-		AvgNum = 1;
-		TEK_AcquireSample();
+		TEK_Horizontal("1e-3", "-1e-3");
+		if (clslpc_Compatibility)
+			dev.w(LSLPC_REG_USE_LINEAR_DOWN, 0);
 	}
+}
+//--------------------
+
+function CLSLPC_CheckRegulatorStatus()
+{
+	if (dev.r(49) != 0 || dev.r(50) != 0 || dev.r(51) != 0
+			 || dev.r(52) != 0 || dev.r(53) != 0 || dev.r(54) != 0)
+		return true;
+	else
+		return false;
+}
+
+function CLSLPC_CalibrateDAC()
+{
+	if(CLSLPC_CheckRegulatorStatus())
+	{
+		p("Regulator is active. DAC calibration unavailable");
+		return;
+	}
+
+	CLSLPC_ResetA();
+	
+	// Tektronix init
+	CLSLPC_TekInit();
+
+	// Reload values
+	var CurrentArray = CGEN_GetRangeLogarithm(clslpc_IdMin[clslpc_CurrentRange], clslpc_IdMax[clslpc_CurrentRange], clslpc_Points);
+	
+	if (CLSLPC_CollectId(CurrentArray, clslpc_Iterations))
+	{
+		CLSLPC_RefreshDACSettings();
+		CLSLPC_SaveRawId("LSLPC_IdRaw");
+
+		scattern(clslpc_IdSc, clslpc_IdErr, "Current (in A)", "Error (in %)", "Calibrate current setpoint relative error "
+				+ clslpc_IdMin[clslpc_CurrentRange] + " A ... " + clslpc_IdMax[clslpc_CurrentRange] + " A");
+
+		print("Before");
+		CLSLPC_PrintCoefIdRaw();
+
+		// Calculate correction
+		clslpc_IdCorr = CGEN_GetCorrection("LSLPC_IdRaw");
+		CLSLPC_SetCoefIdRaw(clslpc_IdCorr[0], clslpc_IdCorr[1]);
+		print("After");
+		CLSLPC_PrintCoefIdRaw();
+	}
+}
+//--------------------
+
+function CLSLPC_RefreshDACSettings()
+{
+	for (var i = 0; i < clslpc_Id.length; i++)
+	{
+		clslpc_IdRaw[i] = clslpc_IdDAC[i] - dev.r(15);
+	}
+}
+
+function CLSLPC_ReadCoefDAC()
+{
+	switch(clslpc_CurrentRange)
+	{
+		case 0:
+		{
+			K = dev.rs(20);
+			B = dev.rs(21);
+		}
+		break;
+		
+		case 1:
+		{
+			K = dev.rs(22);
+			B = dev.rs(23);
+		}
+		break;
+		
+		case 2:
+		{
+			K = dev.rs(24);
+			B = dev.rs(25);
+		}
+		break;
+	}
+	return {K : K, B : B};
+}
+
+function CLSLPC_CalibrateId()
+{		
+	CLSLPC_ResetA();
+	CLSLPC_ResetIdCal();
+	
+	// Tektronix init
+	CLSLPC_TekInit();
+
+	// Reload values
+	var CurrentArray = CGEN_GetRangeLogarithm(clslpc_IdMin[clslpc_CurrentRange], clslpc_IdMax[clslpc_CurrentRange], clslpc_Points);
+	
+	if (CLSLPC_CollectId(CurrentArray, clslpc_Iterations))
+	{
+		CLSLPC_SaveId("LSLPC_Id");
+
+		// Plot relative error distribution
+		scattern(clslpc_IdSc, clslpc_IdErr, "Current (in A)", "Error (in %)", "Current setpoint relative error "
+				+ clslpc_IdMin[clslpc_CurrentRange] + " A ... " + clslpc_IdMax[clslpc_CurrentRange] + " A");
+
+		// Calculate correction
+		clslpc_IdCorr = CGEN_GetCorrection2("LSLPC_Id");
+		CLSLPC_SetCoefId(clslpc_IdCorr[0], clslpc_IdCorr[1], clslpc_IdCorr[2]);
+		CLSLPC_PrintCoefId();
+	}
+}
+//--------------------
+
+function CLSLPC_VerifyId()
+{		
+	CLSLPC_ResetA();
+	
+	// Tektronix init
+	CLSLPC_TekInit();
+
+	// Reload values
+	var CurrentArray = CGEN_GetRangeLogarithm(clslpc_IdMin[clslpc_CurrentRange], clslpc_IdMax[clslpc_CurrentRange], clslpc_Points);
+	
+	if (CLSLPC_CollectId(CurrentArray, clslpc_Iterations))
+	{
+		CLSLPC_SaveId("LSLPC_Id_fixed");
+
+		// Plot relative error distribution
+		scattern(clslpc_IdSc, clslpc_IdErr, "Current (in A)", "Error (in %)", "Current setpoint relative error "
+				+ clslpc_IdMin[clslpc_CurrentRange] + " A ... " + clslpc_IdMax[clslpc_CurrentRange] + " A");
+		scattern(clslpc_IdSc, clslpc_IdUnitErr, "Current (in A)", "Error (in %)", "Current unit relative error "
+				+ clslpc_IdMin[clslpc_CurrentRange] + " A ... " + clslpc_IdMax[clslpc_CurrentRange] + " A");
+	}
+}
+//--------------------
+
+function CLSLPC_CollectId(CurrentValues, IterationsCount)
+{
+	clslpc_CntTotal = IterationsCount * CurrentValues.length;
+	clslpc_CntDone = 1;
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
 		for (var j = 0; j < CurrentValues.length; j++)
 		{
-			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-			//
-			CAL_TekScale(cal_chMeasureId, CurrentValues[j] * cal_Rshunt / 1000000);
+			TEK_ForceTrig();
+			var AvgNum;
+			if (CurrentValues[j] * clslpc_Rshunt / 1e6 < 0.1)
+			{
+				AvgNum = 4;
+				TEK_AcquireAvg(AvgNum);
+			}
+			else
+			{
+				AvgNum = 1;
+				TEK_AcquireSample();
+			}
+			print("-- result " + clslpc_CntDone++ + " of " + clslpc_CntTotal + " --");
+			
+			TEK_ScaleVertical(clslpc_chMeasureId, CurrentValues[j] * clslpc_Rshunt / 1e6,
+				clslpc_UseLinearSlope ? 77.5 : 90);
+			TEK_TriggerPulseInit(clslpc_chMeasureId, CurrentValues[j] * clslpc_Rshunt / 1e6 / 4);
+			sleep(1000)
 			
 			for (var k = 0; k < AvgNum; k++)
 			{
 				if(!LSLPC_Start(CurrentValues[j]))
 					return false;
 			}
+			sleep(500)
+			
+			if (clslpc_Compatibility)
+			{
+				// DAC data
+				var IdDAC = dev.r(202);
+				clslpc_IdDAC.push(IdDAC);
+				print("DAC,      A: " + IdDAC);
+			}
 			
 			// Unit data
-			var IdSet;
-			(cal_LSLPC_Compatibility == 1) ? IdSet = dev.r(128) / 10 : IdSet = dev.r(64);
-			cal_Id.push(IdSet);
+			var IdSet = (clslpc_Compatibility == 1) ? (dev.r(128) / 10) : dev.r(64);
+			clslpc_Id.push(IdSet);
 			print("Idset,     A: " + IdSet);
-			// print("IdsetRaw, A: " + (dev.r(21) * Math.pow(IdSet, dev.r(20) / 1000)).toFixed(0)); // для грубой калибровки
-
+			
 			// Scope data
-			var IdSc = (CAL_Measure(cal_chMeasureId) / cal_Rshunt * 1000000).toFixed(2);
-			cal_IdSc.push(IdSc);
+			var IdSc = (TEK_Measure(clslpc_chMeasureId) / clslpc_Rshunt * 1e6).toFixed(2);
+			clslpc_IdSc.push(IdSc);
 			print("Idtek,     A: " + IdSc);
 
-			// DAC data
-			Id_DACArray = dev.rafs(6);
-			var IdDAC = TEK_GD_MAX(Id_DACArray).Value;
-			cal_IdDAC.push(IdDAC);
-			print("DAC,      pt: " + IdDAC);
-
-			// Relative error
-			Id_UnitArray = dev.rafs(1);
-			var IdUnit = TEK_GD_Sinus_MAX(Id_UnitArray)
-			IdUnitErr = ((IdUnit - IdSc) / IdSc * 100).toFixed(2);
-			cal_IdUnitErr.push(IdUnitErr);
-			print("Idunit,    A: " + IdUnit);
-			print("IdunitErr, %: " + IdUnitErr);
+			if (clslpc_Compatibility)
+			{
+				// Relative error
+				var IdUnit = CLSLPC_GetMeasuredCurrent();
+				var IdUnitErr = ((IdUnit - IdSc) / IdSc * 100).toFixed(2);
+				clslpc_IdUnitErr.push(IdUnitErr);
+				print("Idunit,    A: " + IdUnit);
+				print("IdunitErr, %: " + IdUnitErr);
+			}
 
 			var IdErr = ((IdSc - IdSet) / IdSet * 100).toFixed(2);
-			cal_IdErr.push(IdErr);
+			clslpc_IdErr.push(IdErr);
 			print("IdSetErr,  %: " + IdErr);
 			print("--------------------");
 			
+			if (clslpc_SaveImage)
+			{
+				var NameFile = "" + IdSet + "";
+				var SaveImage = "save:image \"A:\\" + NameFile + ".BMP\"";
+				TEK_Send(SaveImage);
+				sleep(8000);
+				TEK_Busy();
+			}
+
 			if (anykey()) return 0;
 		}
 	}
@@ -190,77 +310,56 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 }
 //--------------------
 
-function CAL_TekScale(Channel, Value)
+function CLSLPC_GetMeasuredCurrent()
 {
-	// 0.9 - use 90% of full range
-	// 8 - number of scope grids in full scale
-	var scale = (Value / (8 * 0.9));
-	TEK_Send("ch" + Channel + ":scale " + scale);
-	
-	TEK_TriggerPulseInit(cal_chMeasureId, Value / 5);
-	while(TEK_Exec("TRIGger:STATE?") != "REA") // закомментировать для TPS2014
-		sleep(500);
+	if(dev.r(203) == 0)
+		return dev.r(200) / 10;
+	else
+		return dev.r(203) + dev.r(204) / 1000;
 }
 //--------------------
 
-function CAL_TekInit()
-{
-	TEK_ChannelInit(cal_chMeasureId, "1", "0.01");
-	TEK_TriggerPulseInit(cal_chMeasureId, "0.04");
-	TEK_Horizontal("1e-3", "-2e-3");
-	TEK_Send("measurement:meas" + cal_chMeasureId + ":source ch" + cal_chMeasureId);
-	TEK_Send("measurement:meas" + cal_chMeasureId + ":type maximum");
-}
-//--------------------
-
-function CAL_Measure(Channel)
-{
-	while(TEK_Exec("TRIGger:STATE?") != "REA")  // закомментировать для TPS2014
-		sleep(500);
-	return TEK_Measure(Channel);
-}
-//--------------------
-
-function CAL_ResetA()
+function CLSLPC_ResetA()
 {	
 	// Results storage
-	cal_Id = [];
-	cal_IdDAC = [];
+	clslpc_Id = [];
+	clslpc_IdRaw = [];
+	clslpc_IdDAC = [];
 
 	// Tektronix data
-	cal_IdSc = [];
+	clslpc_IdSc = [];
 
 	// Relative error
-	cal_IdErr = [];
-	cal_IdUnitErr = [];
+	clslpc_IdErr = [];
+	clslpc_IdUnitErr = [];
 
 	// Correction
-	cal_IdCorr = [];
+	clslpc_IdCorr = [];
 }
 //--------------------
 
-function CAL_SaveId(NameId)
+function CLSLPC_SaveId(NameId)
 {
-	CGEN_SaveArrays(NameId, cal_Id, cal_IdSc, cal_IdErr);
+	CGEN_SaveArrays(NameId, clslpc_Id, clslpc_IdSc, clslpc_IdUnitErr);
 }
 //--------------------
 
-function CAL_SaveRawId(NameId)
+function CLSLPC_SaveRawId(NameId)
 {
-	CGEN_SaveArrays(NameId, cal_Id, cal_IdSc, cal_IdDAC);
+	CGEN_SaveArrays(NameId, clslpc_IdSc, clslpc_IdRaw, clslpc_IdErr);
 }
 //--------------------
 
-function CAL_ResetIdCal()
+function CLSLPC_ResetIdCal()
 {
-	CAL_SetCoefId(0, 1, 0);
+	CLSLPC_SetCoefId(0, 1, 0);
 }
 //--------------------
 
-function CAL_SetCoefId(P2, P1, P0)
+function CLSLPC_SetCoefId(P2, P1, P0)
 {
-	switch(cal_CurrentRange)
-	{	
+	switch(clslpc_CurrentRange)
+	{
 		case 0:
 		{
 			dev.ws(31, Math.round(P2 * 1e6));
@@ -284,13 +383,41 @@ function CAL_SetCoefId(P2, P1, P0)
 			dev.ws(45, Math.round(P0) * 10);
 		}
 		break;
-	}		
+	}
 }
 //--------------------
 
-function CAL_PrintCoefId()
+function CLSLPC_SetCoefIdRaw(K, B)
 {
-	switch(cal_CurrentRange)
+	switch(clslpc_CurrentRange)
+	{
+		case 0:
+		{
+			dev.w(20, Math.round(K * 1000));
+			dev.ws(21, Math.round(B));
+		}
+		break;
+		
+		case 1:
+		{
+			dev.w(22, Math.round(K * 1000));
+			dev.ws(23, Math.round(B));
+		}
+		break;
+		
+		case 2:
+		{
+			dev.w(24, Math.round(K * 1000));
+			dev.ws(25, Math.round(B));
+		}
+		break;
+	}
+}
+//--------------------
+
+function CLSLPC_PrintCoefId()
+{
+	switch(clslpc_CurrentRange)
 	{
 		case 0:
 		{
@@ -316,5 +443,13 @@ function CAL_PrintCoefId()
 		}
 		break;
 	}
+}
+//--------------------
+
+function CLSLPC_PrintCoefIdRaw()
+{
+	CoefDACObject = CLSLPC_ReadCoefDAC();
+	print("IdDAC " + clslpc_CurrentRange + " K x1000		: " + CoefDACObject.K);
+	print("IdDAC " + clslpc_CurrentRange + " B x1		: " + CoefDACObject.B);
 }
 //--------------------

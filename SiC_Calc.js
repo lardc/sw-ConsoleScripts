@@ -278,3 +278,16 @@ function SiC_CALC_dVdt(Data, LowLevel10, HighLevel90)
 
 	return dVdt;
 }
+function SiC_Approx2(Data, Index) 
+{
+	var DataLimit = [];
+
+	// Исключаем точки которые вне предела
+	for (var i = Index; i < Data.length - 1; i++)
+	{
+	  DataLimit.push(Data[i]);
+	}
+	// рассчет квадротичной аппроксимаци
+	
+
+}

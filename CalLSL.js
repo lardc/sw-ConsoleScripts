@@ -543,7 +543,7 @@ function CLSL_CollectUtm(VoltageValues, IterationsCount)
 			clsl_UtmErr.push(UtmErr);
 			
 			//Summary error
-			var UtmErr_sum = (CLSL_sign(UtmErr) * (Math.abs(UtmErr) + EUosc)).toFixed(2);
+			var UtmErr_sum = (Math.sign_ma(UtmErr) * (Math.abs(UtmErr) + EUosc)).toFixed(2);
 			clsl_UtmErr_sum.push(UtmErr_sum);
 
 			print("Utmerr,  %: " + UtmErr);
@@ -706,7 +706,7 @@ function CLSL_CollectIset(CurrentValues, IterationsCount)
 
 			//Summary error
 			var E0 = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ERshunt, 2));
-			var IsetErr_sum = (CLSL_sign(IsetErr) * (Math.abs(IsetErr) + E0)).toFixed(2);
+			var IsetErr_sum = (Math.sign_ma(IsetErr) * (Math.abs(IsetErr) + E0)).toFixed(2);
 			clsl_IsetErr_sum.push(IsetErr_sum);
 
 			print("Iseterr, %: " + IsetErr);
@@ -1012,19 +1012,10 @@ function CLSL_ResetA()
 	clsl_UgSetCorr = [];
 }
 
-//Error sign
-function CLSL_sign(a)
-{
-	if (a >= 0)
-		return 1
-	else
-		return -1
-	}
-
 // Save
 function CLSL_SaveUtm(NameUtm)
 {
-	CGEN_SaveArrays(NameUtm, clsl_Utm, clsl_UtmSc, clsl_UtmErr);
+	CGEN_SaveArrays(NameUtm, clsl_Utm, clsl_UtmSc, clsl_UtmErr, clsl_UtmErr_sum);
 }
 
 function CLSL_SaveItm(NameItm)
@@ -1034,7 +1025,7 @@ function CLSL_SaveItm(NameItm)
 
 function CLSL_SaveIset(NameIset)
 {
-	CGEN_SaveArrays(NameIset, clsl_IsetSc, clsl_Iset, clsl_IsetErr);
+	CGEN_SaveArrays(NameIset, clsl_IsetSc, clsl_Iset, clsl_IsetErr, clsl_IsetErr_sum);
 }
 
 function CLSL_SaveIg(NameIg, NameIgSet)

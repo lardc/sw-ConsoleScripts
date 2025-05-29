@@ -1,4 +1,4 @@
-// Пояснения
+﻿// Пояснения
 
 CAL_Init(portDevice, portTek, channelMeasureId);
 DRCU_Pulse(Current, CurrentRate);
@@ -50,10 +50,10 @@ sleep(1000);
 
 
 
-i("CalRCU.js");
+i("CalRCU016.js");
 CAL_Init(1,2,1);
 CAL_VerifyIrate(2);
-Hand_Cal_CompensationIrete(2);
+Hand_Cal_CompensationIrate(2);
 CAL_CalibrateIrate(2);
 CAL_PrintCoefIrateCompens(2);
 
@@ -69,4 +69,4 @@ cal_UseCursors = 0;
 CAL_Init(1,2,1);
 CurrentRateTest = 0.75;
 
-CAL_VerifyId()
+CAL_VerifyId(4)

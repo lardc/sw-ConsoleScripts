@@ -1,14 +1,21 @@
-var ACT_FLASH_DIAG_SAVE			= 332;	// Flash write
-var ACT_FLASH_DIAG_ERASE		= 333;	// Flash erase data sector
+var ACT_FLASH_DIAG_INIT_READ		= 331;
+var ACT_FLASH_DIAG_SAVE				= 332;
+var ACT_FLASH_DIAG_ERASE			= 333;
 
-var ACT_FLASH_DIAG_READ_SYMBOL	= 330;	// Flash read symbol and shift
-var ACT_FLASH_DIAG_INIT_READ	= 331;	// Flash read start position
+var ACT_FLASH_COUNTER_INIT_READ		= 334;
+var ACT_FLASH_COUNTER_SET			= 336;
+var ACT_FLASH_COUNTER_SAVE			= 337;
+var ACT_FLASH_COUNTER_ERASE			= 338;
 
-var REG_MEM_SYMBOL				= 299;	// Current data
+var ACT_FLASH_COUNTER_TO_EP			= 339;
+var ACT_FLASH_DIAG_TO_EP			= 340;
 
-var ACT_FLASH_COUNTER_INIT_READ	= 334;	// Перемещение указателя в область счетчиков
-var ACT_FLASH_COUNTER_READ_SYMBOL= 335;	// Сохранение наработки счетчиков во флеш
-var ACT_FLASH_COUNTER_SAVE		= 336
+var ACT_JSON_INIT_READ				= 341;
+var ACT_JSON_TO_EP					= 342;
+
+var REG_MEM_SYMBOL					= 299;
+
+var EP_FLASH_DATA					= 20;
 
 var DT_Char		= 0;
 var DT_Int8U	= 1;
@@ -19,11 +26,44 @@ var DT_Int32U	= 5;
 var DT_Int32S	= 6;
 var DT_Float	= 7;
 
+var FR_ForceEP = true;
+var FR_LocalDataCopy;
+var FR_LocalDataCounter = 0;
 
-function flash_read(ActReadSymbol)
+function ReadSymbolWrapper(ActReadSymbol)
 {
-	dev.c(ActReadSymbol);
-	return dev.r(REG_MEM_SYMBOL);
+	if(!FR_LocalDataCopy || FR_LocalDataCopy.length == FR_LocalDataCounter)
+	{
+		try
+		{
+			dev.c(ActReadSymbol);
+			var ReadArrFunc = dev.raf;
+			try
+			{
+				dev.ReadFloatSilent(0);
+				ReadArrFunc = dev.raff;
+			}
+			catch(e) {}
+			FR_LocalDataCopy = ReadArrFunc(EP_FLASH_DATA);
+			FR_LocalDataCounter = 0;
+		}
+		catch(e)
+		{
+			if(FR_ForceEP)
+				throw new Error("EP not supported");
+		}
+	}
+	
+	if(FR_LocalDataCounter < FR_LocalDataCopy.length)
+		return FR_LocalDataCopy[FR_LocalDataCounter++];
+	else
+		return 0xFFFF;
+}
+
+function FR_Reset()
+{
+	FR_LocalDataCopy = null;
+	FR_LocalDataCounter = 0;
 }
 
 function DataTypeString(DataType)
@@ -83,11 +123,15 @@ function ToFloat(value)
 	if (exponent == 128) 
 		return sign * ((significand) ? Number.NaN : Number.POSITIVE_INFINITY);
 
-	if (exponent == -127) {
-		if (significand == 0) return sign * 0.0;
+	if (exponent == -127)
+	{
+		if (significand == 0)
+			return sign * 0.0;
 		exponent = -126;
 		significand /= (1 << 22);
-	} else significand = (significand | (1 << 23)) / (1 << 23);
+	}
+	else
+		significand = (significand | (1 << 23)) / (1 << 23);
 
 	return sign * significand * Math.pow(2, exponent);
 }
@@ -99,31 +143,52 @@ function FlashWrite()
 
 function FlashReadDiag(PrintPlot)
 {
-	FlashReadAll(ACT_FLASH_DIAG_INIT_READ, ACT_FLASH_DIAG_READ_SYMBOL, PrintPlot);
+	FlashReadAll(ACT_FLASH_DIAG_INIT_READ, ACT_FLASH_DIAG_TO_EP, PrintPlot);
 }
 
 function FlashReadCounters()
 {
-	FlashReadAll(ACT_FLASH_COUNTER_INIT_READ, ACT_FLASH_COUNTER_READ_SYMBOL, false);
+	FlashReadAll(ACT_FLASH_COUNTER_INIT_READ, ACT_FLASH_COUNTER_TO_EP, false);
+}
+
+function FlashEraseDiag()
+{
+	dev.c(ACT_FLASH_DIAG_ERASE);
+}
+
+function FlashEraseCounters()
+{
+	dev.c(ACT_FLASH_COUNTER_ERASE);
+}
+
+function PrintJSON()
+{
+	print(ReadJSON());
+}
+
+function SaveJSON()
+{
+	save("Ranges.js", ReadJSON());
 }
 
 function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 {
 	dev.c(ActMemLabel);
-
 	var FileName = "";
 
 	while (true)
 	{
-		var dataType = flash_read(ActReadSymbol);
+		var dataType = ReadSymbolWrapper(ActReadSymbol);
 
 		if (dataType == 0xFFFF)
 		{
-			p("ERROR: No data.")
+			FR_Reset();
+			p("[End of data]")
 			return;
 		}
 		if (dataType > 7)
 		{
+			FR_Reset();
 			p("ERROR: Invalid data type.");
 			p(dataType);
 			return;
@@ -138,17 +203,17 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 		if (dataType == DT_Char)
 		{
 			var Description = "";
-			var length = flash_read(ActReadSymbol);
+			var length = ReadSymbolWrapper(ActReadSymbol);
 
 			for (var i = 0; i < length; i++)
 			{
-				Description += String.fromCharCode(flash_read(ActReadSymbol));
+				Description += String.fromCharCode(ReadSymbolWrapper(ActReadSymbol));
 			}
 			FileName += Description;
 		}
 		else
 		{
-			var length = flash_read(ActReadSymbol);
+			var length = ReadSymbolWrapper(ActReadSymbol);
 			Message += FileName + " (Type: " + DataTypeString(dataType) + ", Length: " + length + ")\n";
 
 			for (var i = 0; i < length; i++)
@@ -156,8 +221,8 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 				var word = 0;
 				if (dataTypeLength == 2)
 				{
-					var LOW = flash_read(ActReadSymbol);
-					var HIGH = flash_read(ActReadSymbol);
+					var LOW = ReadSymbolWrapper(ActReadSymbol);
+					var HIGH = ReadSymbolWrapper(ActReadSymbol);
 					switch (dataType)
 					{
 						case DT_Int32U:
@@ -173,7 +238,7 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 				}
 				else
 				{
-					var value = flash_read(ActReadSymbol);
+					var value = ReadSymbolWrapper(ActReadSymbol);
 					switch (dataType)
 					{
 						case DT_Int8U:
@@ -199,7 +264,8 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 			if (Data.length > 1)
 			{
 				var date = new Date();
-				FileName += "_" + (new Date(date.getTime() - (date.getTimezoneOffset() * 60000))).toISOString().slice(0, 19).replace(/[\-:]/g, "").replace("T", "_") + ".csv";
+				FileName += "_" + (new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
+					).toISOString().slice(0, 19).replace(/[\-:]/g, "").replace("T", "_") + ".csv";
 				save(FileName, Data);
 
 				if (PrintPlot)
@@ -213,42 +279,21 @@ function FlashReadAll(ActMemLabel, ActReadSymbol, PrintPlot)
 	}
 }
 
-function FlashRead(i, ActMemLabel)
+function ReadJSON()
 {
-	if (ActMemLabel == ACT_FLASH_DIAG_INIT_READ)
+	dev.c(ACT_JSON_INIT_READ);
+	FR_Reset();
+
+	var JSON = "";
+
+	while (true)
 	{
-		dev.c(ACT_FLASH_DIAG_INIT_READ);
-		for (var j = 0; j < i; j++)
-		{
-			p(flash_read(ACT_FLASH_DIAG_READ_SYMBOL));
-		}
+		var symbol = ReadSymbolWrapper(ACT_JSON_TO_EP);
+
+		JSON += String.fromCharCode(symbol);
+
+		if (symbol == 0 || symbol == 0xFFFF || anykey())
+			break;
 	}
-
-	if (ActMemLabel == ACT_FLASH_COUNTER_INIT_READ)
-	{
-		dev.c(ACT_FLASH_COUNTER_INIT_READ);
-		for (var j = 0; j < i; j++)
-		{
-			var Word1 = flash_read(ACT_FLASH_COUNTER_READ_SYMBOL);
-			p(Word1);
-		}
-	}
-}
-
-function FlashErase()
-{
-	dev.c(ACT_FLASH_DIAG_ERASE);
-}
-
-
-/** DEBUG MXU
-	* REG_CNT_NUMBER	104
-	* REG_CNT_VALUE		105
-	* ACT_SET_COUNTER	336
-*/
-function AssignCounter(Index, Value)
-{
-	dev.w(104, Index);
-	dev.w(105, Value);
-	dev.c(336);
+	return JSON;
 }

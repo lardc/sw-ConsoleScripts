@@ -1,69 +1,130 @@
 // Пояснения
-CAL_Init(portDevice, portTek, channelMeasureId);
-LSLPC_Start(Current);
+CAL_Init(portDevice, portTek, channelMeasureId)
+LSLPC_Start(Current)
 LSLPC_ResourceTest(Current, hours_resource_test)
 Nid = 150...
 
 // Посмотреть версию прошивки
-i("PrintStatus.js");
-PrintFWInfo();
+i("PrintStatus.js")
+PrintFWInfo()
 
 // Обновление прошивки
-i("STM_FWUpdate.js");
-FWU_LSLPC();
+i("STM_FWUpdate.js")
+FWU_LSLPC()
 
 // Скачать дамп регистров
-i("STM_FWUpdate.js");
-FWU_DumpLSLPC();
+i("STM_FWUpdate.js")
+FWU_DumpLSLPC()
 
 // Загрузить дамп регистров
-i("STM_FWUpdate.js");
-FWU_RestoreLSLPC();
+i("STM_FWUpdate.js")
+FWU_RestoreLSLPC()
 
 // Подготовка блока
-dev.co(7); //  номер COM-порта блока pp()
-dev.nid(150); // 151 для второго блока в связке
-dev.c(1);
-i("TestLSLPC.js");
+dev.co(7) //  номер COM-порта блока pp()
+dev.nid(150) // 151 для второго блока в связке
+dev.c(1)
+i("TestLSLPC.js")
 
 // Измерение
-LSLPC_Start(200);
+LSLPC_Start(100)
 
 // Ресурсный тест
-dev.co(12);
-i("TestLSLPC.js");
-LSLPC_ResourceTest(6500, 8);
+dev.co(12)
+i("TestLSLPC.js")
+LSLPC_ResourceTest(6500, 8)
 
+/// КАЛИБРОВКА ИЗМЕРЕНИЯ
 // 0 диапазон 100 - 999 А
 / (Offset: 36) (K: 34/35)
 / [P0: 33] [P1: 32] [P2: 31]
-i("CalLSLPC.js");
-cal_IdMin = [50, 1001];
-cal_IdMax = [1000, 6500];
-cal_CurrentRange = 0;
-cal_Points = 10;
-cal_Rshunt = 750; // на 100А шунте
-cal_UseAvg = 1;
-cal_Iterations = 1;
-CAL_Init(5,6,1);
+i("CalLSLPC.js")
+cal_IdMin = [150, 1000]
+cal_IdMax = [999, 6500]
+cal_CurrentRange = 0
+cal_Points = 10
+cal_Rshunt = 250
+cal_Iterations = 1
+cal_SaveImage = 0
+CAL_Init(20, 21, 1)
 
-CAL_VerifyId();
+CAL_VerifyId()
 
-CAL_CalibrateId();
+CAL_CalibrateId()
 
 // 1 диапазон 1001 - 6500 А
 / (Offset: 42) (K: 40/41)
 / [P0: 39] [P1: 38] [P2: 37]
-i("CalLSLPC.js");
-cal_IdMin = [50, 1001];
-cal_IdMax = [1000, 6500];
-cal_CurrentRange = 1;
-cal_Points = 10;
-cal_Rshunt = 250; // на 300А шунте
-cal_UseAvg = 0;
-cal_Iterations = 3;
-CAL_Init(5,6,1);
+i("CalLSLPC.js")
+cal_IdMin = [150, 1000]
+cal_IdMax = [999, 6500]
+cal_CurrentRange = 1
+cal_Points = 10
+cal_Rshunt = 250
+cal_Iterations = 1
+cal_SaveImage = 0
+CAL_Init(20, 21, 1)
 
-CAL_VerifyId();
+CAL_VerifyId()
 
-CAL_CalibrateId();
+CAL_CalibrateId()
+
+/// Верификация спадающий ток
+// 0 диапазон 100 - 999 А
+/ (Offset: 36) (K: 34/35)
+/ [P0: 33] [P1: 32] [P2: 31]
+i("CalLSLPC.js")
+cal_IdMin = [150, 1000]
+cal_IdMax = [999, 6500]
+cal_CurrentRange = 0
+cal_Points = 7
+cal_Rshunt = 250
+cal_Iterations = 1
+cal_SaveImage = 1
+cal_LSLPC_USE_LINEAR_DOWN = 1;
+CAL_Init(20, 21, 1)
+
+CAL_VerifyId()
+
+/// NEW КАЛИБРОВКА ЦАП
+// 0 диапазон
+i("CalLSLPC.js")
+cal_IdMin = [150, 350, 1100]
+cal_IdMax = [349, 1099, 6500]
+cal_CurrentRange = 0
+cal_Points = 10
+cal_Rshunt = 250
+cal_LSLPC_Compatibility = 1
+CAL_Init(20, 21, 1)
+//dev.w(20, 507)
+//dev.w(21, 45)
+
+CAL_CalibrateDAC()
+
+// 1 диапазон
+i("CalLSLPC.js")
+cal_IdMin = [150, 350, 1100]
+cal_IdMax = [349, 1099, 6500]
+cal_CurrentRange = 1
+cal_Points = 10
+cal_Rshunt = 250
+cal_LSLPC_Compatibility = 1
+CAL_Init(20, 21, 1)
+//dev.w(22, 322)
+//dev.w(23, 116)
+
+CAL_CalibrateDAC()
+
+// 2 диапазон
+i("CalLSLPC.js")
+cal_IdMin = [150, 350, 1100]
+cal_IdMax = [349, 1099, 6500]
+cal_CurrentRange = 2
+cal_Points = 10
+cal_Rshunt = 250
+cal_LSLPC_Compatibility = 1
+CAL_Init(20, 21, 1)
+//dev.w(24, 252)
+//dev.w(25, 202)
+
+CAL_CalibrateDAC()

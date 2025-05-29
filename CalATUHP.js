@@ -40,13 +40,6 @@ catu_Iterations = 3;
 catu_chMeasureV = 1;
 catu_chMeasureI = 2;
 
-/////////////////////////
-// Measurement errors
-EUosc = 3;
-Esh = 2;
-Ediv = 0;
-////////////////////////
-
 // Results storage
 catu_v = [];
 catu_i = [];
@@ -65,6 +58,19 @@ catu_i_err = [];
 catu_p_err = [];
 catu_iset_err = [];
 catu_pset_err = [];
+
+// Summary error
+catu_p_err_sum = [];
+catu_pset_err_sum = [];
+
+// Measurement errors
+EUosc = 3;
+ERshunt = 2;
+EProbe = 2;
+E0 = 0;
+
+//
+catu_PlotSummaryError = 0;
 
 // Correction
 catu_v_corr = [];
@@ -186,6 +192,14 @@ function CATU_VerifyP()
 		scattern(catu_p_sc, catu_p_err, "Power (in W)", "Error (in %)", "Power relative error"); sleep(200);
 		scattern(catu_p_set, catu_pset_err, "Power (in W)", "Error (in %)", "Power setpoint relative error"); sleep(200);
 		scattern(catu_p_set, catu_p_counter, "Power (in W)", "REG_COUNTER_MEASURE", "The number of pulses for the set power");
+		
+		// Plot summary error distribution
+		if (catu_PlotSummaryError)
+		{
+		scattern(catu_p_sc, catu_p_err_sum, "Power (in W)", "Error (in %)", "Power summary error"); sleep(200);
+		scattern(catu_p_set, catu_pset_err_sum, "Power (in W)", "Error (in %)", "Power setpoint summary error"); sleep(200);
+		}
+
 	}
 }
 
@@ -315,10 +329,10 @@ function CATU_Collect(CurrentValues, IterationsCount)
 			catu_v_sc.push(v_sc);
 			catu_i_sc.push(i_sc);
 			print("Utek,    V: " + v_sc);
-			print("Погр изм. U,  %: " + ((dev.r(110) - v_sc) / v_sc * 100).toFixed(2));
+			print("U_err,  %: " + ((dev.r(110) - v_sc) / v_sc * 100).toFixed(2));
 			print("Itek,   A: " + (i_sc / 1000).toFixed(2));
-			print("Погр зад. I,  %: " + ((i_sc - CurrentValues[j]) / CurrentValues[j] * 100).toFixed(2));
-			print("Погр изм. I,  %: " + ((dev.r(111) - i_sc) / i_sc * 100).toFixed(2));
+			print("I_set_err,  %: " + ((i_sc - CurrentValues[j]) / CurrentValues[j] * 100).toFixed(2));
+			print("I_err,  %: " + ((dev.r(111) - i_sc) / i_sc * 100).toFixed(2));
 			
 			print("Ptek,   kW: " + (p_sc / 1000).toFixed(2));
 
@@ -330,8 +344,8 @@ function CATU_Collect(CurrentValues, IterationsCount)
 			catu_i_err.push(((UnitData.I - i_sc) / i_sc * 100).toFixed(2));
 			////////////////////////////////////////////////////////////////
 			// Summary error
-			//catu_v_err.push(1.1 * Math.sqrt(Math.pow((UnitData.V - v_sc)/v_sc * 100, 2) + Math.pow(EUosc, 2) + Math.pow(Ediv, 2));
-			//catu_i_err.push(1.1 * Math.sqrt(Math.pow((UnitData.I - i_sc)/i_sc * 100, 2) + Math.pow(EUosc, 2) + Math.pow(Esh, 2));
+			//catu_v_err.push(1.1 * Math.sqrt(Math.pow((UnitData.V - v_sc)/v_sc * 100, 2) + Math.pow(EUosc, 2) + Math.pow(EProbe, 2));
+			//catu_i_err.push(1.1 * Math.sqrt(Math.pow((UnitData.I - i_sc)/i_sc * 100, 2) + Math.pow(EUosc, 2) + Math.pow(ERshunt, 2));
 			////////////////////////////////////////////////////////////////
 			catu_iset_err.push(((i_sc - CurrentValues[j]) / CurrentValues[j] * 100).toFixed(2));
 			////////////////////////////////////////////////////////////////
@@ -399,13 +413,24 @@ function CATU_CollectP(PowerValues, IterationsCount)
 			print("Itek,   mA: " + (i_sc / 1000).toFixed(2));
 			print("Ptek,   kW: " + (p_sc / 1000).toFixed(2));
 
-			print("Погр зад. W,  %: " + ((p_sc - PowerValues[j]) / PowerValues[j] * 100).toFixed(2));
-			print("Погр изм. W,  %: " + ((UnitData.P - p_sc) / p_sc * 100).toFixed(2));
+			print("P_set_err,  %: " + ((p_sc - PowerValues[j]) / PowerValues[j] * 100).toFixed(2));
+			print("P_err,  %: " + ((UnitData.P - p_sc) / p_sc * 100).toFixed(2));
 
 			// Relative error
-			catu_p_err.push(((UnitData.P - p_sc) / p_sc * 100).toFixed(2));
-			catu_pset_err.push(((p_sc - PowerValues[j]) / PowerValues[j] * 100).toFixed(2));
+			p_err = ((UnitData.P - p_sc) / p_sc * 100).toFixed(2);
+			catu_p_err.push(p_err);
+			pset_err = ((p_sc - PowerValues[j]) / PowerValues[j] * 100).toFixed(2);
+			catu_pset_err.push(pset_err);
 			
+			// Summary error
+			E0 = 1.1 * Math.sqrt(2 * Math.pow(EUosc, 2) + Math.pow(ERshunt, 2) + Math.pow(EProbe, 2));
+			p_err_sum = (Math.sign_ma(p_err) * (Math.abs(p_err) + E0)).toFixed(2);
+			catu_p_err_sum.push(p_err_sum);
+			pset_err_sum = (Math.sign_ma(pset_err) * (Math.abs(pset_err) + E0)).toFixed(2);
+			catu_pset_err_sum.push(pset_err_sum);
+
+			print("P_set_err_sum, % " + pset_err_sum);
+			print("P_err_sum, % " + p_err_sum);
 			print("------------------------");
 			sleep(1000);
 			
@@ -531,6 +556,10 @@ function CATU_ResetA()
 	// Correction
 	catu_v_corr = [];
 	catu_i_corr = [];
+
+	// Summary error
+	catu_p_err_sum = [];
+	catu_pset_err_sum = [];
 }
 
 function CATU_SaveV(NameV)
