@@ -7,7 +7,6 @@ include("TEK_GetData.js");
 ctou_ud_test = 600; 								// Available - 600V, 1000V, 1500V
 ctou_id_test_arr = [125, 1000, 2500];				// in A
 ctou_ig_test = 2000; 								// in mA
-ctou_rate_ig_test_arr = [2000, 3000, 4000, 5000]; 		// in mA
 ctou_rise_time_ig = 1; 								// in us
 //
 ctou_idmin = 125;		// in A
@@ -277,10 +276,10 @@ function CTOU_CalibrateTgt()
 		CTOU_SaveTgt("tou_tgt_fixed");
 		
 		// Plot relative error distribution
-		scattern(ctou_tgt_sc, ctou_tgt_err, "Tgt (in ns)", "Error (in %)", "Tgt relative error, voltage test " + ctou_ud_test + "V");
+		scattern(ctou_tgt_sc, ctou_tgt_err, "Tgt (in ns)", "Error (in %)", "Calibrate Tgt relative error, voltage test " + ctou_ud_test + "V");
 
 		// Plot summary error distribution
-		scattern(ctou_tgt_sc, ctou_tgt_err_sum, "Tgt (in ns)", "Error (in %)", "Tgt_Sum_Err summary error, voltage test " + ctou_ud_test + "V");
+		scattern(ctou_tgt_sc, ctou_tgt_err_sum, "Tgt (in ns)", "Error (in %)", "Calibrate Tgt_Sum_Err summary error, voltage test " + ctou_ud_test + "V");
 		
 		// Calculate correction
 		ctou_tgt_corr = CGEN_GetCorrection2("tou_tgt_fixed");
@@ -632,10 +631,7 @@ function CTOU_IdCollect(CurrentValues, IterationsCount)
 			if (ctou_verify_i_bit)
 			{
 				// Scope data
-				var rise_time = TEK_Measure(2) * 1e6;
-				var rise_current = TEK_Measure(1) * 0.8 / ctou_Ri;
-				var didt_sc = (rise_current / rise_time).toFixed(2);
-				print("dI/dt_Tek, A/us: " + didt_sc);
+				TOUHP_MeasureRiseTimeId(10, 63, ctou_chMeasureI, ctou_Ri);
 
 				var bit_tocu_hp_180 = CTOU_ReadRegisterNID(180, 129);
 				var bit_tocu_hp_181 = CTOU_ReadRegisterNID(181, 129);
@@ -731,7 +727,7 @@ function CTOU_UdCollect(VoltageValues, IterationsCount)
 
 function CTOU_TimeCollect(CurrentValues, IterationsCount)
 {
-	ctou_cntTotal = IterationsCount * CurrentValues.length * ctou_rate_ig_test_arr.length;
+	ctou_cntTotal = IterationsCount * CurrentValues.length;
 	ctou_cntDone = 1;
 
 	var AvgNum;
@@ -746,6 +742,9 @@ function CTOU_TimeCollect(CurrentValues, IterationsCount)
 		TEK_AcquireSample();
 	}
 
+	// Отключение проверки на КЗ
+	dev.w(132,1);
+
 	for (var i = 0; i < IterationsCount; i++)
 	{
 		if(i == 0)
@@ -758,90 +757,84 @@ function CTOU_TimeCollect(CurrentValues, IterationsCount)
 
 		for (var j = 0; j < CurrentValues.length; j++)
 		{
-			for (var m = 0; m < ctou_rate_ig_test_arr.length; m++)
+			print("-- result " + ctou_cntDone++ + " of " + ctou_cntTotal + " --");
+		
+			// Настройка развертки по вертикали
+			TEK_ScaleVertical(ctou_chMeasureI, ctou_ig_test * ctou_Rshunt_gate / 1000, 80);
+			TEK_ScaleVertical(ctou_chMeasureU, ctou_ud_test, 80);
+			TEK_MeasMaxInit(ctou_chMeasureI, 2);
+			sleep(1000);
+
+			var tou_print_copy = tou_print;
+			tou_print = 0;
+			for (var k = 0; k < AvgNum; k++)
 			{
-				print("-- result " + ctou_cntDone++ + " of " + ctou_cntTotal + " --");
-			
-				// Настройка развертки по вертикали
-				TEK_ScaleVertical(ctou_chMeasureI, ctou_ig_test * ctou_Rshunt_gate / 1000, 80);
-				TEK_ScaleVertical(ctou_chMeasureU, ctou_ud_test, 80);
-				TEK_MeasMaxInit(ctou_chMeasureI, 2);
+				TOUHP_Measure(ctou_ud_test, CurrentValues[j] * 10, ctou_ig_test, ctou_ig_test / ctou_rise_time_ig);
 				sleep(1000);
-
-				var tou_print_copy = tou_print;
-				tou_print = 0;
-				for (var k = 0; k < AvgNum; k++)
-				{
-					TOUHP_Measure(ctou_ud_test, CurrentValues[j] * 10, ctou_ig_test, ctou_rate_ig_test_arr[m]);
-					sleep(1000);
-					if(anykey())
-					break;
-				}
-				tou_print = tou_print_copy;
-
-				// Измерение времени по курсорам
-				var max_u_ig = TEK_Measure(2);
-				var max_ud = TEK_Measure(3);
-				var time_result = CTOU_MeasureTimeSc(max_u_ig, max_ud);
-
-				// Вывод параметров измерения
-				print("Vd, V  : " + ctou_ud_test);
-				print("Id, A  : " + CurrentValues[j]);
-				print("Ig, mA : " + ctou_ig_test)
-				print("dIg/dt, mA/us : " + ctou_rate_ig_test_arr[m]);
-				print("--------");
-
-				// Scope data Tgd
-				var tgd_sc = Math.round(time_result[0] * 1e9);
-				ctou_tgd_sc.push(tgd_sc);
-				print("Tgd_Tek, ns: " + tgd_sc);
-
-				// Unit data
-				var tgd = dev.r(251);
-				ctou_tgd.push(tgd);
-				print("Tgd_MME, ns: " + tgd);
-
-				// Relative error
-				var tgd_err = ((tgd - tgd_sc) / tgd_sc * 100).toFixed(2);
-				ctou_tgd_err.push(tgd_err);
-				print("Tgd_Err, %: " + tgd_err);
-
-				// Summary error
-				var E0_tgd_tgt = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ETosc, 2) + Math.pow(EProbe, 2));
-				var tgd_err_sum = (Math.sign_ma(tgd_err) * (Math.abs(tgd_err) + E0_tgd_tgt)).toFixed(2);
-				ctou_tgd_err_sum.push(tgd_err_sum);
-				print("Tgd_Sum_Err, %: " + tgd_err_sum);
-				print("--------");
-
-				// Scope data Tgt
-				var tgt_sc = Math.round(time_result[1] * 1e9);
-				ctou_tgt_sc.push(tgt_sc);
-				print("Tgt_Tek, ns: " + tgt_sc);
-
-				// Unit data
-				var tgt = dev.r(252);
-				ctou_tgt.push(tgt);
-				print("Tgt_MME, ns: " + tgt);
-
-				// Relative error
-				var tgt_err = ((tgt - tgt_sc) / tgt_sc * 100).toFixed(2);
-				ctou_tgt_err.push(tgt_err);
-				print("Tgt_Err, %: " + tgt_err);
-
-				// Summary error
-				var E0_tgd_tgt = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ETosc, 2) + Math.pow(EProbe, 2));
-				var tgt_err_sum = (Math.sign_ma(tgt_err) * (Math.abs(tgt_err) + E0_tgd_tgt)).toFixed(2);
-				ctou_tgt_err_sum.push(tgt_err_sum);
-				print("Tgt_Sum_Err, %: " + tgt_err_sum);
-				print("--------------------");
-
-				if (anykey()) return 0;
+				if(anykey())
+				break;
 			}
+			tou_print = tou_print_copy;
+
+			// Измерение времени по курсорам
+			var time_result = CTOU_MeasureTimeSc((ctou_ig_test * ctou_Rshunt_gate / 1000), ctou_ud_test);
+
+			// Вывод параметров измерения
+			print("Vd, V  : " + ctou_ud_test);
+			print("Id, A  : " + CurrentValues[j]);
+			print("Ig, mA : " + ctou_ig_test);
+			print("--------");
+
+			// Scope data Tgd
+			var tgd_sc = Math.round(time_result[0] * 1e9);
+			ctou_tgd_sc.push(tgd_sc);
+			print("Tgd_Tek, ns: " + tgd_sc);
+
+			// Unit data
+			var tgd = dev.r(251);
+			ctou_tgd.push(tgd);
+			print("Tgd_MME, ns: " + tgd);
+
+			// Relative error
+			var tgd_err = ((tgd - tgd_sc) / tgd_sc * 100).toFixed(2);
+			ctou_tgd_err.push(tgd_err);
+			print("Tgd_Err, %: " + tgd_err);
+
+			// Summary error
+			var E0_tgd_tgt = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ETosc, 2) + Math.pow(EProbe, 2));
+			var tgd_err_sum = (Math.sign_ma(tgd_err) * (Math.abs(tgd_err) + E0_tgd_tgt)).toFixed(2);
+			ctou_tgd_err_sum.push(tgd_err_sum);
+			print("Tgd_Sum_Err, %: " + tgd_err_sum);
+			print("--------");
+
+			// Scope data Tgt
+			var tgt_sc = Math.round(time_result[1] * 1e9);
+			ctou_tgt_sc.push(tgt_sc);
+			print("Tgt_Tek, ns: " + tgt_sc);
+
+			// Unit data
+			var tgt = dev.r(252);
+			ctou_tgt.push(tgt);
+			print("Tgt_MME, ns: " + tgt);
+
+			// Relative error
+			var tgt_err = ((tgt - tgt_sc) / tgt_sc * 100).toFixed(2);
+			ctou_tgt_err.push(tgt_err);
+			print("Tgt_Err, %: " + tgt_err);
+
+			// Summary error
+			var E0_tgd_tgt = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ETosc, 2) + Math.pow(EProbe, 2));
+			var tgt_err_sum = (Math.sign_ma(tgt_err) * (Math.abs(tgt_err) + E0_tgd_tgt)).toFixed(2);
+			ctou_tgt_err_sum.push(tgt_err_sum);
+			print("Tgt_Sum_Err, %: " + tgt_err_sum);
+			print("--------------------");
 			
 			if (anykey()) return 0;
 		}
 	}
 	
+	dev.w(132,0);
+
 	return 1;
 }
 
@@ -858,8 +851,12 @@ function CTOU_TekHorizontal(VoltageValues, CurrentValues)
 	var ctou_fall_time_ud = TEK_Measure(1);
 	if (ctou_fall_time_ud < 900e-9)
 		TEK_Horizontal(500e-9, -500e-9);
+	
+	else if (ctou_fall_time_ud > 1.7e-6)
+		TEK_Horizontal(2.5e-6, 7.5e-6);
+
 	else
-		TEK_Horizontal(1e-6, "0");
+		TEK_Horizontal(1e-6, 1.5e-6);
 
 	if (anykey()) return 0;
 }
