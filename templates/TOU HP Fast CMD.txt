@@ -3,6 +3,7 @@ CTOU_Init(portTOU, portTek, channelMeasureI, channelMeasureU, channelSync);
 TOUHP_Measure(Voltage, Current, GateCurrent, GateCurrentRate);
 TOMUHP_GatePulse(GateCurrentRate, GateCurrent);
 TOUHP_Start(N, Voltage, Current, GateCurrent, GateCurrentRate);
+TOUHP_MeasureRiseTimeId(FirstLevel, SecondLevel, Channel, Rshunt)
 
 // Посмотреть версию прошивки
 PrintFWInfo();
@@ -24,9 +25,14 @@ FWU_RestoreTOCUHP();
 
 // Измерение
 i("TestTOU_HP.js");
-TOUHP_Measure(1000, 1250, 2000, 2000);
+TOUHP_Measure(600, 5000, 2000, 2000);
 TOUHP_Start(10, 600, 1250, 2000, 2000);
 TOMUHP_GatePulse(2000, 2000);
+
+// Измерение скорости нарастания силового тока
+i("TestTOU_HP.js");
+TEK_PortInit(7);
+TOUHP_MeasureRiseTimeId(10, 63, 1, 0.001);
 
 // Вывод битов со счетчиков (биты инвертированы относительно осцилла по 8 байт)
 TOU_to24Bit();
@@ -38,11 +44,11 @@ TOU_to24Bit();
 // 1500 V: [P0: 68] [P1: 67] [P2: 66]
 i("CalTOU_HP.js");
 ctou_idmax = 1000;
-ctou_idmin = 125;
-ctou_id_points = 3;
+ctou_idmin = 30;
+ctou_id_points = 10;
 ctou_ud_test = 1000;
-ctou_ig_test = 5000; 
-ctou_rate_ig_test_arr = [500, 1000, 2000, 3000, 4000, 5000];
+ctou_ig_test = 2000; 
+ctou_rise_time_ig = 1;
 ctou_Rshunt_gate = 1;
 ctou_tgd_plot = 1;
 ctou_tgt_plot = 1;
@@ -65,8 +71,8 @@ ctou_idmax = 1000;
 ctou_idmin = 125;
 ctou_id_points = 5;
 ctou_ud_test = 1000;
-ctou_ig_test = 5000; 
-ctou_rate_ig_test_arr = [500, 1000, 2000, 3000, 4000, 5000];
+ctou_ig_test = 2000; 
+ctou_rise_time_ig = 1;
 ctou_Rshunt_gate = 1;
 ctou_tgd_plot = 1;
 ctou_tgt_plot = 1;

@@ -1,4 +1,5 @@
-include("PrintStatus.js")
+include("PrintStatus.js");
+include("TEK_GetData.js");
 
 // Global definitions
 GateCurrentRate = 2000;
@@ -69,6 +70,67 @@ function TOUHP_PrintFault()
 	print("FaultReason   	  = "+dev.r(193));
 	print("Warning       	  = "+dev.r(195));
 	print("Problem       	  = "+dev.r(196));
+}
+
+function TOUHP_MeasureRiseTimeId(FirstLevel, SecondLevel, Channel, Rshunt)
+{
+	var id_sc_arr = [];
+	id_sc_arr = TEK_GetChannelData(Channel);
+
+	var id_firstlevel_err = 0;
+	var id_secondlevel_err = 0;
+	var id_firstlevel_min_err = 0;
+	var id_secondlevel_min_err = 0;
+
+	var id_max = 0;
+
+	var id_firstlevel_index = 0;
+	var id_secondlevel_index = 0;
+
+	// Поиск максимального значения
+	var id_max = id_sc_arr[0];
+	for (var i = 0; i < id_sc_arr.length; i++)
+	{
+		if (id_sc_arr[i] > id_max)
+			id_max = id_sc_arr[i]
+	}
+
+	// Вычисление напряжения для уровней FirstLevel и SecondLevel
+	var id_firstlevel = id_max * FirstLevel / 100;
+	var id_secondlevel = id_max * SecondLevel / 100;
+
+	// Определение индекса элемента массива с наименьшей ошибкой
+	id_firstlevel_min_err = Math.abs(id_firstlevel - id_sc_arr[0]);
+	for(var k = 1; k < id_sc_arr.length; k++)
+	{
+		var id_firstlevel_err = Math.abs(id_firstlevel - id_sc_arr[k]);
+		if(id_firstlevel_err < id_firstlevel_min_err)
+		{
+			id_firstlevel_min_err = id_firstlevel_err;
+			id_firstlevel_index = k;
+		}
+	}
+
+	id_secondlevel_min_err = Math.abs(id_secondlevel - id_sc_arr[0]);
+	for(var m = 1; m < id_sc_arr.length; m++)
+	{
+		var id_secondlevel_err = Math.abs(id_secondlevel - id_sc_arr[m]);
+		if(id_secondlevel_err < id_secondlevel_min_err)
+		{
+			id_secondlevel_min_err = id_secondlevel_err;
+			id_secondlevel_index = m;
+		}
+	}
+
+	// Расстояние по горизонтали между двумя ближайшими точками
+	var time_scale = TEK_GetTimeScale();
+	var time_arr_min = time_scale / 250;
+
+	var di = Math.abs(id_sc_arr[id_secondlevel_index] - id_sc_arr[id_firstlevel_index]) / Rshunt; 
+	var dt = Math.abs(id_secondlevel_index - id_firstlevel_index)
+			* time_arr_min * 1e+6;
+	var di_dt = Math.round(di / dt);
+	print("dId/dt " + FirstLevel + "/" + SecondLevel + ", A/us = " + di_dt);
 }
 
 // TOCU HP
