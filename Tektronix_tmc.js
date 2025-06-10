@@ -48,7 +48,7 @@ function TEK_tmc_ChannelInvInit(Channel, Probe, Scale)
 	tmc.w("ch" + Channel + ":bandwidth 20");
 	tmc.w("ch" + Channel + ":coupling dc");
 	tmc.w("ch" + Channel + ":invert on");
-	tmc.w("ch" + Channel + ":position -4");
+	tmc.w("ch" + Channel + ":position -3");
 	tmc.w("ch" + Channel + ":scale " + Scale);
 }
 
@@ -123,17 +123,7 @@ function TEK_tmc_Measure(ChannelID)
 		return 0;
 	}
 
-	while(tmc.q("measurement:meas" + ChannelID + ":value?").split(' ')[0] == 9.9E37)
-	{
-		//p(tmc.q("*ESR?"));
-		//p(tmc.q("ALLEV?"));
-		
-		sleep(500);
-		if(i++ >= 10)
-			break;
-	}
-
-	return parseFloat(tmc.q("measurement:meas" + ChannelID + ":value?").split(' ')[0]);
+	return parseFloat(tmc.q("measurement:meas" + ChannelID + ":value?").split(' ')[1]);
 }
 
 function TEK_tmc_Measurement(ChannelID, Position)
@@ -174,7 +164,7 @@ function TEK_tmc_PlotChannel(Channel)
 
 	plot(TEK_tmc_GetChannelData(Channel), 1,1);
 }
-data_input = []
+
 function TEK_tmc_GetChannelData(Channel) 
 {
 	// read basic data
@@ -200,8 +190,6 @@ function TEK_tmc_GetChannelData(Channel)
 	var res = [];
 	for (var i = 6; i < 2048; ++i)
 		res[i - 6] = (((data_input[i].charCodeAt(0) - 128 - p_position * 25) * p_scale / 25)*10000).toFixed(0);
-	
-	
 
 	return res;
 }
