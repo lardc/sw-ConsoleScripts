@@ -17,6 +17,7 @@ MaxTimeRCU = 300;
 //
 MaxPort = 1;
 MinPort = 2;
+FallPort = 3;
 //
 def_UseSaveImage = true; 
 //
@@ -44,6 +45,8 @@ cal_CntDone = 0;
 // Channels
 cal_chMeasureI = 1;
 cal_chMeasureU = 3;
+
+SumCI = 3.197
 
 // Results storage
 cal_Trr = [];
@@ -117,6 +120,9 @@ cal_dIdtSetErrCal = [];
 // Data arrays
 cdidt_scatter = [];
 
+
+Out = [];
+
 //-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция инициализации портов блока и осциллографа для калибровки  
 
@@ -172,10 +178,13 @@ function CAL_VerifyCurrent(RateStart,RateEnd)
 		// Plot relative error distribution
 		scattern(cal_IdcSc, cal_IdcSetErr, "Current Direct (in A)", "Error (in %)", "Current Direct Set error All Rate");
 		scattern(cal_IrcSc, cal_IrcSetErr, "Current Revers (in A)", "Error (in %)", "Current Revers Set error All Rate");
-		scattern(cal_IdcSc, cal_IdcUnitErr, "Current Direct (in A)", "Error (in %)", "Current Direct Measure error All Rate");
-		scattern(cal_IrcSc, cal_IrcUnitErr, "Current Revers (in A)", "Error (in %)", "Current Revers Measure error All Rate");
+		// scattern(cal_IdcSc, cal_IdcUnitErr, "Current Direct (in A)", "Error (in %)", "Current Direct Measure error All Rate");
+		// scattern(cal_IrcSc, cal_IrcUnitErr, "Current Revers (in A)", "Error (in %)", "Current Revers Measure error All Rate");
 		scattern(cal_IdcSet, cal_dIdtSetErr, "Set Current (in A)", "Error (in %)", "dIdt Set error All Rate");
-		scattern(cal_dIdtSc, cal_dIdtUnitErr, "dIdt (in A/us)", "Error (in %)", "dIdt Measure error All Rate");
+		scattern(cal_dIdtSet, cal_dIdtSetErr, "Set dIdt (in A)", "Error (in %)", "dIdt Set error All Rate");
+		scattern(cal_dIdtSet, cal_dIdtSetErr, "Set dIdt (in A)", "Error (in %)", "dIdt Set error All Rate");
+		// scattern(cal_dIdtSc, cal_dIdtUnitErr, "dIdt (in A/us)", "Error (in %)", "dIdt Measure error All Rate");
+
 			
 	}
 	
@@ -192,6 +201,8 @@ function CAL_VerifyCurrent(RateStart,RateEnd)
 				scattern(cal_dIdtSc, cal_dIdtUnitErr, "dIdt (in A/us)", "Error (in %)", "dIdt Measure error " + RateStart + " Rate");
 			}		
 	}
+
+	save(cgen_correctionDir + "/" + "dIdtErr" + ".csv", Out);
 	dev.w(153,0);
 	dev.c(111);
 }
@@ -525,7 +536,7 @@ function CAL_CollectCurrent(Rate,IterationsCount)
 			var IrcUnit = -(dev.r(211) / 10);
 			cal_IrcUnit.push(IrcUnit);
 
-			var dIdtUnit = dev.r(215) / 10;
+			var dIdtUnit = dev.r(215) / 100;
 			cal_dIdtUnit.push(dIdtUnit);
 
 			// Scope data
@@ -555,6 +566,10 @@ function CAL_CollectCurrent(Rate,IterationsCount)
 			cal_IdcUnitErr.push(IdcUnitErr);
 			cal_IrcUnitErr.push(IrcUnitErr);
 			cal_dIdtUnitErr.push(dIdtUnitErr);
+
+			dIdtSetErrSum = (dIdtUnitErr < 0) ? (dIdtUnitErr - SumCI) : (dIdtUnitErr + SumCI) 
+
+			Out.push(IdcSet + ";" + dIdtSet + ";" + dIdtSetErr + ";" + dIdtSetErrSum + ";" + dIdtSc);
 			
 			// Print results
 			print("");
@@ -577,7 +592,7 @@ function CAL_CollectCurrent(Rate,IterationsCount)
 			print("dIdtUnitErr,	%: " + dIdtUnitErr);
 			print("--------------------");
 			
-			
+			if (anykey()) break;
 		}
 		if (anykey()) break;
 	}
@@ -653,6 +668,8 @@ function CAL_CollectCurrentHSS(Rate,IterationsCount)
 
 function CAL_CollectCurrentSingl(Current,Rate)
 {
+	CAL_TekInitCurrent()
+
 	TEK_Send("horizontal:scale "  + ((Current / CurrentRate[Rate]) * 1e-6) * 0.4);
 	CAL_TekScale(cal_chMeasureI, Current * cal_Rshunt / 1e6 * 2);
 	sleep(1000);
@@ -680,7 +697,7 @@ function CAL_CollectCurrentSingl(Current,Rate)
 			
 	var IrcUnit = -(dev.r(211) / 10);
 
-	var dIdtUnit = dev.r(215) / 10;
+	var dIdtUnit = dev.r(215) / 100;
 
 	// Scope data
 	var ScopeData = CAL_MeasureCurrent(cal_chMeasureI);
@@ -1427,7 +1444,7 @@ function CAL_MeasureCurrent(Channel)
 
 	TimeFraction = SiC_GD_GetTimeScale() / 250 * 1e9  / 1000;
 
-	ChannelData("Current016", Channel);
+	// ChannelData("Current016", Channel);
 
 
 	//Get IdcSc
@@ -1441,7 +1458,7 @@ function CAL_MeasureCurrent(Channel)
 
 	//Get dIdtSc
 	ChannelData("Current016", Channel)
-	Use_Data2("Current016", "UseCurrent016", 0.8, 0.8)
+	Use_Data2("Current016", "UseCurrent016", 0.5, 0.5)
 	ResultdIdtSc = Use_Time("UseCurrent016")
 
 	var ReturnValues = [];
@@ -1712,11 +1729,14 @@ function CAL_TekInitCurrent()
 	TEK_TriggerInit(cal_chMeasureI, "0.09");
 	TEK_Send("trigger:main:edge:slope fall");
 
+	TEK_MeasMaxInit(cal_chMeasureI, MaxPort)
+	TEK_MeasMinInit(cal_chMeasureI, MinPort)
+	TEK_MeasFallTimeInit(cal_chMeasureI, FallPort)
+
 	TEK_Send("data:width 1");
 	TEK_Send("data:encdg rpb");
 	TEK_Send("data:start 1");
 	TEK_Send("data:stop 2500");
-
 }
 
 //--------------------
