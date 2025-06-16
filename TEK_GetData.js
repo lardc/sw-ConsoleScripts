@@ -14,6 +14,8 @@ MINPort = 2;
 // 
 Cal_RCU = 1;
 
+Rshunt = 1e4;	// uOhm
+
 //
 Use_Min = 0.5;
 Use_Max = 0.9;
@@ -73,7 +75,8 @@ save(cgen_correctionDir + "/" + NameFile + ".csv", Data);
 function ChannelData(NameFile, Channel)
 {
 	var Data = [];
-	Data = (TEK_GetChannelData(Channel));
+	// Data = (TEK_GetChannelData(Channel)); 
+	Data = (TEK_MesDataProbe(TEK_GetChannelData(Channel)));
 	SaveChannelData(NameFile, Data);
 }
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -101,7 +104,7 @@ function Use_Data(InNameFile, OutNameFile)
 	End = 0;
 	Min_i = 0;
 	Load = load(cgen_correctionDir + "/" + InNameFile + ".csv");
-	Measure = TEK_Measure(UsePort) * 1e4;
+	Measure = TEK_Measure(UsePort) * Rshunt;
 
 	for (var i = 0 ; i < Load.length ; ++i)
 	{
@@ -156,8 +159,8 @@ function Use_Data2(InNameFile, OutNameFile, Use_Max, Use_Min)
 	Min_i = 0;
 	Max_i = 0;
 	Load = load(cgen_correctionDir + "/" + InNameFile + ".csv");
-	MeasureMax = TEK_Measure(MAXPort) * 1e4;
-	MeasureMin = TEK_Measure(MINPort) * 1e4;
+	MeasureMax = TEK_Measure(MAXPort) * Rshunt;
+	MeasureMin = TEK_Measure(MINPort) * Rshunt;
 
 	for (var i = 0 ; i < Load.length ; ++i)
 	{
@@ -264,6 +267,22 @@ function InvertData(InNameFile, OutNameFile)
 
 	}
 	save(cgen_correctionDir + "/" + OutNameFile + ".csv", Invert);
+}
+//---------------------------------------------------------------------------------------------------------------------------------------------------------
+// Замена , на .
+function DirectData(InNameFile, OutNameFile)
+{
+	Load = [];
+	Direct = [];
+	Load = load(cgen_correctionDir + "/" + InNameFile + ".csv");
+	
+	for (var i = 0 ; i < Load.length ; i++)
+	{
+		//p("i" + i);	
+		Direct.push(Load[i]);
+
+	}
+	save(cgen_correctionDir + "/" + OutNameFile + ".csv", Direct);
 }
 //---------------------------------------------------------------------------------------------------------------------------------------------------------
 // Взятие производной массива данных
