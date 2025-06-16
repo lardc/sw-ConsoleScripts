@@ -1,12 +1,13 @@
-include("TestTOU_HP.js")
-include("Tektronix.js")
-include("CalGeneral.js")
+include("TestTOU_HP.js");
+include("Tektronix.js");
+include("CalGeneral.js");
+include("TEK_GetData.js");
 
 // Input parameters
-ctou_ud_test = 600; 				// Available - 600V, 1000V, 1500V
-ctou_id_test = [125, 1000, 2500];	// in A
-ctou_ig_test = 2000; 				// in mA
-ctou_rise_time_ig = 1; 				// in us
+ctou_ud_test = 600; 								// Available - 600V, 1000V, 1500V
+ctou_id_test_arr = [125, 1000, 2500];				// in A
+ctou_ig_test = 2000; 								// in mA
+ctou_rise_time_ig = 1; 								// in us
 //
 ctou_idmin = 125;		// in A
 ctou_idmax = 400;		// in A
@@ -18,7 +19,6 @@ ctou_r_0_bit = 480;		// Resistance 0 bit, in Ohm
 ctou_k_idstp = 10;
 //
 ctou_ud_array = [600, 1000, 1500];			// in V
-ctou_ig_array = [2000, 3000, 4000, 5000];	// in mA
 //
 ctou_Ri = 0.001;		// Anode current shunt resistance, in Ohm
 ctou_Rshunt_gate = 2; 	// Gate current shunt resistance, in Ohm
@@ -40,7 +40,6 @@ ctou_UseAvg = 0;
 EUosc = 3;
 ETosc = 0.5;
 EProbe = 2;
-ERg = 1;
 Eshunt = 1.1;
 
 // Verify Id by bits
@@ -48,9 +47,15 @@ ctou_verify_i_bit = 0;
 id_bit_csv_array = [];
 ctou_id_bit_sum = [];
 
+// Auto Measure Time
+ctou_ig_sc_arr = [];
+ctou_ud_sc_arr = [];
+ctou_ig_cursor_arr = [];
+ctou_ud_cursor_arr = [];
+
 // Сalibrate time flag
-ctou_tgd_flag = 1;
-ctou_tgt_flag = 1;
+ctou_tgd_plot = 1;
+ctou_tgt_plot = 1;
 
 // Channels
 ctou_chMeasureI = 1;
@@ -61,18 +66,12 @@ ctou_chSync = 3;
 ctou_id = [];
 ctou_id_set = [];
 ctou_ud_set = [];
-ctou_ig_set = [];
-ctou_didt_set = [];
-ctou_trig_10_ig_set = [];
 ctou_tgd = [];
 ctou_tgt = [];
 
 // Tektronix data
 ctou_id_sc = [];
 ctou_ud_sc = [];
-ctou_ig_sc = [];
-ctou_didt_sc = [];
-ctou_trig_10_ig_sc = [];
 ctou_tgd_sc = [];
 ctou_tgt_sc = [];
 
@@ -80,26 +79,19 @@ ctou_tgt_sc = [];
 ctou_id_err = [];
 ctou_id_set_err = [];
 ctou_ud_set_err = [];
-ctou_ig_set_err = [];
-ctou_didt_set_err = [];
-ctou_trig_10_ig_set_err = [];
 ctou_tgd_err = [];
 ctou_tgt_err = [];
 
 // Summary error
-ctou_tgd_err_sum = [];
-ctou_tgt_err_sum = [];
-ctou_ig_set_err_sum = [];
 ctou_id_set_err_sum = [];
 ctou_ud_set_err_sum = [];
+ctou_tgd_err_sum = [];
+ctou_tgt_err_sum = [];
 
 // Correction
 ctou_id_corr = [];
 ctou_id_set_corr = [];
 ctou_ud_set_corr = [];
-ctou_ig_set_corr = [];
-ctou_didt_set_corr = [];
-ctou_trig_10_ig_set_corr = [];
 ctou_tgd_corr = [];
 ctou_tgt_corr = [];
 
@@ -147,8 +139,8 @@ function CTOU_СalibrateIdset()
 		CTOU_SaveIdset("touhp_idset");
 
 		// Plot relative error distribution
-		scattern(ctou_id_set, ctou_id_set_err, "Current (in A)", "Error (in %)", "Current setpoint relative error");
-		scattern(ctou_id_set, ctou_id_set_err_sum, "Id (in A)", "Error (in %)", "Current setpoint summary error");
+		scattern(ctou_id_set, ctou_id_set_err, "Current (in A)", "Error (in %)", "Current setpoint relative error, voltage test " + ctou_ud_test + "V");
+		scattern(ctou_id_set, ctou_id_set_err_sum, "Id (in A)", "Error (in %)", "Current setpoint summary error, voltage test " + ctou_ud_test + "V");
 
 		// Calculate correction
 		ctou_id_set_corr = CGEN_GetCorrection2("touhp_idset");
@@ -176,7 +168,7 @@ function CTOU_СalibrateId()
 		CTOU_SaveId("touhp_id");
 
 		// Plot relative error distribution
-		scattern(ctou_id_sc, ctou_id_err, "Current (in A)", "Error (in %)", "Current relative error");
+		scattern(ctou_id_sc, ctou_id_err, "Current (in A)", "Error (in %)", "Current relative error, voltage test " + ctou_ud_test + "V");
 		
 		// Calculate correction
 		ctou_id_corr = CGEN_GetCorrection2("touhp_id");
@@ -197,9 +189,9 @@ function CTOU_СalibrateTOCUHP_Ud()
 	// Tektronix init
 	CTOU_UdTekInit();
 
-	var VoltageArray = CGEN_GetRangeLogarithm(ctou_udmin, ctou_udmax, ctou_ud_points);
+	// var VoltageArray = CGEN_GetRangeLogarithm(ctou_udmin, ctou_udmax, ctou_ud_points);
 
-	if (CTOU_UdCollect(VoltageArray, ctou_Iterations))
+	if (CTOU_UdCollect(ctou_ud_array, ctou_Iterations))
 	{
 		CTOU_SaveUd("touhp_ud");
 
@@ -222,9 +214,9 @@ function CTOU_CalibrateTOMUHP_Ud()
 	// Tektronix init
 	CTOU_UdTekInit();
 
-	var VoltageArray = CGEN_GetRangeLogarithm(ctou_udmin, ctou_udmax, ctou_ud_points);
+	// var VoltageArray = CGEN_GetRangeLogarithm(ctou_udmin, ctou_udmax, ctou_ud_points);
 
-	if (CTOU_UdCollect(VoltageArray, ctou_Iterations))
+	if (CTOU_UdCollect(ctou_ud_array, ctou_Iterations))
 	{
 		CTOU_SaveUd("touhp_ud");
 
@@ -235,79 +227,6 @@ function CTOU_CalibrateTOMUHP_Ud()
 		ctou_ud_set_corr = CGEN_GetCorrection2("touhp_ud");
 		CTOU_CalUdTOMUHP(ctou_ud_set_corr[0], ctou_ud_set_corr[1], ctou_ud_set_corr[2]);
 		CTOU_PrintUdCalTOMUHP();
-	}
-}
-
-function CTOU_CalibrateIg()
-{
-	// Collect data
-	CTOU_ResetA();
-	CTOU_ResetIgCal();
-
-
-	// Tektronix init
-	CTOU_IgTekInit();
-
-	if (CTOU_IgCollect(ctou_ig_array, ctou_Iterations))
-	{
-		CTOU_SaveIg("tou_ig_set_fixed");
-
-		// Plot relative error distribution
-		scattern(ctou_ig_sc, ctou_ig_set_err, "Ig (in A)", "Error (in %)", "Ig set relative error");
-		
-		// Plot summary error distribution
-		scattern(ctou_ig_sc, ctou_ig_set_err_sum, "Ig (in A)", "Error (in %)", "Ig set summary error");
-	
-		// Calculate correction
-		ctou_ig_set_corr = CGEN_GetCorrection2("tou_ig_set_fixed");
-		CTOU_CalIgSet(ctou_ig_set_corr[0], ctou_ig_set_corr[1], ctou_ig_set_corr[2]);
-		CTOU_PrintIgSetCal();
-	}
-}
-
-function CTOU_CalibrateRateIg()
-{
-	// Collect data
-	CTOU_ResetA();
-	CTOU_ResetRateIgCal();
-
-	// Tektronix init
-	CTOU_RateIgTekInit();
-
-	if (CTOU_RateIgCollect(ctou_ig_array, ctou_Iterations))
-	{
-		CTOU_SaveRateIg("tou_didt_set_fixed");
-
-		// Plot relative error distribution
-		scattern(ctou_didt_sc, ctou_didt_set_err, "dI/dt (in A/us)", "Error (in %)", "dI/dt set relative error");
-	
-		// Calculate correction
-		ctou_didt_set_corr = CGEN_GetCorrection2("tou_didt_set_fixed");
-		CTOU_CalRateIgSet(ctou_didt_set_corr[0], ctou_didt_set_corr[1], ctou_didt_set_corr[2]);
-		CTOU_PrintRateIgSetCal();
-	}	
-}
-
-function CTOU_CalibrateTrig10Ig()
-{
-	// Collect data
-	CTOU_ResetA();
-	CTOU_ResetTrig10IgCal();
-
-	// Tektronix init
-	CTOU_Trig10IgTekInit();
-
-	if (CTOU_Trig10IgCollect(ctou_ig_array, ctou_Iterations))
-	{
-		CTOU_SaveTrig10Ig("tou_trig_10_set_fixed");
-
-		// Plot relative error distribution
-		scattern(ctou_trig_10_ig_sc, ctou_trig_10_ig_set_err, "Trigger 10 % Ig (in mA)", "Error (in %)", "Trigger 10 % Ig set relative error");
-	
-		// Calculate correction
-		ctou_trig_10_ig_set_corr = CGEN_GetCorrection2("tou_trig_10_set_fixed");
-		CTOU_CalTrig10IgSet(ctou_trig_10_ig_set_corr[0], ctou_trig_10_ig_set_corr[1], ctou_trig_10_ig_set_corr[2]);
-		CTOU_PrintTrig10IgSetCal();
 	}
 }
 
@@ -328,12 +247,10 @@ function CTOU_CalibrateTgd()
 		CTOU_SaveTgd("tou_tgd_fixed");
 		
 		// Plot relative error distribution
-		scattern(ctou_tgd_sc, ctou_tgd_err, "Tgd (in us)", "Error (in %)", "Tgd relative error");
-		scattern(ctou_tgt_sc, ctou_tgt_err, "Tgt (in us)", "Error (in %)", "Tgt relative error");
+		scattern(ctou_tgd_sc, ctou_tgd_err, "Tgd (in ns)", "Error (in %)", "Tgd relative error, voltage test " + ctou_ud_test + "V");
 
 		// Plot summary error distribution
-		scattern(ctou_tgd_sc, ctou_tgd_err_sum, "Tgd (in us)", "Error (in %)", "Tgd summary error");
-		scattern(ctou_tgt_sc, ctou_tgt_err_sum, "Tgt (in us)", "Error (in %)", "Tgt_Sum_Err summary error");
+		scattern(ctou_tgd_sc, ctou_tgd_err_sum, "Tgd (in ns)", "Error (in %)", "Tgd summary error, voltage test " + ctou_ud_test + "V");
 		
 		// Calculate correction
 		ctou_tgd_corr = CGEN_GetCorrection2("tou_tgd_fixed");
@@ -359,12 +276,10 @@ function CTOU_CalibrateTgt()
 		CTOU_SaveTgt("tou_tgt_fixed");
 		
 		// Plot relative error distribution
-		scattern(ctou_tgd_sc, ctou_tgd_err, "Tgd (in us)", "Error (in %)", "Tgd relative error");
-		scattern(ctou_tgt_sc, ctou_tgt_err, "Tgt (in us)", "Error (in %)", "Tgt relative error");
+		scattern(ctou_tgt_sc, ctou_tgt_err, "Tgt (in ns)", "Error (in %)", "Calibrate Tgt relative error, voltage test " + ctou_ud_test + "V");
 
 		// Plot summary error distribution
-		scattern(ctou_tgd_sc, ctou_tgd_err_sum, "Tgd (in us)", "Error (in %)", "Tgd summary error");
-		scattern(ctou_tgt_sc, ctou_tgt_err_sum, "Tgt (in us)", "Error (in %)", "Tgt_Sum_Err summary error");
+		scattern(ctou_tgt_sc, ctou_tgt_err_sum, "Tgt (in ns)", "Error (in %)", "Calibrate Tgt_Sum_Err summary error, voltage test " + ctou_ud_test + "V");
 		
 		// Calculate correction
 		ctou_tgt_corr = CGEN_GetCorrection2("tou_tgt_fixed");
@@ -400,11 +315,11 @@ function CTOU_VerifyId()
 		CTOU_SaveIdset("tou_iset_fixed");
 
 		// Plot relative error distribution
-		scattern(ctou_id_sc, ctou_id_err, "Id (in A)", "Error (in %)", "Current relative error");
-		scattern(ctou_id_set, ctou_id_set_err, "Id (in A)", "Error (in %)", "Current setpoint relative error");
+		scattern(ctou_id_sc, ctou_id_err, "Id (in A)", "Error (in %)", "Current relative error, voltage test " + ctou_ud_test + "V");
+		scattern(ctou_id_set, ctou_id_set_err, "Id (in A)", "Error (in %)", "Current setpoint relative error, voltage test " + ctou_ud_test + "V");
 		
 		// Plot summary error distribution
-		scattern(ctou_id_set, ctou_id_set_err_sum, "Id (in A)", "Error (in %)", "Current setpoint summary error");
+		scattern(ctou_id_set, ctou_id_set_err_sum, "Id (in A)", "Error (in %)", "Current setpoint summary error, voltage test " + ctou_ud_test + "V");
 
 		if(ctou_verify_i_bit)	
 		scattern(ctou_id_bit_sum, ctou_id_sc, "Bit", "Id (in A)", "Id / Bit");
@@ -436,60 +351,6 @@ function CTOU_VerifyUd()
 	}
 }
 
-function CTOU_VerifyIg()
-{
-	// Collect data
-	CTOU_ResetA();
-
-	// Tektronix init
-	CTOU_IgTekInit();
-
-	if (CTOU_IgCollect(ctou_ig_array, ctou_Iterations))
-	{
-		CTOU_SaveIg("tou_ig_set_fixed");
-
-		// Plot relative error distribution
-		scattern(ctou_ig_sc, ctou_ig_set_err, "Ig (in A)", "Error (in %)", "Ig set relative error");
-		
-		// Plot summary error distribution
-		scattern(ctou_ig_sc, ctou_ig_set_err_sum, "Ig (in A)", "Error (in %)", "Ig set summary error");
-	}
-}
-
-function CTOU_VerifyRateIg()
-{
-	// Collect data
-	CTOU_ResetA();
-
-	// Tektronix init
-	CTOU_RateIgTekInit();
-
-	if (CTOU_RateIgCollect(ctou_ig_array, ctou_Iterations))
-	{
-		CTOU_SaveRateIg("tou_didt_set_fixed");
-
-		// Plot relative error distribution
-		scattern(ctou_didt_sc, ctou_didt_set_err, "dI/dt (in A/us)", "Error (in %)", "dI/dt set relative error");
-	}	
-}
-
-function CTOU_VerifyTrig10Ig()
-{
-	// Collect data
-	CTOU_ResetA();
-
-	// Tektronix init
-	CTOU_Trig10IgTekInit();
-
-	if (CTOU_Trig10IgCollect(ctou_ig_array, ctou_Iterations))
-	{
-		CTOU_SaveTrig10Ig("tou_trig_10_set_fixed");
-
-		// Plot relative error distribution
-		scattern(ctou_trig_10_ig_sc, ctou_trig_10_ig_set_err, "Trigger 10 % Ig (in mA)", "Error (in %)", "Trigger 10 % Ig set relative error");
-	}
-}
-
 function CTOU_VerifyTime()
 {
 	// Collect data
@@ -503,22 +364,21 @@ function CTOU_VerifyTime()
 
 	if (CTOU_TimeCollect(CurrentArray, ctou_Iterations))
 	{
-		if (ctou_tgd_flag)
-		{
-			CTOU_SaveTgd("tou_tgd_fixed");
+		CTOU_SaveTgd("tou_tgd_fixed");
+		CTOU_SaveTgt("tou_tgt_fixed");
 
+		if (ctou_tgd_plot)
+		{
 			// Plot relative and summary error distribution
-			scattern(ctou_tgd_sc, ctou_tgd_err, "Tgd (in us)", "Error (in %)", "Tgd relative error");
-			scattern(ctou_tgd_sc, ctou_tgd_err_sum, "Tgd (in us)", "Error (in %)", "Tgd summary error");
+			scattern(ctou_tgd_sc, ctou_tgd_err, "Tgd (in ns)", "Error (in %)", "Tgd relative error, voltage test " + ctou_ud_test + "V");
+			scattern(ctou_tgd_sc, ctou_tgd_err_sum, "Tgd (in ns)", "Error (in %)", "Tgd summary error, voltage test " + ctou_ud_test + "V");
 		}
 
-		if (ctou_tgt_flag)
+		if (ctou_tgt_plot)
 		{
-			CTOU_SaveTgt("tou_tgt_fixed");
-
 			// Plot relative and summary error distribution
-			scattern(ctou_tgt_sc, ctou_tgt_err, "Tgt (in us)", "Error (in %)", "Tgt relative error");
-			scattern(ctou_tgt_sc, ctou_tgt_err_sum, "Tgt (in us)", "Error (in %)", "Tgt summary error");
+			scattern(ctou_tgt_sc, ctou_tgt_err, "Tgt (in ns)", "Error (in %)", "Tgt relative error, voltage test " + ctou_ud_test + "V");
+			scattern(ctou_tgt_sc, ctou_tgt_err_sum, "Tgt (in ns)", "Error (in %)", "Tgt summary error, voltage test " + ctou_ud_test + "V");
 		}
 	}
 }
@@ -570,80 +430,6 @@ function CTOU_UdTekInit()
 	TEK_Busy();
 }
 
-function CTOU_IgTekInit()
-{
-	// Init channels
-	TEK_ChannelInit(ctou_chMeasureI, "1", "0.8"); // для тока управления 2 А на шунте 2 Ом
-	TEK_ChannelInit(ctou_chSync, "1", "1");
-	// Init trigger
-	TEK_TriggerInit(ctou_chSync, "2");
-	// Horizontal settings
-	TEK_Horizontal("5e-6", "15e-6");
-	
-	// Display channels
-	for (var i = 1; i <= 4; i++)
-	{
-		if (i == ctou_chMeasureI || i == ctou_chSync)
-			TEK_ChannelOn(i);
-		else
-			TEK_ChannelOff(i);
-	}
-	
-	// Init measurement
-	TEK_MeasMaxInit(ctou_chMeasureI, 1);
-	TEK_Busy();
-}
-
-function CTOU_RateIgTekInit()
-{
-	// Init channels
-	TEK_ChannelInit(ctou_chMeasureI, "1", "0.8");
-	TEK_ChannelInit(ctou_chSync, "1", "1");
-	// Init trigger
-	TEK_TriggerInit(ctou_chSync, "2");
-	// Horizontal settings
-	TEK_Horizontal("2.5e-7", "7.5e-7");
-	
-	// Display channels
-	for (var i = 1; i <= 4; i++)
-	{
-		if (i == ctou_chMeasureI || i == ctou_chSync)
-			TEK_ChannelOn(i);
-		else
-			TEK_ChannelOff(i);
-	}
-	
-	// Init measurement
-	TEK_MeasPk2PkInit(ctou_chMeasureI, 1);
-	TEK_MeasRiseTimeInit(ctou_chMeasureI, 2);
-	TEK_Busy();
-}
-
-function CTOU_Trig10IgTekInit()
-{
-	// Init channels
-	TEK_ChannelInit(ctou_chMeasureI, "1", "0.5");
-	TEK_ChannelInit(ctou_chSync, "1", "0.7");
-	// Init trigger
-	TEK_TriggerInit(ctou_chSync, "2.5");
-	// Horizontal settings
-	TEK_Horizontal("50e-9", "0");
-	
-	// Display channels
-	for (var i = 1; i <= 4; i++)
-	{
-		if (i == ctou_chMeasureI || i == ctou_chSync)
-			TEK_ChannelOn(i);
-		else
-			TEK_ChannelOff(i);
-	}
-	
-	// Init measurement
-	TEK_CursorTimeInit(ctou_chMeasureI);
-	TEK_CursorTimeРosition(ctou_chMeasureI, 0, 0);
-	TEK_Busy();
-}
-
 function CTOU_TimeTekInit()
 {
 	// Init channels
@@ -653,7 +439,7 @@ function CTOU_TimeTekInit()
 	// Init trigger
 	TEK_TriggerInit(ctou_chSync, "2");
 	// Horizontal settings
-	TEK_Horizontal("10e-6", "40e-6"); // должен помещаться спадающий фронт в 50 мкс
+	TEK_Horizontal("5e-6", "20e-6");
 
 	// Display channels
 	for (var i = 1; i <= 4; i++)
@@ -671,119 +457,100 @@ function CTOU_TimeTekInit()
 	TEK_Busy();
 }
 
-function CTOU_MeasureAutoCursor(VoltageIg, VoltageUd)
+function CTOU_MeasureTimeSc(VoltageIg, VoltageUd)
 {
-	// Вычисление уровней 10 % тока управления и 10 % и 90 % анодного напряжения 
-	var ctou_u_ig_10 = VoltageIg * 0.1;
-	var ctou_ud_10 = VoltageUd * 0.1;
-	var ctou_ud_90 = VoltageUd * 0.9;
+	ctou_ig_sc_arr = [];
+	ctou_ud_sc_arr = [];
+	ctou_ig_cursor_arr = [];
+	ctou_ud_cursor_arr = [];
 
-	// Вычисление ошибки для автонастройки курсоров
-	var ctou_u_ig_10_err_high = ctou_u_ig_10 * 1.1;
-	var ctou_u_ig_10_err_low = ctou_u_ig_10 * 0.9;
-
-	var ctou_ud_10_err_high = ctou_ud_10 * 1.1;
-	var ctou_ud_10_err_low = ctou_ud_10 * 0.9;
-
-	var ctou_ud_90_err_high = ctou_ud_90 * 1.1;
-	var ctou_ud_90_err_low = ctou_ud_90 * 0.9;
-
-	// Включение курсоров
-	var ctou_timescale = TEK_GetTimeScale();
-	var ctou_pos_cursor2 = ctou_timescale * 4;
-	var ctou_pos_cursor1 = 0;
-	TEK_CursorTimeInit(ctou_chMeasureI);
-	TEK_CursorTimeРosition(ctou_chMeasureI, ctou_pos_cursor1, ctou_pos_cursor2);
-	
-	var ctou_timestep = ctou_timescale / 25;
-	var ctou_u_err = 0;
+	var ig_10_index = 0;
+	var ud_10_index = 0;
+	var ud_90_index = 0;
 	var Tgd = 0;
 	var Tgt = 0;
 
-	// Проверка расположения курсоров
-	var ctou_u_cursor1 = TEK_MeasureCursor(1);
-	var ctou_u_cursor2 = TEK_MeasureCursor(2);
-	if (ctou_u_cursor1 > 10e+6 || ctou_u_cursor2 > 10e+6)
+	// Вычисление уровней 10 % тока управления и 10 % и 90 % анодного напряжения 
+	var ctou_ig_10 = VoltageIg * 0.1;
+	var ctou_ud_10 = VoltageUd * 0.1;
+	var ctou_ud_90 = VoltageUd * 0.9;
+
+	// Считывание массивов с осциллографа
+	ctou_ig_sc_arr = TEK_GetChannelData(ctou_chMeasureI);
+	ctou_ud_sc_arr = TEK_GetChannelData(ctou_chMeasureU);
+
+	// Извлечение 250 точек
+	for(var i = 5; i < ctou_ig_sc_arr.length; i += 10)
 	{
-		print("Measurement error on cursors");
-		return 0;
+		ctou_ig_cursor_arr.push(ctou_ig_sc_arr[i]);
 	}
 
-	else
+	for(var j = 5; j < ctou_ud_sc_arr.length; j += 10)
 	{
-		// Настройка курсора, уровень 10 % тока управления
-		while(ctou_u_cursor1 > ctou_u_ig_10_err_high || ctou_u_cursor1 < ctou_u_ig_10_err_low)
-		{
-			ctou_u_err = (ctou_u_cursor1 - ctou_u_ig_10).toFixed(2);
-			if(ctou_u_err > 0)
-			{
-				ctou_pos_cursor1 = ctou_pos_cursor1 - ctou_timestep;
-				TEK_Send("cursor:select:source ch" + ctou_chMeasureI);
-				TEK_Send("cursor:vbars:position1 " + ctou_pos_cursor1);
-			}
-			else
-			{
-				ctou_pos_cursor1 = ctou_pos_cursor1 + ctou_timestep;
-				TEK_Send("cursor:select:source ch" + ctou_chMeasureI);
-				TEK_Send("cursor:vbars:position1 " + ctou_pos_cursor1);
-			}
-			ctou_u_cursor1 = TEK_MeasureCursor(1);
-			if (anykey()) return 0;
-		}
-
-		if (ctou_tgd_flag)
-		{
-			// Настройка курсора, уровнь 90 % анодного напряжения
-			while(ctou_u_cursor2 > ctou_ud_90_err_high || ctou_u_cursor2 < ctou_ud_90_err_low)
-			{
-				ctou_u_err = (ctou_u_cursor2 - ctou_ud_90).toFixed(2);
-				if(ctou_u_err > 0)
-				{
-					ctou_pos_cursor2 = ctou_pos_cursor2 + ctou_timestep;
-					TEK_Send("cursor:select:source ch" + ctou_chMeasureU);
-					TEK_Send("cursor:vbars:position2 " + ctou_pos_cursor2);
-				}
-				else
-				{
-					ctou_pos_cursor2 = ctou_pos_cursor2 - ctou_timestep;
-					TEK_Send("cursor:select:source ch" + ctou_chMeasureU);
-					TEK_Send("cursor:vbars:position2 " + ctou_pos_cursor2);
-				}
-				ctou_u_cursor2 = TEK_MeasureCursor(2);
-				if (anykey()) return 0;
-			}
-		
-			Tgd = TEK_MeasureCursorDelta();
-		}
-
-		if (ctou_tgt_flag)
-		{
-			// Настройка курсора, уровень 10 % анодного напряжения
-			while(ctou_u_cursor2 > ctou_ud_10_err_high || ctou_u_cursor2 < ctou_ud_10_err_low)
-			{
-				ctou_u_err = (ctou_u_cursor2 - ctou_ud_10).toFixed(2);
-				if(ctou_u_err > 0)
-				{
-					ctou_pos_cursor2 = ctou_pos_cursor2 + ctou_timestep;
-					TEK_Send("cursor:select:source ch" + ctou_chMeasureU);
-					TEK_Send("cursor:vbars:position2 " + ctou_pos_cursor2);
-				}
-				else
-				{
-					ctou_pos_cursor2 = ctou_pos_cursor2 - ctou_timestep;
-					TEK_Send("cursor:select:source ch" + ctou_chMeasureU);
-					TEK_Send("cursor:vbars:position2 " + ctou_pos_cursor2);
-				}
-				ctou_u_cursor2 = TEK_MeasureCursor(2);
-
-				if (anykey()) return 0;
-			}
-
-			Tgt = TEK_MeasureCursorDelta();
-		}
-
-		return [Tgd, Tgt];
+		ctou_ud_cursor_arr.push(ctou_ud_sc_arr[j]);
 	}
+
+	// Определение индекса элемента массива с наименьшей ошибкой
+	var ig_10_min_err = Math.abs(ctou_ig_10 - ctou_ig_cursor_arr[0]);
+	for(var k = 1; k < ctou_ig_cursor_arr.length; k++)
+	{
+		var ig_10_err = Math.abs(ctou_ig_10 - ctou_ig_cursor_arr[k]);
+		if(ig_10_err < ig_10_min_err)
+		{
+			ig_10_min_err = ig_10_err;
+			ig_10_index = k;
+		}
+	}
+
+	var ud_10_min_err = Math.abs(ctou_ud_10 - ctou_ud_cursor_arr[0]);
+	for(var m = 1; m < ctou_ud_cursor_arr.length; m++)
+	{
+		var ud_10_err = Math.abs(ctou_ud_10 - ctou_ud_cursor_arr[m]);
+		if(ud_10_err < ud_10_min_err)
+		{
+			ud_10_min_err = ud_10_err;
+			ud_10_index = m;
+		}
+	}
+
+	var ud_90_min_err = Math.abs(ctou_ud_90 - ctou_ud_cursor_arr[0]);
+	for(var n = 1; n < ctou_ud_cursor_arr.length; n++)
+	{
+		var ud_90_err = Math.abs(ctou_ud_90 - ctou_ud_cursor_arr[n]);
+		if(ud_90_err < ud_90_min_err)
+		{
+			ud_90_min_err = ud_90_err;
+			ud_90_index = n;
+		}
+	}
+
+	// Расстояние по горизонтали между двумя ближайшими точками
+	var time_scale = TEK_GetTimeScale();
+	var time_point_min = (time_scale * 10) / 250;
+
+	// Позиция первой точки
+	var time_pos = TEK_GetTimePosition();
+	var pos_first_point = - time_scale * 10 / 2 + time_pos;
+
+	// Установка курсора на уровень 10 % тока управления
+	var ig_10_time_cursor = pos_first_point + (ig_10_index) * time_point_min;
+	TEK_CursorTimeInit(ctou_chMeasureI);
+	TEK_CursorTimeРosition(ctou_chMeasureI, ig_10_time_cursor);
+	sleep(1000);
+
+	// Установка курсора на уровень 90 % анодного напряжения и измерение Tgd
+	var ud_90_time_cursor = pos_first_point + (ud_90_index) * time_point_min;
+	TEK_Cursor2TimeРosition(ctou_chMeasureU, ud_90_time_cursor);
+	sleep(2000);
+	Tgd = TEK_MeasureCursorDelta();
+
+	// Установка курсора на уровень 10 % анодного напряжения и измерение Tgt
+	var ud_10_time_cursor = pos_first_point + (ud_10_index) * time_point_min;
+	TEK_Cursor2TimeРosition(ctou_chMeasureU, ud_10_time_cursor);
+	sleep(2000);
+	Tgt = TEK_MeasureCursorDelta();
+
+	return [Tgd, Tgt];
 }
 
 function CTOU_IdCollect(CurrentValues, IterationsCount)
@@ -864,10 +631,7 @@ function CTOU_IdCollect(CurrentValues, IterationsCount)
 			if (ctou_verify_i_bit)
 			{
 				// Scope data
-				var rise_time = TEK_Measure(2) * 1e6;
-				var rise_current = TEK_Measure(1) * 0.8 / ctou_Ri;
-				var didt_sc = (rise_current / rise_time).toFixed(2);
-				print("dI/dt_Tek, A/us: " + didt_sc);
+				TOUHP_MeasureRiseTimeId(10, 63, ctou_chMeasureI, ctou_Ri);
 
 				var bit_tocu_hp_180 = CTOU_ReadRegisterNID(180, 129);
 				var bit_tocu_hp_181 = CTOU_ReadRegisterNID(181, 129);
@@ -891,7 +655,7 @@ function CTOU_IdCollect(CurrentValues, IterationsCount)
 
 function CTOU_UdCollect(VoltageValues, IterationsCount)
 {
-	ctou_cntTotal = IterationsCount * VoltageValues.length * ctou_id_test.length;
+	ctou_cntTotal = IterationsCount * VoltageValues.length * ctou_id_test_arr.length;
 	ctou_cntDone = 1;
 	
 	for (var i = 0; i < IterationsCount; i++)
@@ -914,7 +678,7 @@ function CTOU_UdCollect(VoltageValues, IterationsCount)
 			TEK_TriggerInit(ctou_chMeasureU, VoltageValues[j] / 2);
 			sleep(1500);
 
-			for (var m = 0; m < ctou_id_test.length; m++)
+			for (var m = 0; m < ctou_id_test_arr.length; m++)
 			{
 				print("-- result " + ctou_cntDone++ + " of " + ctou_cntTotal + " --");
 
@@ -922,7 +686,7 @@ function CTOU_UdCollect(VoltageValues, IterationsCount)
 				tou_print = 0;
 				for (var k = 0; k < AvgNum; k++)
 				{
-					TOUHP_Measure(VoltageValues[j], ctou_id_test[m] * 10, ctou_ig_test, ctou_ig_test / ctou_rise_time_ig);
+					TOUHP_Measure(VoltageValues[j], ctou_id_test_arr[m] * 10, ctou_ig_test, ctou_ig_test / ctou_rise_time_ig);
 					sleep(3000);
 					if (anykey()) return 0;
 				}
@@ -932,7 +696,7 @@ function CTOU_UdCollect(VoltageValues, IterationsCount)
 				var ud_set = VoltageValues[j];
 				ctou_ud_set.push(ud_set);
 				print("Ud, В: " + ud_set);
-				print("Id, A: " + ctou_id_test[m]);
+				print("Id, A: " + ctou_id_test_arr[m]);
 
 				// Scope data
 				var ud_sc = Math.round(TEK_Measure(1));
@@ -961,190 +725,6 @@ function CTOU_UdCollect(VoltageValues, IterationsCount)
 	return 1;
 }
 
-function CTOU_IgCollect(CurrentValues, IterationsCount)
-{
-	ctou_cntTotal = IterationsCount * CurrentValues.length;
-	ctou_cntDone = 1;
-
-	var AvgNum;
-	if (ctou_UseAvg)
-	{
-		AvgNum = 4;
-		TEK_AcquireAvg(AvgNum);
-	}
-	else
-	{
-		AvgNum = 1;
-		TEK_AcquireSample();
-	}
-	
-	for (var i = 0; i < IterationsCount; i++)
-	{
-		for (var j = 0; j < CurrentValues.length; j++)
-		{
-			print("-- result " + ctou_cntDone++ + " of " + ctou_cntTotal + " --");
-			
-			TEK_ScaleVertical(ctou_chMeasureI, CurrentValues[j] * ctou_Rshunt_gate / 1000, 80);
-			TEK_TriggerInit(ctou_chSync, "2");
-			sleep(1000);
-
-			for (var k = 0; k < AvgNum; k++)
-			{
-				TOMUHP_GatePulse(CurrentValues[j] / ctou_rise_time_ig, CurrentValues[j]);
-				sleep(1000);
-				if(anykey()) break;
-			}
-			
-			// Set data
-			var ig_set = CurrentValues[j];
-			ctou_ig_set.push(ig_set);
-			print("Ig_Set, мA: " + ig_set);
-			
-			// Scope data
-			var ig_sc = (TEK_Measure(1) * 1000 / ctou_Rshunt_gate).toFixed(2);
-			ctou_ig_sc.push(ig_sc);
-			print("Ig_Tek, мA: " + ig_sc);
-
-			// Relative error
-			var ig_set_err = ((ig_sc - ig_set) / ig_set * 100).toFixed(2);
-			ctou_ig_set_err.push(ig_set_err);
-			print("Ig_Set_Err, %: " + ig_set_err);
-
-			// Summary error
-			var E0_ig = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ERg, 2));
-			var ig_err_sum = (Math.sign_ma(ig_set_err) * (Math.abs(ig_set_err) + E0_ig)).toFixed(2);
-			ctou_ig_set_err_sum.push(ig_err_sum);
-			print("Ig_Sum_Err, %: " + ig_err_sum);
-
-			print("--------------------");
-			
-			if (anykey()) return 0;
-		}
-	}
-
-	return 1;
-}
-
-function CTOU_RateIgCollect(CurrentValues, IterationsCount)
-{
-	ctou_cntTotal = IterationsCount * CurrentValues.length;
-	ctou_cntDone = 1;
-
-	var AvgNum;
-	if (ctou_UseAvg)
-	{
-		AvgNum = 4;
-		TEK_AcquireAvg(AvgNum);
-	}
-	else
-	{
-		AvgNum = 1;
-		TEK_AcquireSample();
-	}
-	
-	for (var i = 0; i < IterationsCount; i++)
-	{
-		for (var j = 0; j < CurrentValues.length; j++)
-		{
-			print("-- result " + ctou_cntDone++ + " of " + ctou_cntTotal + " --");
-			
-			TEK_ScaleVertical(ctou_chMeasureI, CurrentValues[j] * ctou_Rshunt_gate / 1000, 80);
-			TEK_TriggerInit(ctou_chSync, "2");
-			sleep(1000);
-
-			for (var k = 0; k < AvgNum; k++)
-			{
-				TOMUHP_GatePulse(CurrentValues[j] / ctou_rise_time_ig, CurrentValues[j]);
-				sleep(1000);
-				if(anykey()) break;
-			}
-			
-			// Set data
-			var dIdt_set = CurrentValues[j] / ctou_rise_time_ig;
-			ctou_didt_set.push(dIdt_set);
-			print("Ig_set, мA: " + CurrentValues[j]);
-			print("dI/dt_Set, мA/us: " + dIdt_set);
-			
-			// Scope data
-			var rise_time = TEK_Measure(2) * 1e6;
-			var rise_current = TEK_Measure(1) * 0.8 * 1000 / ctou_Rshunt_gate;
-			var didt_sc = (rise_current / rise_time).toFixed(2);
-			ctou_didt_sc.push(didt_sc);
-			print("dI/dt_Tek, мA/us: " + didt_sc);
-
-			// Relative error
-			var didt_set_err = ((didt_sc - dIdt_set) / dIdt_set * 100).toFixed(2);
-			ctou_didt_set_err.push(didt_set_err);
-			print("dI/dt_Set_Err, %: " + didt_set_err);
-
-			print("--------------------");
-			
-			if (anykey()) return 0;
-		}
-	}
-
-	return 1;
-}
-
-function CTOU_Trig10IgCollect(CurrentValues, IterationsCount)
-{
-	ctou_cntTotal = IterationsCount * CurrentValues.length;
-	ctou_cntDone = 1;
-
-	var AvgNum;
-	if (ctou_UseAvg)
-	{
-		AvgNum = 4;
-		TEK_AcquireAvg(AvgNum);
-	}
-	else
-	{
-		AvgNum = 1;
-		TEK_AcquireSample();
-	}
-	
-	for (var i = 0; i < IterationsCount; i++)
-	{
-		for (var j = 0; j < CurrentValues.length; j++)
-		{
-			print("-- result " + ctou_cntDone++ + " of " + ctou_cntTotal + " --");
-			
-			TEK_ScaleVertical(ctou_chMeasureI, CurrentValues[j] * ctou_Rshunt_gate / 1000, 600);
-			
-			TEK_TriggerInit(ctou_chSync, "2.5");
-			sleep(1000);
-
-			for (var k = 0; k < AvgNum; k++)
-			{
-				TOMUHP_GatePulse(CurrentValues[j] / ctou_rise_time_ig, CurrentValues[j]);
-				sleep(1000);
-				if(anykey()) break;
-			}
-
-			// Set data
-			var trig_10_ig_set = CurrentValues[j] * 0.1;
-			ctou_trig_10_ig_set.push(trig_10_ig_set);
-			print("Trig_10%_Ig, мA: " + trig_10_ig_set);
-						
-			// Scope data
-			var trig_10_ig_sc = (TEK_MeasureCursor(1) * 1000 / ctou_Rshunt_gate).toFixed(2);
-			ctou_trig_10_ig_sc.push(trig_10_ig_sc);
-			print("Trig_10%_Ig_Tek, мA: " + trig_10_ig_sc);
-
-			// Relative error
-			var trig_10_ig_set_err = ((trig_10_ig_sc - trig_10_ig_set) / trig_10_ig_set * 100).toFixed(2);
-			ctou_trig_10_ig_set_err.push(trig_10_ig_set_err);
-			print("Trig_10%_Ig_Set_Err, %: " + trig_10_ig_set_err);
-
-			print("--------------------");
-			
-			if (anykey()) return 0;
-		}
-	}
-
-	return 1;
-}
-
 function CTOU_TimeCollect(CurrentValues, IterationsCount)
 {
 	ctou_cntTotal = IterationsCount * CurrentValues.length;
@@ -1162,25 +742,28 @@ function CTOU_TimeCollect(CurrentValues, IterationsCount)
 		TEK_AcquireSample();
 	}
 
+	// Отключение проверки на КЗ
+	dev.w(132,1);
+
 	for (var i = 0; i < IterationsCount; i++)
 	{
+		if(i == 0)
+		{
+			// Настройка развертки по горизонтали
+			TEK_TriggerPulseExtendedInit(ctou_chSync, "2", "dc", "2.5e-6", "positive", "outside");
+			CTOU_TekHorizontal(ctou_ud_test, CurrentValues[0]);
+			sleep(1000);
+		}
+
 		for (var j = 0; j < CurrentValues.length; j++)
 		{
 			print("-- result " + ctou_cntDone++ + " of " + ctou_cntTotal + " --");
-			
+		
 			// Настройка развертки по вертикали
 			TEK_ScaleVertical(ctou_chMeasureI, ctou_ig_test * ctou_Rshunt_gate / 1000, 80);
 			TEK_ScaleVertical(ctou_chMeasureU, ctou_ud_test, 80);
-			TEK_MeasFallTimeInit(ctou_chMeasureU, 1);
+			TEK_MeasMaxInit(ctou_chMeasureI, 2);
 			sleep(1000);
-
-			if(j == 0)
-			{
-				// Настройка развертки по горизонтали
-				CTOU_TekHorizontal(ctou_ud_test, CurrentValues[j]);
-				TEK_TriggerInit(ctou_chSync, "2");
-				sleep(1000);
-			}
 
 			var tou_print_copy = tou_print;
 			tou_print = 0;
@@ -1194,67 +777,63 @@ function CTOU_TimeCollect(CurrentValues, IterationsCount)
 			tou_print = tou_print_copy;
 
 			// Измерение времени по курсорам
-			var max_u_ig = TEK_Measure(2);
-			var max_ud = TEK_Measure(3);
-			var time_result = CTOU_MeasureAutoCursor(max_u_ig, max_ud);
+			var time_result = CTOU_MeasureTimeSc((ctou_ig_test * ctou_Rshunt_gate / 1000), ctou_ud_test);
 
 			// Вывод параметров измерения
-			print("Vd, V: " + ctou_ud_test);
-			print("Id, A: " + CurrentValues[j]);
+			print("Vd, V  : " + ctou_ud_test);
+			print("Id, A  : " + CurrentValues[j]);
+			print("Ig, mA : " + ctou_ig_test);
+			print("--------");
 
-			if (ctou_tgd_flag)
-			{
-				// Scope data
-				var tgd_sc = time_result[0] * 1e9;
-				ctou_tgd_sc.push(tgd_sc);
-				print("Tgd_Tek, ns: " + tgd_sc);
+			// Scope data Tgd
+			var tgd_sc = Math.round(time_result[0] * 1e9);
+			ctou_tgd_sc.push(tgd_sc);
+			print("Tgd_Tek, ns: " + tgd_sc);
 
-				// Unit data
-				var tgd = dev.r(251);
-				ctou_tgd.push(tgd);
-				print("Tgd_MME, ns: " + tgd);
+			// Unit data
+			var tgd = dev.r(251);
+			ctou_tgd.push(tgd);
+			print("Tgd_MME, ns: " + tgd);
 
-				// Relative error
-				var tgd_err = (tgd - tgd_sc) / tgd_sc * 100;
-				ctou_tgd_err.push(tgd_err);
-				print("Tgd_Err, %: " + tgd_err);
+			// Relative error
+			var tgd_err = ((tgd - tgd_sc) / tgd_sc * 100).toFixed(2);
+			ctou_tgd_err.push(tgd_err);
+			print("Tgd_Err, %: " + tgd_err);
 
-				// Summary error
-				var E0_tgd_tgt = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ETosc, 2) + Math.pow(EProbe, 2));
-				var tgd_err_sum = (Math.sign_ma(tgd_err) * (Math.abs(tgd_err) + E0_tgd_tgt)).toFixed(2);
-				ctou_tgd_err_sum.push(tgd_err_sum);
-				print("Tgd_Sum_Err, %: " + tgd_err_sum);
-			}
+			// Summary error
+			var E0_tgd_tgt = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ETosc, 2) + Math.pow(EProbe, 2));
+			var tgd_err_sum = (Math.sign_ma(tgd_err) * (Math.abs(tgd_err) + E0_tgd_tgt)).toFixed(2);
+			ctou_tgd_err_sum.push(tgd_err_sum);
+			print("Tgd_Sum_Err, %: " + tgd_err_sum);
+			print("--------");
 
-			if (ctou_tgt_flag)
-			{
-				// Scope data
-				var tgt_sc = time_result[1] * 1e9;
-				ctou_tgt_sc.push(tgt_sc);
-				print("Tgt_Tek, ns: " + tgt_sc);
+			// Scope data Tgt
+			var tgt_sc = Math.round(time_result[1] * 1e9);
+			ctou_tgt_sc.push(tgt_sc);
+			print("Tgt_Tek, ns: " + tgt_sc);
 
-				// Unit data
-				var tgt = dev.r(252);
-				ctou_tgt.push(tgt);
-				print("Tgt_MME, ns: " + tgt);
+			// Unit data
+			var tgt = dev.r(252);
+			ctou_tgt.push(tgt);
+			print("Tgt_MME, ns: " + tgt);
 
-				// Relative error
-				var tgt_err = (tgt - tgt_sc) / tgt_sc * 100;
-				ctou_tgt_err.push(tgt_err);
-				print("Tgt_Err, %: " + tgt_err);
+			// Relative error
+			var tgt_err = ((tgt - tgt_sc) / tgt_sc * 100).toFixed(2);
+			ctou_tgt_err.push(tgt_err);
+			print("Tgt_Err, %: " + tgt_err);
 
-				// Summary error
-				var E0_tgd_tgt = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ETosc, 2) + Math.pow(EProbe, 2));
-				var tgt_err_sum = (Math.sign_ma(tgt_err) * (Math.abs(tgt_err) + E0_tgd_tgt)).toFixed(2);
-				ctou_tgt_err_sum.push(tgt_err_sum);
-				print("Tgt_Sum_Err, %: " + tgt_err_sum);
-			}
-
+			// Summary error
+			var E0_tgd_tgt = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ETosc, 2) + Math.pow(EProbe, 2));
+			var tgt_err_sum = (Math.sign_ma(tgt_err) * (Math.abs(tgt_err) + E0_tgd_tgt)).toFixed(2);
+			ctou_tgt_err_sum.push(tgt_err_sum);
+			print("Tgt_Sum_Err, %: " + tgt_err_sum);
 			print("--------------------");
 			
 			if (anykey()) return 0;
 		}
 	}
+	
+	dev.w(132,0);
 
 	return 1;
 }
@@ -1263,18 +842,23 @@ function CTOU_TekHorizontal(VoltageValues, CurrentValues)
 {
 	var tou_print_copy = tou_print;
 	tou_print = 0;
+	TEK_ScaleVertical(ctou_chMeasureU, VoltageValues, 80);
 	TOUHP_Measure(VoltageValues, CurrentValues * 10, 2000, 2000);
+	sleep(500);
 	tou_print = tou_print_copy;
 	
 	// Расчет и установка шкалы
 	var ctou_fall_time_ud = TEK_Measure(1);
-	var ctou_timescale = (ctou_fall_time_ud + ctou_rise_time_ig / 1e6) / 5;
-	TEK_Horizontal(ctou_timescale, "0");
+	if (ctou_fall_time_ud < 900e-9)
+		TEK_Horizontal(500e-9, -500e-9);
+	
+	else if (ctou_fall_time_ud > 1.7e-6)
+		TEK_Horizontal(2.5e-6, 7.5e-6);
 
-	// Расчет и установка позиции
-	var ctou_timescale = TEK_GetTimeScale();
-	var ctou_time_pos = ctou_timescale * 4;
-	TEK_Horizontal(ctou_timescale, ctou_time_pos);
+	else
+		TEK_Horizontal(1e-6, 1.5e-6);
+
+	if (anykey()) return 0;
 }
 
 function CTOU_ResetA()
@@ -1283,18 +867,12 @@ function CTOU_ResetA()
 	ctou_id = [];
 	ctou_id_set = [];
 	ctou_ud_set = [];
-	ctou_ig_set = [];
-	ctou_didt_set = [];
-	ctou_trig_10_ig_set = [];
 	ctou_tgd = [];
 	ctou_tgt = [];
 
 	// Tektronix data
 	ctou_id_sc = [];
 	ctou_ud_sc = [];
-	ctou_ig_sc = [];
-	ctou_didt_sc = [];
-	ctou_trig_10_ig_sc = [];
 	ctou_tgd_sc = [];
 	ctou_tgt_sc = [];
 
@@ -1302,9 +880,6 @@ function CTOU_ResetA()
 	ctou_id_err = [];
 	ctou_id_set_err = [];
 	ctou_ud_set_err = [];
-	ctou_ig_set_err = [];
-	ctou_didt_set_err = [];
-	ctou_trig_10_ig_set_err = [];
 	ctou_tgd_err = [];
 	ctou_tgt_err = [];
 
@@ -1312,14 +887,10 @@ function CTOU_ResetA()
 	ctou_id_corr = [];
 	ctou_id_set_corr = [];
 	ctou_ud_set_corr = [];
-	ctou_ig_set_corr = [];
-	ctou_didt_set_corr = [];
-	ctou_trig_10_ig_set_corr = [];
 	ctou_tgd_corr = [];
 	ctou_tgt_corr = [];
 
 	// Summary error
-	ctou_ig_set_err_sum = [];
 	ctou_tgd_err_sum = [];
 	ctou_tgt_err_sum = [];
 	ctou_id_set_err_sum = [];
@@ -1342,21 +913,6 @@ function CTOU_SaveIdset(NameIdset)
 function CTOU_SaveUd(NameUd)
 {
 	CGEN_SaveArrays(NameUd, ctou_ud_sc, ctou_ud_set, ctou_ud_set_err);
-}
-
-function CTOU_SaveIg(NameIgset)
-{
-	CGEN_SaveArrays(NameIgset, ctou_ig_sc, ctou_ig_set, ctou_ig_set_err);
-}
-
-function CTOU_SaveRateIg(NameRateIgset)
-{
-	CGEN_SaveArrays(NameRateIgset, ctou_didt_sc, ctou_didt_set, ctou_didt_set_err);
-}
-
-function CTOU_SaveTrig10Ig(NameTrig10Ig)
-{
-	CGEN_SaveArrays(NameTrig10Ig, ctou_trig_10_ig_sc, ctou_trig_10_ig_set, ctou_trig_10_ig_set_err);
 }
 
 function CTOU_SaveTgd(NameTgd)
@@ -1433,27 +989,6 @@ function CTOU_PrintUdCalTOMUHP()
 	print("Ud P0 	  : " + dev.rs(88));
 }
 
-function CTOU_PrintIgSetCal()
-{
-	print("Ig P2 x1e6   :" + dev.rs(17));
-	print("Ig P1 x1000  :" + dev.rs(18));
-	print("Ig P0        :" + dev.rs(19));
-}
-
-function CTOU_PrintRateIgSetCal()
-{
-	print("dIg/dt P2 x1e6   :" + dev.rs(22));
-	print("dIg/dt P1 x1000  :" + dev.rs(23));
-	print("dIg/dt P0        :" + dev.rs(24));
-}
-
-function CTOU_PrintTrig10IgSetCal()
-{
-	print("Trig10Ig P2 x1e6   :" + dev.rs(27));
-	print("Trig10Ig P1 x1000  :" + dev.rs(28));
-	print("Trig10Ig P0        :" + dev.rs(29));
-}
-
 function CTOU_PrintTgdCal()
 {
 	switch(ctou_ud_test)
@@ -1520,21 +1055,6 @@ function CTOU_ResetUdCalTOCUHP()
 function CTOU_ResetUdCalTOMUHP()
 {
 	CTOU_CalUdTOMUHP(0, 1, 0)
-}
-
-function CTOU_ResetIgCal()
-{
-	CTOU_CalIgSet(0, 1, 0);
-}
-
-function CTOU_ResetRateIgCal()
-{
-	CTOU_CalRateIgSet(0, 1, 0);
-}
-
-function CTOU_ResetTrig10IgCal()
-{
-	CTOU_CalTrig10IgSet(0, 1, 0);
 }
 
 function CTOU_ResetTgdCal() 
@@ -1606,27 +1126,6 @@ function CTOU_CalUdTOMUHP(P2, P1, P0)
 	dev.ws(86, Math.round(P2 * 1e6));
 	dev.w(87, Math.round(P1 * 1000));
 	dev.ws(88, Math.round(P0));	
-}
-
-function CTOU_CalIgSet(P2, P1, P0)
-{
-	dev.ws(17, Math.round(P2 * 1e6));
-	dev.w(18, Math.round(P1 * 1000));
-	dev.ws(19, Math.round(P0));	
-}
-
-function CTOU_CalRateIgSet(P2, P1, P0)
-{
-	dev.ws(22, Math.round(P2 * 1e6));
-	dev.w(23, Math.round(P1 * 1000));
-	dev.ws(24, Math.round(P0));	
-}
-
-function CTOU_CalTrig10IgSet(P2, P1, P0)
-{
-	dev.ws(27, Math.round(P2 * 1e6));
-	dev.w(28, Math.round(P1 * 1000));
-	dev.ws(29, Math.round(P0));	
 }
 
 function CTOU_CalTgd(P2, P1, P0)

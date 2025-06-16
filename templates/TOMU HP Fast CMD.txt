@@ -1,0 +1,70 @@
+// Пояснения
+CTOU_Init(portTOU, portTek, channelMeasureI, channelMeasureU, channelSync);
+TOUHP_Measure(Voltage, Current, GateCurrent, GateCurrentRate);
+TOMUHP_GatePulse(GateCurrentRate, GateCurrent);
+
+// Посмотреть версию прошивки
+PrintFWInfo();
+
+// Обновление прошивки
+i("STM_FWUpdate.js");
+FWU_TOMUHP();
+
+// Скачать дамп регистров
+i("STM_FWUpdate.js");
+FWU_DumpTOMUHP();
+
+// Загрузить дамп регистров
+i("STM_FWUpdate.js");
+FWU_RestoreTOMUHP();
+
+// Измерение
+i("TestTOU_HP.js");
+TOUHP_Measure(600, 1250, 2000, 2000);
+TOMUHP_GatePulse(2000, 2000);
+
+/// Калибровка задания тока управления Ig
+// (Offset: 16) (K: 15)
+// [P0: 19] [P1: 18] [P2: 17]
+i("CalTOMU_HP.js");
+ctou_ig_array = [2000, 3000, 4000, 5000];
+ctou_Rshunt_gate = 2;
+ctou_UseAvg = 0;
+ctou_Iterations = 3;
+CTOU_Init(3, 7, 1, 3);
+dev.nid(11);
+
+CTOMU_VerifyIg();
+
+CTOMU_CalibrateIg();
+
+/// Калибровка задания скорости нарастания тока управления 
+// (Offset: 21) (K: 20)
+// [P0: 24] [P1: 23] [P2: 22]
+i("CalTOMU_HP.js");
+ctou_ig_array = [2000, 3000, 4000, 5000];
+ctou_Rshunt_gate = 2;
+ctou_rise_time_ig = 1;
+ctou_UseAvg = 0;
+ctou_Iterations = 3;
+CTOU_Init(3, 7, 1, 3);
+dev.nid(11);
+
+CTOMU_VerifyRateIg();
+
+CTOMU_CalibrateRateIg();
+
+/// Калибровка задания триггера 10 % тока управления Ig
+// (Offset: 51) (K: 50)
+// [P0: 29] [P1: 28] [P2: 27]
+i("CalTOMU_HP.js");
+ctou_ig_array = [2000, 3000, 4000, 5000];
+ctou_Rshunt_gate = 1;
+ctou_UseAvg = 0;
+ctou_Iterations = 5;
+CTOU_Init(3, 7, 1, 3);
+dev.nid(11);
+
+CTOMU_VerifyTrig10Ig();
+
+CTOMU_CalibrateTrig10Ig();

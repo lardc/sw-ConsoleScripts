@@ -104,7 +104,7 @@ function SC_SineConfig(Current)
 
 	while(dev.r(REG_DEV_STATE) != DS_PulseConfigReady)
 	{
-		sleep(1000);
+		sleep(100);
 
 		if (anykey()) return 1;
 

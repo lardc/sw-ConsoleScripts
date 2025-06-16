@@ -2,20 +2,19 @@ include("TestSCPC.js")
 include("Tektronix_tmc.js")
 
 SCPC	= 1
-LSLPC	= 2
-TOCU	= 3
+CUHV	= 2
 
 Contacts_Rshunt = 0.001;		// in Ohms
-Contacts_RIngun = 0.0003;		// in Ohms опытным путем
+Contacts_RIngun = 0.0008;		// in Ohms опытным путем
 Contacts_IngunCount = 2;		// Количество контактов
 
 PulsesInASeries = 1;			// Количество импульсов в серии
-SeriesPauseSeconds = 0;			// Длительность паузы в серии между импульсами
-DelayBetweenSeriesSeconds = 10;	// Длительность паузы между сериями
-ResourceTestHours = 8;			// Длительность ресурного теста в часах
+SeriesPauseSeconds = 0;			// Длительность паузы в серии между импульсами, в с
+DelayBetweenSeriesSeconds = 4;	// Длительность паузы между сериями, в с
+ResourceTestHours = 8;			// Длительность ресурного теста, в часах
 
 // Actions
-Action_ContacsOn = 18;			// Команда на TOCU для замыкания пружинных контатков на шины
+Action_ContacsOn = 18;			// Команда на CUHV для замыкания пружинных контатков на шины
 Action_ContacsOff = 26;			// Размыкание
 Action_Pulse = 63;				// Формирование импульса с помощью сигнала синхронизации
 
@@ -29,16 +28,12 @@ function Contacts_Connect(nameBlock)
 	switch(nameBlock)
 	{
 		case SCPC:
-			dev.co(6);
+			dev.co(5);
 			break;
 
-		case LSLPC:
-			dev.co(7);
-			break;
-
-		case TOCU:
-			dev.co(4);
-			dev.nid(180);
+		case CUHV:
+			dev.co(11);
+			//dev.nid(1);
 			break;
 	}
 }
@@ -87,7 +82,7 @@ function Contacts_Init_TMC(channelVoltage, channelCurrent)
 	TEK_tmc_FactoryReset();
 
 	// Init trigger
-	TEK_tmc_TriggerPulseExtInit(2.5, 1, 5e-3);
+	TEK_tmc_TriggerPulseExtInit(4.5, 1, 5e-3);
 	// Tektronix init
 	// Init channels
 	TEK_tmc_ChannelInit(ccontacts_chVoltage, 1, 1);
@@ -117,27 +112,22 @@ function Contacts_Pulse(Current)
 		var VertValueVoltage = ((Contacts_RIngun * 2) / (Contacts_IngunCount / 2)) * Current;
 
 		TEK_tmc_ScaleV(ccontacts_chCurrent, VertValueCurrent, 0.9);
-		TEK_tmc_ScaleV(ccontacts_chVoltage, VertValueVoltage, 0.3);
+		TEK_tmc_ScaleV(ccontacts_chVoltage, VertValueVoltage, 0.4);
 	}
 
-	Contacts_Connect(TOCU);
+	Contacts_Connect(CUHV);
 	dev.c(Action_ContacsOn);
-	sleep(2000)
+	sleep(900)
 
 	for (var i = 1; i <= PulsesInASeries; i++)
 	{
-		TEK_tmc_ForceTrig()
-		TEK_tmc_TrigSequence();
 		csv_array = [];
 
-		Contacts_Connect(SCPC);
-		if(SC_SineConfig(Math.round(Current)))
-			return 32;
+		TEK_tmc_TrigSequence();
 
-		/*Contacts_Connect(LSLPC);
-		if(SC_SineConfig(Math.round(Current / 2)))
-			return 27;
-		*/
+		Contacts_Connect(SCPC);
+		if(SC_SineConfig(Current))
+			return 32;
 
 		if(Contacts_AnykeyExit())
 			return 8;
@@ -151,10 +141,10 @@ function Contacts_Pulse(Current)
 
 		var TimeStartActionPulse = new Date();
 		
-		Contacts_Connect(TOCU);
+		Contacts_Connect(CUHV);
 		dev.c(Action_Pulse);
 
-		sleep(20)
+		sleep(50)
 
 		Contacts_Connect(SCPC);
 		while (dev.r(REG_DEV_STATE) != DS_PulseEnd)
@@ -165,48 +155,37 @@ function Contacts_Pulse(Current)
 				return 2;
 		}
 
-		/*Contacts_Connect(LSLPC);
-		while (dev.r(REG_DEV_STATE) != DS_PulseEnd)
-		{
-			if(Contacts_AnykeyExit())
-				return 8;
-			if (Print_FaultDisableWarning())
-				return 2;
-		}
-		*/
-
 		print("-- result " + counter++ + " --");
-		print("Time Pulse   : " + TimeStartActionPulse);
+		print("Time	    : " + TimeStartActionPulse);
 		
 		if (Contacts_Oscilloscope)
 		{
-			//sleep(800);
+			sleep(500);
 			var v_sc = TEK_tmc_Measure(ccontacts_chVoltage).toFixed(4);
 			var i_sc = TEK_tmc_Measure(ccontacts_chCurrent).toFixed(4) / Contacts_Rshunt;
 			var p_sc = v_sc * i_sc * 0.0064;
 			var r_sc = v_sc / i_sc;
 			var r_1Ingun_sc = (r_sc / 2 * Contacts_IngunCount) / 2;
-	
-			if(r_1Ingun_sc >= 0.020 || i_sc < 50)		// Если сопротивление на один контакт более 20 мОм или ток менее 50 А на , то остановить тест
-			{
-				print("Контактное сопротивление на один контакт = " + r_1Ingun_sc.toFixed(6) + " Ом")
-				print("Ток в цепи = " + i_sc.toFixed(1) + " А")
-				print("Тест остановлен!")
-				Contacts_Connect(TOCU);
-				dev.c(Action_ContacsOff);
-				return 10;
-			}
 			
-			print("Utek,       V: " + v_sc);
-			print("Itek,       A: " + i_sc.toFixed(3));
-			print("Ptek,       W: " + p_sc.toFixed(3));
-			print("Rtek,     Ohm: " + r_sc.toFixed(6));
-			print("R_PerOne, Ohm: " + r_1Ingun_sc.toFixed(6));
+			print("Utek,	   V: " + v_sc);
+			print("Itek,	   A: " + i_sc.toFixed(3));
+			print("Ptek,	   W: " + p_sc.toFixed(3));
+			print("Rtek,	 Ohm: " + r_sc.toFixed(6));
+			print("R_Per1,	 Ohm: " + r_1Ingun_sc.toFixed(6));
+
 			csv_array.push(TimeStartActionPulse + ";" + v_sc + ";" + i_sc + ";"
 				+ p_sc + ";" + r_sc + ";" + r_1Ingun_sc);
 			append("data/Contacts_ResourceTest.csv", csv_array);
-		}
 
+			if(v_sc > VertValueVoltage * 3)
+			{
+				print("Расчетное напряжение в ~3 раза больше!");
+				Contacts_Connect(CUHV);
+				dev.c(Action_ContacsOff);
+				print("Разжатие");
+				return 18;
+			}
+		}
 
 		if(PulsesInASeries > 1)
 		{
@@ -219,11 +198,11 @@ function Contacts_Pulse(Current)
 					return 15;
 			}
 
-			pinline("\r                                                            \r");
+			pinline("\r																														\r");
 		}
 	}
 
-	Contacts_Connect(TOCU);
+	Contacts_Connect(CUHV);
 	dev.c(Action_ContacsOff);
 
 	return 0;
@@ -233,6 +212,7 @@ function Contacts_ResourceTest(Current, Counter)
 {
 	csv_array = [];
 	counter = Counter;
+	TEK_tmc_TrigSequence();
 
 	Contacts_Connect(SCPC);
 	p("dev.r 4 SCPC = " + dev.r(4));
@@ -240,25 +220,11 @@ function Contacts_ResourceTest(Current, Counter)
 	dev.w(0,175)
 	dev.w(1,3300)
 	dev.w(2,359)
-	dev.w(3,38)
+	dev.w(3,37)
 	dev.w(4,830)
 	dev.w(5,100)
 	for(reg = 6; reg <= 64; reg++){dev.w(reg,0)}
 	p("Напряжение SCPC = " + dev.r(96) / 10);
-
-	/*
-	Contacts_Connect(LSLPC);
-	p("dev.r 4 SCPC = " + dev.r(4));
-	p("dev.r 5 SCPC = " + dev.r(5));
-	dev.w(0,175)
-	dev.w(1,3300)
-	dev.w(2,359)
-	dev.w(3,38)
-	dev.w(4,830)
-	dev.w(5,100)
-	for(reg = 6; reg <= 64; reg++){dev.w(reg,0)}
-	p("Напряжение SCPC = " + dev.r(96) / 10);
-	*/
 	
 	if (Contacts_Oscilloscope)
 	{
@@ -288,7 +254,7 @@ function Contacts_ResourceTest(Current, Counter)
 				return 58;
 		}
 		
-		pinline("\r                                                            \r");
+		pinline("\r																														\r");
 
 		var left_time = new Date((today.getTime()) - ((new Date()).getTime()));
 		print("Осталось " + (left_time.getHours()-3) + " ч и " + left_time.getMinutes() + " мин");
@@ -302,7 +268,7 @@ function Contacts_ResourceTest(Current, Counter)
 
 function Contacts_TestContactor(num_clamp)
 {
-	Contacts_Connect(TOCU);
+	Contacts_Connect(CUHV);
 
 	var i = 0;
 	var period_ms = 3000;
@@ -318,7 +284,7 @@ function Contacts_TestContactor(num_clamp)
 			pinline("\rРазжатие = " + (Date.now() - (PrevStartTS + period_clamp_ms + period_ms * i)) + "	");
 			sleep(10);
 		}
-		pinline("\r                        	\r");
+		pinline("\r													\r");
 
 		dev.c(Action_ContacsOn);
 
@@ -328,7 +294,7 @@ function Contacts_TestContactor(num_clamp)
 			sleep(10);
 		}
 		
-		pinline("\r                        	\r");
+		pinline("\r													\r");
 
 		dev.c(Action_ContacsOff);
 		
@@ -343,9 +309,9 @@ function Contacts_AnykeyExit()
 {
 	if (anykey())
 	{
-		Contacts_Connect(TOCU);
+		Contacts_Connect(CUHV);
 		dev.c(Action_ContacsOff);
-		print("\rStopped from user                              ");
+		print("\rStopped from user															");
 		return 1;
 	}
 
