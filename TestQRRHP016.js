@@ -6,6 +6,7 @@ include("Tektronix.js")
 qrr_idc_width = 2000;		// in us
 qrr_single = 0;
 qrr_print = 1;
+print_plot = 0;
 CALIBRATION_PROCESS = 1;
 
 
@@ -84,6 +85,8 @@ function QRR_Start(Mode, IDC, IDCFallRate, OSV, OSVRate)
 		}
 		sleep(50);
 	}
+	if(print_plot)
+		pl(dev.rafs(1));
 	
 	if(qrr_print)
 	{
@@ -168,8 +171,8 @@ function QRR_Status()
 	print("[DCU1]");
 	if (dev.r(2) == 0)
 	{	
-		QSU_NodeStatus(161, 192);
-		print("Fault:		" + QSU_ReadReg(161, 193));
+		QSU_NodeStatus(160, 192);
+		print("Fault:		" + QSU_ReadReg(160, 193));
 	}
 	else
 		print("Emulation");
@@ -198,8 +201,8 @@ function QRR_Status()
 	print("[RCU1]");
 	if (dev.r(5) == 0)
 	{	
-		QSU_NodeStatus(171, 192);
-		print("Fault:		" + QSU_ReadReg(171, 193));
+		QSU_NodeStatus(170, 192);
+		print("Fault:		" + QSU_ReadReg(170, 193));
 	}
 	else
 		print("Emulation");
@@ -246,7 +249,7 @@ function QRR_Result()
 	print("trr,        us: " + (dev.r(212) / 10));
 	print("tq,         us: " + (dev.r(213) / 10));
 	print("Idc,         A: " + dev.r(214));
-	print("dIdt,     A/us: " + (dev.r(215) / 10));
+	print("dIdt,     A/us: " + (dev.r(215) / 100));
 	QSU_Plot();
 }
 
