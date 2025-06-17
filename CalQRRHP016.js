@@ -6,6 +6,7 @@ include("CaldVdt.js")
 
 // Calibration setup parameters
 cal_Rshunt = 1000;	// uOhm
+cal_Probe = 1000;	// 
 DirectCurrentTest = 1000; // in A
 DirectCurrentRateTest = 10; // in A/us
 DirectVoltageTest = 1500; // in V
@@ -64,8 +65,11 @@ cal_dIdtUnit = [];
 
 //HSS
 cal_IUnit = [];
+cal_VUnit = [];
 cal_ISc = [];
+cal_VSc = [];
 cal_IUnitErr = [];
+cal_VUnitErr = [];
 
 // Tektronix data
 cal_TrrSc = [];
@@ -113,6 +117,7 @@ cal_dIdtSetErrCal = [];
 // Correction
 Сal_IdSetCorr = []; 
 Сal_IHSSCorr = [];
+Сal_VHSSCorr = [];
 Сal_fIdSetCorr = [];
 Сal_IrSetCorr = [];
 Сal_dIdtSetCorr = [];
@@ -178,12 +183,12 @@ function CAL_VerifyCurrent(RateStart,RateEnd)
 		// Plot relative error distribution
 		scattern(cal_IdcSc, cal_IdcSetErr, "Current Direct (in A)", "Error (in %)", "Current Direct Set error All Rate");
 		scattern(cal_IrcSc, cal_IrcSetErr, "Current Revers (in A)", "Error (in %)", "Current Revers Set error All Rate");
-		// scattern(cal_IdcSc, cal_IdcUnitErr, "Current Direct (in A)", "Error (in %)", "Current Direct Measure error All Rate");
-		// scattern(cal_IrcSc, cal_IrcUnitErr, "Current Revers (in A)", "Error (in %)", "Current Revers Measure error All Rate");
+		scattern(cal_IdcSc, cal_IdcUnitErr, "Current Direct (in A)", "Error (in %)", "Current Direct Measure error All Rate");
+		scattern(cal_IrcSc, cal_IrcUnitErr, "Current Revers (in A)", "Error (in %)", "Current Revers Measure error All Rate");
 		scattern(cal_IdcSet, cal_dIdtSetErr, "Set Current (in A)", "Error (in %)", "dIdt Set error All Rate");
 		scattern(cal_dIdtSet, cal_dIdtSetErr, "Set dIdt (in A)", "Error (in %)", "dIdt Set error All Rate");
 		scattern(cal_dIdtSet, cal_dIdtSetErr, "Set dIdt (in A)", "Error (in %)", "dIdt Set error All Rate");
-		// scattern(cal_dIdtSc, cal_dIdtUnitErr, "dIdt (in A/us)", "Error (in %)", "dIdt Measure error All Rate");
+		scattern(cal_dIdtSc, cal_dIdtUnitErr, "dIdt (in A/us)", "Error (in %)", "dIdt Measure error All Rate");
 
 			
 	}
@@ -386,8 +391,45 @@ function CAL_CalibrateIHSS(RateStart,RateEnd)
 	CAL_SetCoefIHSS(Сal_IHSSCorr[0], Сal_IHSSCorr[1]); 
 
 	CAL_PrintCoefIHSS();		
-	
 
+	dev.w(153,0);
+	dev.c(111);
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Калибровка VHSS 
+
+function CAL_CalibrateVHSS(RateStart,RateEnd)
+{
+	CAL_ResetA();
+	CAL_ResetVHSSCal();
+
+	dev.w(153,1);
+	dev.c(110);
+
+	// Tektronix init
+	CAL_TekInitVoltage(); // изменить на напряжение 
+	if (RateEnd)
+	{	
+		for (var i = RateStart; i <= RateEnd; i++)
+			CAL_CollectVoltageHSS(CurrentRateN[i], cal_Iterations)
+	}
+	else
+		CAL_CollectVoltageHSS(RateStart, cal_Iterations)
+	
+	CAL_SaveVHSS("QSU_VHSS");
+
+	// Plot relative error distribution
+	scattern(cal_VSc, cal_VUnitErr, "Voltage Direct (in A)", "Error (in %)", "HSS Voltage Measure error");
+
+	// Calculate correction
+		
+	Сal_VHSSCorr = CGEN_GetCorrection("QSU_VHSS");
+
+	CAL_SetCoefVHSS(Сal_VHSSCorr[0], Сal_VHSSCorr[1]); 
+
+	CAL_PrintCoefVHSS();		
+	
 	dev.w(153,0);
 	dev.c(111);
 }
@@ -600,7 +642,7 @@ function CAL_CollectCurrent(Rate,IterationsCount)
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
-// Сбор данных для верификации Id,Ir и dI/dt
+// Сбор данных для IHSS
 
 function CAL_CollectCurrentHSS(Rate,IterationsCount)
 {
@@ -654,6 +696,56 @@ function CAL_CollectCurrentHSS(Rate,IterationsCount)
 			print("IrcUnit,	A: " + IrcUnit);
 			print("IrcSc,		A: " + IrcSc);
 			print("IrcUnitErr,	%: " + IrcUnitErr);
+			print("--------------------");
+			
+			
+		}
+		if (anykey()) break;
+	}
+	return 1;
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Сбор данных для VHSS
+
+function CAL_CollectVoltageHSS(Rate,IterationsCount)
+{
+	cal_CntTotal = SetVoltage.length * IterationsCount;
+	cal_CntDone = 1;
+	
+	for (var i = 0; i < IterationsCount; i++)
+	{
+		for (var k = 0; k < SetVoltage.length; k++)
+		{	
+			TEK_Send("horizontal:scale "  + ((SetVoltage[k] / SetVoltageRate[Rate]) * 1e-6) * 0.4);
+			CAL_TekScale(cal_chMeasureU, SetVoltage[k] * cal_Probe / 1e6 * 2);
+			sleep(1000);		
+
+			qrr_print = 0;
+			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
+			QRR_Start(1, DirectCurrentTest, DirectCurrentRateTest, SetVoltage[k], Rate);
+			qrr_print = 1;
+			
+			sleep(1000);
+
+			// Unit data
+			var VUnit = dev.r(217);
+			cal_VUnit.push(VUnit);
+
+			// Scope data
+
+			var VSc =(TEK_Measure(MaxPort) * 1e3).toFixed(2);
+			cal_VSc.push(VSc);
+
+			// Relative Unit error
+			var VUnitErr = ((VUnit - VSc) / VSc * 100).toFixed(2);
+			cal_VUnitErr.push(VUnitErr);
+			
+			// Print results
+			print("");
+			print("VdUnit,	V: " + VUnit);
+			print("VdSc,		V: " + VSc);
+			print("VdUnitErr,	%: " + VUnitErr);
 			print("--------------------");
 			
 			
@@ -1590,8 +1682,11 @@ function CAL_ResetA()
 	
 	//HSS
 	cal_IUnit = [];
+	cal_VUnit = [];
 	cal_ISc = [];
+	cal_VSc = [];
 	cal_IUnitErr = [];
+	cal_VUnitErr = [];
 
 	// Tektronix data
 	cal_TrrSc = [];
@@ -1639,6 +1734,7 @@ function CAL_ResetA()
 	// Correction
 	Сal_IdSetCorr = [];
 	Сal_IHSSCorr = [];
+	Сal_VHSSCorr = [];
 	Сal_fIdSetCorr = [];
 	Сal_IrSetCorr = [];
 	Сal_dIdtSetCorr = [];
@@ -1667,6 +1763,13 @@ function CAL_SavefIdc(NamefIdc)
 function CAL_SaveIHSS(NameIHSS)
 {
 	CGEN_SaveArrays(NameIHSS, cal_IUnit, cal_ISc, cal_IUnitErr);
+}
+
+//--------------------
+
+function CAL_SaveVHSS(NameVHSS)
+{
+	CGEN_SaveArrays(NameVHSS, cal_VUnit, cal_VSc, cal_VUnitErr);
 }
 
 //--------------------
@@ -1732,6 +1835,28 @@ function CAL_TekInitCurrent()
 	TEK_MeasMaxInit(cal_chMeasureI, MaxPort)
 	TEK_MeasMinInit(cal_chMeasureI, MinPort)
 	TEK_MeasFallTimeInit(cal_chMeasureI, FallPort)
+
+	TEK_Send("data:width 1");
+	TEK_Send("data:encdg rpb");
+	TEK_Send("data:start 1");
+	TEK_Send("data:stop 2500");
+}
+
+//--------------------
+
+function CAL_TekInitVoltage()
+{
+	TEK_Horizontal("1e-6", "0");
+
+	TEK_ChannelInit(cal_chMeasureU, cal_Probe, "0.1");
+	TEK_Send("ch" + cal_chMeasureU + ":position 0");
+
+	TEK_TriggerInit(cal_chMeasureU, "0.09");
+	TEK_Send("trigger:main:edge:slope rise");
+
+	TEK_MeasMaxInit(cal_chMeasureU, MaxPort)
+	TEK_MeasMinInit(cal_chMeasureU, MinPort)
+	TEK_MeasFallTimeInit(cal_chMeasureU, FallPort)
 
 	TEK_Send("data:width 1");
 	TEK_Send("data:encdg rpb");
@@ -1894,6 +2019,14 @@ function CAL_ResetIHSSCal()
 }
 
 //--------------------
+// Функция сброса корректировок IHSS
+
+function CAL_ResetVHSSCal()
+{
+	CAL_SetCoefVHSS(1, 0);
+}
+
+//--------------------
 // Функция сброса корректировок fIdSet
 
 function CAL_ResetfIdSetCal()
@@ -1936,6 +2069,15 @@ function CAL_SetCoefIHSS(P1, P0)
 {
 	QSU_WriteRegS(0, 2, Math.round(P1 * 1000));
 	QSU_WriteRegS(0, 4, Math.round(P0));	
+}
+
+//--------------------
+// Функция записи корректировок VHSS
+
+function CAL_SetCoefVHSS(P1, P0)
+{
+	QSU_WriteRegS(0, 6, Math.round(P1 * 1000));
+	QSU_WriteRegS(0, 8, Math.round(P0));	
 }
 
 //--------------------
@@ -2040,6 +2182,15 @@ function CAL_PrintCoefIHSS()
 {
 	print("IHSS N x1000	: " + QSU_ReadReg(0,2));
 	print("IHSS OFFSET 	: " + QSU_ReadReg(0,4));
+}
+
+//--------------------
+// Функция вызова значений регистров для IHSS
+
+function CAL_PrintCoefVHSS()
+{
+	print("VHSS N x1000	: " + QSU_ReadReg(0,6));
+	print("VHSS OFFSET 	: " + QSU_ReadReg(0,8));
 }
 
 //--------------------
