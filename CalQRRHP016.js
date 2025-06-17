@@ -21,7 +21,7 @@ MinPort = 2;
 FallPort = 3;
 //
 def_UseSaveImage = true; 
-//
+// 
 SetCurrentTest = [320, 500, 1000, 1500, 2000, 2500, 3000, 3200]; // in A  320, 500, 1000, 1500, 2000, 2500, 3000, 3200
 CurrentRateN = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 CurrentRate = [1, 1.5, 2, 5, 10, 15, 20, 30, 50, 60, 100]; // in А/us  1, 1.5, 2, 5, 10, 15, 20, 30, 50, 60, 100
@@ -361,7 +361,7 @@ function CAL_CalibrateIdSet()
 //-------------------------------------------------------------------------------------------------------------------------------------------
 // Калибровка IHSS 
 
-function CAL_CalibrateIHSS(RateStart,RateEnd)
+function CAL_CalibrateIHSS(Rate)
 {
 	CAL_ResetA();
 	CAL_ResetIHSSCal();
@@ -371,13 +371,12 @@ function CAL_CalibrateIHSS(RateStart,RateEnd)
 
 	// Tektronix init
 	CAL_TekInitCurrent();
-	if (RateEnd)
-	{	
-		for (var i = RateStart; i <= RateEnd; i++)
-			CAL_CollectCurrentHSS(CurrentRateN[i], cal_Iterations)
-	}
-	else
-		CAL_CollectCurrentHSS(RateStart, cal_Iterations)
+
+	// Reload values
+	var Cal_Value = CAL_GetValueIHSS(Rate);
+	var CurrentArray = CGEN_GetRange(Cal_Value[0], Cal_Value[1], Cal_Value[2]);
+	
+	CAL_CollectCurrentHSS(CurrentArray, cal_Iterations)
 	
 	CAL_SaveIHSS("QSU_IHSS");
 
@@ -386,11 +385,11 @@ function CAL_CalibrateIHSS(RateStart,RateEnd)
 
 	// Calculate correction
 		
-	Сal_IHSSCorr = CGEN_GetCorrection("QSU_IHSS");
+	Сal_IHSSCorr = CGEN_GetCorrection2("QSU_IHSS");
 
-	CAL_SetCoefIHSS(Сal_IHSSCorr[0], Сal_IHSSCorr[1]); 
+	CAL_SetCoefIHSS(Сal_IHSSCorr[0], Сal_IHSSCorr[1], Сal_IHSSCorr[2], Rate); 
 
-	CAL_PrintCoefIHSS();		
+	CAL_PrintCoefIHSS(Rate);		
 
 	dev.w(153,0);
 	dev.c(111);
@@ -399,7 +398,7 @@ function CAL_CalibrateIHSS(RateStart,RateEnd)
 //-------------------------------------------------------------------------------------------------------------------------------------------
 // Калибровка VHSS 
 
-function CAL_CalibrateVHSS(RateStart,RateEnd)
+function CAL_CalibrateVHSS(Rate)
 {
 	CAL_ResetA();
 	CAL_ResetVHSSCal();
@@ -408,14 +407,13 @@ function CAL_CalibrateVHSS(RateStart,RateEnd)
 	dev.c(110);
 
 	// Tektronix init
-	CAL_TekInitVoltage(); // изменить на напряжение 
-	if (RateEnd)
-	{	
-		for (var i = RateStart; i <= RateEnd; i++)
-			CAL_CollectVoltageHSS(CurrentRateN[i], cal_Iterations)
-	}
-	else
-		CAL_CollectVoltageHSS(RateStart, cal_Iterations)
+	CAL_TekInitVoltage();
+
+	// Reload values
+	var Cal_Value = CAL_GetValueIHSS(Rate);
+	var CurrentArray = CGEN_GetRange(Cal_Value[0], Cal_Value[1], Cal_Value[2]);
+
+	CAL_CollectVoltageHSS(CurrentArray, cal_Iterations)
 	
 	CAL_SaveVHSS("QSU_VHSS");
 
@@ -424,11 +422,11 @@ function CAL_CalibrateVHSS(RateStart,RateEnd)
 
 	// Calculate correction
 		
-	Сal_VHSSCorr = CGEN_GetCorrection("QSU_VHSS");
+	Сal_VHSSCorr = CGEN_GetCorrection2("QSU_VHSS");
 
-	CAL_SetCoefVHSS(Сal_VHSSCorr[0], Сal_VHSSCorr[1]); 
+	CAL_SetCoefVHSS(Сal_VHSSCorr[0], Сal_VHSSCorr[1], Сal_IHSSCorr[2], Rate); 
 
-	CAL_PrintCoefVHSS();		
+	CAL_PrintCoefVHSS(Rate);		
 	
 	dev.w(153,0);
 	dev.c(111);
@@ -644,22 +642,22 @@ function CAL_CollectCurrent(Rate,IterationsCount)
 //-------------------------------------------------------------------------------------------------------------------------------------------
 // Сбор данных для IHSS
 
-function CAL_CollectCurrentHSS(Rate,IterationsCount)
+function CAL_CollectCurrentHSS(CurrentArray, IterationsCount)
 {
-	cal_CntTotal = SetCurrentTest.length * IterationsCount;
+	cal_CntTotal = CurrentArray.length * IterationsCount;
 	cal_CntDone = 1;
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
-		for (var k = 0; k < SetCurrentTest.length; k++)
+		for (var k = 0; k < CurrentArray.length; k++)
 		{	
-			TEK_Send("horizontal:scale "  + ((SetCurrentTest[k] / CurrentRate[Rate]) * 1e-6) * 0.4);
-			CAL_TekScale(cal_chMeasureI, SetCurrentTest[k] * cal_Rshunt / 1e6 * 2);
+			TEK_Send("horizontal:scale "  + ((CurrentArray[k] / CurrentRate[4]) * 1e-6) * 0.4);
+			CAL_TekScale(cal_chMeasureI, CurrentArray[k] * cal_Rshunt / 1e6 * 2);
 			sleep(1000);		
 
 			qrr_print = 0;
 			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-			QRR_Start(0, SetCurrentTest[k], Rate, DirectVoltageTest, DirectVoltageRateTest);
+			QRR_Start(0, CurrentArray[k], Rate, DirectVoltageTest, DirectVoltageRateTest);
 			qrr_print = 1;
 			
 			sleep(1000);
@@ -708,22 +706,22 @@ function CAL_CollectCurrentHSS(Rate,IterationsCount)
 //-------------------------------------------------------------------------------------------------------------------------------------------
 // Сбор данных для VHSS
 
-function CAL_CollectVoltageHSS(Rate,IterationsCount)
+function CAL_CollectVoltageHSS(CurrentArray,IterationsCount)
 {
-	cal_CntTotal = SetVoltage.length * IterationsCount;
+	cal_CntTotal = CurrentArray.length * IterationsCount;
 	cal_CntDone = 1;
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
-		for (var k = 0; k < SetVoltage.length; k++)
+		for (var k = 0; k < CurrentArray.length; k++)
 		{	
-			TEK_Send("horizontal:scale "  + ((SetVoltage[k] / SetVoltageRate[Rate]) * 1e-6) * 0.4);
-			CAL_TekScale(cal_chMeasureU, SetVoltage[k] * cal_Probe / 1e6 * 2);
+			TEK_Send("horizontal:scale "  + ((CurrentArray[k] / SetVoltageRate[1]) * 1e-6) * 0.4);
+			CAL_TekScale(cal_chMeasureU, CurrentArray[k] * cal_Probe / 1e6 * 2);
 			sleep(1000);		
 
 			qrr_print = 0;
 			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-			QRR_Start(1, DirectCurrentTest, DirectCurrentRateTest, SetVoltage[k], Rate);
+			QRR_Start(1, DirectCurrentTest, DirectCurrentRateTest, CurrentArray[k], SetVoltageRate[1]);
 			qrr_print = 1;
 			
 			sleep(1000);
@@ -1662,6 +1660,76 @@ function CAL_MeasureTq(Channel)
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
+// Выбор диапазона для IHSS
+function CAL_GetValueIHSS(Rate)
+{
+	switch(Rate)
+	{
+		case 0:
+			Value_Min = 50;
+			Value_Max = 833; 
+			
+			break;
+		case 1:
+			Value_Min = 834;
+			Value_Max = 1666;
+			
+			break;
+		case 2:
+			Value_Min = 1667;
+			Value_Max = 3200;
+			
+			break;	
+	}	
+
+	Value_Stp = (Value_Max - Value_Min) / 10;
+	var ReturnValues = [];
+	ReturnValues[0] = Value_Min;
+	ReturnValues[1] = Value_Max;
+	ReturnValues[2] = Value_Stp;	
+
+	return ReturnValues;
+}
+
+//--------------------
+// Выбор диапазона для VHSS
+
+function CAL_GetValueVHSS(Rate)
+{
+	switch(Rate)
+	{
+		case 0:
+			Value_Min = 502;
+			Value_Max = 833;
+			
+			break;
+		case 1:
+			Value_Min = 834;
+			Value_Max = 1666;
+			
+			break;
+		case 2:
+			Value_Min = 1667;
+			Value_Max = 4166;
+			
+			break;	
+		case 3:
+			Value_Min = 4167;
+			Value_Max = 4355;
+			
+			break;	
+	}	
+
+	Value_Stp = (Value_Max - Value_Min) / 10;
+	var ReturnValues = [];
+	ReturnValues[0] = Value_Min;
+	ReturnValues[1] = Value_Max;
+	ReturnValues[2] = Value_Stp;		
+
+	return ReturnValues;	
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
 // Сброс данных
 
 function CAL_ResetA()
@@ -2013,17 +2081,17 @@ function CAL_ResetIdSetCal()
 //--------------------
 // Функция сброса корректировок IHSS
 
-function CAL_ResetIHSSCal()
+function CAL_ResetIHSSCal(Rate)
 {
-	CAL_SetCoefIHSS(1, 0);
+	CAL_SetCoefIHSS(0, 1, 0, Rate);
 }
 
 //--------------------
-// Функция сброса корректировок IHSS
+// Функция сброса корректировок VHSS
 
-function CAL_ResetVHSSCal()
+function CAL_ResetVHSSCal(Rate)
 {
-	CAL_SetCoefVHSS(1, 0);
+	CAL_SetCoefVHSS(0, 1, 0, Rate);
 }
 
 //--------------------
@@ -2065,19 +2133,55 @@ function CAL_SetCoefIdSet(P2, P1, P0)
 //--------------------
 // Функция записи корректировок IHSS
 
-function CAL_SetCoefIHSS(P1, P0)
+function CAL_SetCoefIHSS(P2, P1, P0, Rate)
 {
-	QSU_WriteRegS(0, 2, Math.round(P1 * 1000));
-	QSU_WriteRegS(0, 4, Math.round(P0));	
+	switch(Rate)
+	{
+	case 0:
+		// QSU_WriteRegS(0, 2, Math.round(P2 * 1e6));
+		QSU_WriteRegS(0, 2, Math.round(P1 * 1000));
+		QSU_WriteRegS(0, 4, Math.round(P0));
+		break;
+	case 1:
+		// QSU_WriteRegS(0, 2, Math.round(P2 * 1e6));
+		QSU_WriteRegS(0, 2, Math.round(P1 * 1000));
+		QSU_WriteRegS(0, 4, Math.round(P0));
+		break;
+	case 2:
+		// QSU_WriteRegS(0, 2, Math.round(P2 * 1e6));
+		QSU_WriteRegS(0, 2, Math.round(P1 * 1000));
+		QSU_WriteRegS(0, 4, Math.round(P0));
+		break;	
+	}		
 }
 
 //--------------------
 // Функция записи корректировок VHSS
 
-function CAL_SetCoefVHSS(P1, P0)
+function CAL_SetCoefVHSS(P2, P1, P0, Rate)
 {
-	QSU_WriteRegS(0, 6, Math.round(P1 * 1000));
-	QSU_WriteRegS(0, 8, Math.round(P0));	
+	switch(Rate)
+	{
+	case 0:
+		// QSU_WriteRegS(0, 2, Math.round(P2 * 1e6));
+		QSU_WriteRegS(0, 6, Math.round(P1 * 1000));
+		QSU_WriteRegS(0, 8, Math.round(P0));
+		break;
+	case 1:
+		// QSU_WriteRegS(0, 2, Math.round(P2 * 1e6));
+		QSU_WriteRegS(0, 6, Math.round(P1 * 1000));
+		QSU_WriteRegS(0, 8, Math.round(P0));
+		break;
+	case 2:
+		// QSU_WriteRegS(0, 2, Math.round(P2 * 1e6));
+		QSU_WriteRegS(0, 6, Math.round(P1 * 1000));
+		QSU_WriteRegS(0, 8, Math.round(P0));
+		break;	
+	case 3:
+		// QSU_WriteRegS(0, 2, Math.round(P2 * 1e6));
+		QSU_WriteRegS(0, 6, Math.round(P1 * 1000));
+		QSU_WriteRegS(0, 8, Math.round(P0));
+		break;	
 }
 
 //--------------------
@@ -2178,19 +2282,23 @@ function CAL_PrintCoefIdSet()
 //--------------------
 // Функция вызова значений регистров для IHSS
 
-function CAL_PrintCoefIHSS()
+function CAL_PrintCoefIHSS(Rate)
 {
-	print("IHSS N x1000	: " + QSU_ReadReg(0,2));
-	print("IHSS OFFSET 	: " + QSU_ReadReg(0,4));
+	Reg = 2 + (Rate * 3);
+	print("IHSS " + Reg + " : P0	: " + QSU_ReadReg(0,Reg));
+	print("IHSS " + (Reg + 1) + " : P1 	: " + QSU_ReadReg(0,(Reg + 1)));
+	print("IHSS " + (Reg + 2) + " : P2 	: " + QSU_ReadReg(0,(Reg + 2)));
 }
 
 //--------------------
 // Функция вызова значений регистров для IHSS
 
-function CAL_PrintCoefVHSS()
+function CAL_PrintCoefVHSS(Rate)
 {
-	print("VHSS N x1000	: " + QSU_ReadReg(0,6));
-	print("VHSS OFFSET 	: " + QSU_ReadReg(0,8));
+	Reg = 6 + (Rate * 3);
+	print("VHSS " + Reg + " : P0	: " + QSU_ReadReg(0,Reg));
+	print("VHSS " + (Reg + 1) + " : P1 	: " + QSU_ReadReg(0,(Reg + 1)));
+	print("VHSS " + (Reg + 2) + " : P2 	: " + QSU_ReadReg(0,(Reg + 2)));
 }
 
 //--------------------
