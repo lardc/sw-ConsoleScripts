@@ -16,8 +16,8 @@ Cal_UseAvg = 0;
 
 // CurrentArray
 Cal_IdMin = 100;	
-Cal_IdMax = 450;
-Cal_IdStp = 50;
+Cal_IdMax = 1100;
+Cal_IdStp = 100;
 
 // VoltageRete
 Cal_IntPsVmin = 90;	// V
@@ -35,10 +35,6 @@ Cal_CntDone = 0;
 // Channels
 Cal_chMeasureId = 1;
 Cal_chSync = 3;
-
-
-Out = [];
-
 
 // Results storage
 Cal_Id = [];
@@ -630,7 +626,7 @@ function CAL_CollectIrate50_90(CurrentValues, IterationsCount, CurrentRateNTest)
 					if(!DRCU_Pulse(CurrentValues[j], CurrentRateN[CurrentRateNTest]))
 						return 0;
 				}
-				sleep(1500);
+				sleep(1000);
 				
 				CAL_MeasureIrate50_90(CurrentRate[CurrentRateNTest], CurrentValues[j]);
 				if (anykey()) return 0;
