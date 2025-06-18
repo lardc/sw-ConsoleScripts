@@ -1,5 +1,7 @@
 tek_measuring_device = "TPS2024";	// "TPS2014" "TPS2024"
 
+Rshunt = 1e4;	// uOhm
+
 function TEK_PortInit(PortNumber, BaudeRate)
 {
 	if (typeof devTek !== 'undefined')
@@ -87,6 +89,12 @@ function TEK_MeasMaxInit(Channel, NumMeas)
 {
 	TEK_Send("measurement:meas" + NumMeas + ":source ch" + Channel);
 	TEK_Send("measurement:meas" + NumMeas + ":type maximum");
+}
+
+function TEK_MeasMinInit(Channel, NumMeas)
+{
+	TEK_Send("measurement:meas" + NumMeas + ":source ch" + Channel);
+	TEK_Send("measurement:meas" + NumMeas + ":type minimum");
 }
 
 function TEK_MeasPk2PkInit(Channel, NumMeas)
@@ -276,14 +284,18 @@ function TEK_GetChannelData(Channel)
 	return res;
 }
 
+function TEK_MesDataProbe(Data)
+{
+	var res = [];
+	for (var i = 0; i < Data.length; i++)
+		res[i] = (Data[i] * Rshunt).toFixed(0);
+
+	return res;
+}
+
 function TEK_GetTimeScale()
 {
 	return parseFloat(TEK_Exec("horizontal:main:scale?"));
-}
-
-function TEK_GetTimePosition()
-{
-	return parseFloat(TEK_Exec("horizontal:main:position?"));
 }
 
 function TEK_CALC_dVdt(Data, LowLevel10, HighLevel90)
