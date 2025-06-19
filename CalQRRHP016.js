@@ -8,7 +8,7 @@ include("CaldVdt.js")
 cal_Rshunt = 1000;	// uOhm
 cal_Probe = 1000;	// 
 DirectCurrentTest = 1000; // in A
-DirectCurrentRateTest = 10; // in A/us
+DirectCurrentRateTest = 4; // in A/us
 DirectVoltageTest = 1500; // in V
 DirectVoltageRateTest = 20; // in V/us
 //
@@ -657,7 +657,7 @@ function CAL_CollectCurrentHSS(CurrentArray, IterationsCount)
 
 			qrr_print = 0;
 			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-			QRR_Start(0, CurrentArray[k], Rate, DirectVoltageTest, DirectVoltageRateTest);
+			QRR_Start(0, CurrentArray[k], DirectCurrentRateTest, DirectVoltageTest, DirectVoltageRateTest);
 			qrr_print = 1;
 			
 			sleep(1000);
@@ -760,7 +760,7 @@ function CAL_CollectCurrentSingl(Current,Rate)
 {
 	CAL_TekInitCurrent()
 
-	TEK_Send("horizontal:scale "  + ((Current / CurrentRate[Rate]) * 1e-6) * 0.4);
+	TEK_Send("horizontal:scale "  + ((Current / CurrentRate[Rate]) * 1e-6) * 0.6);
 	CAL_TekScale(cal_chMeasureI, Current * cal_Rshunt / 1e6 * 2);
 	sleep(1000);
 
@@ -1661,12 +1661,13 @@ function CAL_MeasureTq(Channel)
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
 // Выбор диапазона для IHSS
+
 function CAL_GetValueIHSS(Rate)
 {
 	switch(Rate)
 	{
 		case 0:
-			Value_Min = 50;
+			Value_Min = 320;
 			Value_Max = 833; 
 			
 			break;
@@ -2118,8 +2119,6 @@ function CAL_ResetdIdtSetCal(Rate)
 	CAL_SetCoefdIdtSet(0, 0, 0, Rate);
 }
 
-//--------------------
-
 //-------------------------------------------------------------------------------------------------------------------------------------------
 // Функция записи корректировок IdSet
 
@@ -2182,8 +2181,8 @@ function CAL_SetCoefVHSS(P2, P1, P0, Rate)
 		QSU_WriteRegS(0, 6, Math.round(P1 * 1000));
 		QSU_WriteRegS(0, 8, Math.round(P0));
 		break;	
+	}
 }
-
 //--------------------
 // Функция записи корректировок fIdSet
 
@@ -2285,9 +2284,9 @@ function CAL_PrintCoefIdSet()
 function CAL_PrintCoefIHSS(Rate)
 {
 	Reg = 2 + (Rate * 3);
-	print("IHSS " + Reg + " : P0	: " + QSU_ReadReg(0,Reg));
-	print("IHSS " + (Reg + 1) + " : P1 	: " + QSU_ReadReg(0,(Reg + 1)));
-	print("IHSS " + (Reg + 2) + " : P2 	: " + QSU_ReadReg(0,(Reg + 2)));
+	print("IHSS " + Reg + " : P0	: " + QSU_ReadRegS(0,Reg));
+	print("IHSS " + (Reg + 1) + " : P1 	: " + QSU_ReadRegS(0,(Reg + 1)));
+	print("IHSS " + (Reg + 2) + " : P2 	: " + QSU_ReadRegS(0,(Reg + 2)));
 }
 
 //--------------------
@@ -2296,9 +2295,9 @@ function CAL_PrintCoefIHSS(Rate)
 function CAL_PrintCoefVHSS(Rate)
 {
 	Reg = 6 + (Rate * 3);
-	print("VHSS " + Reg + " : P0	: " + QSU_ReadReg(0,Reg));
-	print("VHSS " + (Reg + 1) + " : P1 	: " + QSU_ReadReg(0,(Reg + 1)));
-	print("VHSS " + (Reg + 2) + " : P2 	: " + QSU_ReadReg(0,(Reg + 2)));
+	print("VHSS " + Reg + " : P0	: " + QSU_ReadRegS(0,Reg));
+	print("VHSS " + (Reg + 1) + " : P1 	: " + QSU_ReadRegS(0,(Reg + 1)));
+	print("VHSS " + (Reg + 2) + " : P2 	: " + QSU_ReadRegS(0,(Reg + 2)));
 }
 
 //--------------------
