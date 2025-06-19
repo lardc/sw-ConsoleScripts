@@ -4,6 +4,7 @@ include("TestdVdt.js")
 
 cdvdt_chMeasure = 1;
 cdvdt_Powerex = 0;
+cdvdt_QSUAction = 0;
 
 // DeviceState
 DS_None = 0;
@@ -51,8 +52,8 @@ cdvdt_HVProbeScale = 1000					// Коэффициент деления щупа
 cdvdt_DeviderRate = 10; 					// Делитель скорости. Установить равным 1 если плата без диапазонов 
 
 // Voltage settings for unit calibration
-cdvdt_Vmin = 500;
-cdvdt_Vmax = 4500;
+cdvdt_Vmin = 502;
+cdvdt_Vmax = 4355;
 cdvdt_Points = 10;
 //
 cdvdt_collect_v = 0;
@@ -68,7 +69,7 @@ cdvdt_MeasureMethod = dVdt_AutoCursor;
 cdvdt_def_UseSaveImage = false;
 
 // Voltage rate points
-cdvdt_RatePoint = [20, 50, 100, 200, 320, 500, 1000, 1600, 2000, 2500];
+cdvdt_RatePoint = [20, 50, 100, 200]; //20, 50, 100, 200, 320, 500, 1000, 1600, 2000, 2500
 
 // Use averages in OSC
 cdvdt_NO_AVERAGES = 1;
@@ -637,24 +638,24 @@ function CdVdt_NonlinearityCell(X, Y, CellNumber, cdvdt_SelectedRange)
 function CdVdt_CollectFixedRate(Repeat)
 {
 	CdVdt_ResetA();
-
-	var csu_offset = dev.r(3);
-	dev.w(3, 0);
-
-	// Re-enable power
-	if(dev.r(192) != DS_Ready)
+	if(!cdvdt_QSUAction)
 	{
-		if (dev.r(192) == DS_Fault)
+		
+		// Re-enable power
+		if(dev.r(192) != DS_Ready)
 		{
-			PrintStatus();
-			return 0;
-		}
+			if (dev.r(192) == DS_Fault)
+			{
+				PrintStatus();
+				return 0;
+			}
 
-		if (dev.r(192) == DS_None || dev.r(192) == DS_Disabled)
-			dev.c(1);
+			if (dev.r(192) == DS_None || dev.r(192) == DS_Disabled)
+				dev.c(1);
 
-		while(_dVdt_Active())
-			sleep(100);
+			while(_dVdt_Active())
+				sleep(100);
+		}	
 	}
 	
 	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, (cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Points - 1));
@@ -671,12 +672,23 @@ function CdVdt_CollectFixedRate(Repeat)
 	{
 		for (var k = 0; k < VoltageArray.length; k++)
 		{
-			dev.w(128, VoltageArray[k]);
+			if(cdvdt_QSUAction)
+			{
+				dev.w(140, 1);	
+				dev.w(128, 2);
+				dev.w(133, VoltageArray[k]);	
+			}
+			else	
+				dev.w(128, VoltageArray[k]);
+
 			CdVdt_TekVScale(cdvdt_chMeasure, VoltageArray[k]);
 			TEK_TriggerInit(cdvdt_chMeasure, VoltageArray[k] / 2);
 			TEK_Busy();
 			for (var i = 0; i < cdvdt_RatePoint.length; i++)
 			{
+				if(cdvdt_QSUAction)
+					dev.w(134,cdvdt_RatePoint[i]);
+						
 				CdVdt_TekHScale(cdvdt_chMeasure, VoltageArray[k], cdvdt_RatePoint[i]);
 				CdVdt_ClearDisplay();
 				
@@ -685,55 +697,62 @@ function CdVdt_CollectFixedRate(Repeat)
 				{
 					for (var t = 0; t < 3; t++)
 					{
-						while (_dVdt_Active())
+						if(cdvdt_QSUAction)
 						{
-							if (anykey()){ print("Stopped from user!"); return};
-							sleep(100);
-						}
-
-						switch (cdvdt_RatePoint[i])
-						{
-							case 20:
-								dev.c(95);
-								break;
-
-							case 50:
-								dev.c(96);
-								break;
-
-							case 100:
-								dev.c(97);
-								break;
-
-							case 200:
-								dev.c(98);
-								break;
-
-							case 320:
-								dev.c(99);
-								break;
-
-							case 500:
-								dev.c(101);
-								break;
-
-							case 1000:
+							while (dev.r(192) == 5){sleep(100)};
 								dev.c(102);
-								break;
-
-							case 1600:
-								dev.c(103);
-								break;
-
-							case 2000:
-								dev.c(104);
-								break;
-
-							case 2500:
-								dev.c(105);
-								break;
 						}
-					}
+						else
+						{	
+							while (_dVdt_Active())
+							{
+								if (anykey()){ print("Stopped from user!"); return};
+								sleep(100);
+							}
+							switch (cdvdt_RatePoint[i])
+							{
+								case 20:
+									dev.c(95);
+									break;
+
+								case 50:
+									dev.c(96);
+									break;
+
+								case 100:
+									dev.c(97);
+									break;
+
+								case 200:
+									dev.c(98);
+									break;
+
+								case 320:
+									dev.c(99);
+									break;
+
+								case 500:
+									dev.c(101);
+									break;
+
+								case 1000:
+									dev.c(102);
+									break;
+
+								case 1600:
+									dev.c(103);
+									break;
+
+								case 2000:
+									dev.c(104);
+									break;
+
+								case 2500:
+									dev.c(105);
+									break;
+							}
+						}
+					}	
 					while(TEK_Exec("TRIGger:STATE?") == "REA") sleep(50);
 				}
 				TEK_Busy();
@@ -821,10 +840,11 @@ function CdVdt_CollectFixedRate(Repeat)
 			}
 		}
 	}
-
-	dev.ws(3, csu_offset);
-	// Power disable
-	dev.c(2);
+	if(!cdvdt_QSUAction)	
+	{	
+		// Power disable
+		dev.c(2);
+	}
 	return 1;
 }
 
