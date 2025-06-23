@@ -7,8 +7,9 @@ DS_Ready = 3,
 DS_ConfigReady = 4,
 DS_InProcess = 5
 
-function LCSU_Start(Current)
+function LCSU_Start(Type,Current)
 {
+	dev.w(19,Type);
 	// Enable power
 	if(dev.r(192) == DS_None)
 	{
