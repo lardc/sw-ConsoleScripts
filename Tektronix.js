@@ -308,6 +308,11 @@ function TEK_GetTimeScale()
 	return parseFloat(TEK_Exec("horizontal:main:scale?"));
 }
 
+function TEK_GetTimePosition()
+{
+	return parseFloat(TEK_Exec("horizontal:main:position?"));
+}
+
 function TEK_CALC_dVdt(Data, LowLevel10, HighLevel90)
 {
 	var dVdt = 0
