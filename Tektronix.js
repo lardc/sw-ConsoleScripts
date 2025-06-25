@@ -68,6 +68,16 @@ function TEK_TriggerInit(Channel, Level)
 	TEK_Send("trigger:main:edge:source ch" + Channel);
 }
 
+function TEK_TriggerInitFall(Channel, Level)
+{
+	TEK_Send("trigger:main:level " + Level);
+	TEK_Send("trigger:main:mode normal");
+	TEK_Send("trigger:main:type edge");
+	TEK_Send("trigger:main:edge:coupling dc");
+	TEK_Send("trigger:main:edge:slope fall");
+	TEK_Send("trigger:main:edge:source ch" + Channel);
+}
+
 function TEK_TriggerPulseInit(Channel, Level)
 {
 	TEK_TriggerPulseExtendedInit(Channel, Level, "hfrej", "5e-3", "positive", "outside");
