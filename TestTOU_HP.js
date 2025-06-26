@@ -12,7 +12,7 @@ PulseToPulseDelay = 2000;
 // TOU HP
 function TOUHP_Start(N, Voltage, Current, GateCurrent, GateCurrentRate)
 {
-	for(i = 0; i < N; i++)
+	for(var i = 0; i < N; i++)
 	{
 		print("#" + i);
 		
@@ -131,6 +131,8 @@ function TOUHP_MeasureRiseTimeId(FirstLevel, SecondLevel, Channel, Rshunt)
 			* time_arr_min * 1e+6;
 	var di_dt = Math.round(di / dt);
 	print("dId/dt " + FirstLevel + "/" + SecondLevel + ", A/us = " + di_dt);
+
+	return di_dt;
 }
 
 // TOCU HP
