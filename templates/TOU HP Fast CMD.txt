@@ -1,9 +1,10 @@
 // Пояснения
 CTOU_Init(portTOU, portTek, channelMeasureI, channelMeasureU, channelSync);
-TOUHP_Measure(Voltage, Current, GateCurrent, GateCurrentRate);
+TOUHP_Measure(Voltage, Current * 10, GateCurrent, GateCurrentRate);
 TOMUHP_GatePulse(GateCurrentRate, GateCurrent);
-TOUHP_Start(N, Voltage, Current, GateCurrent, GateCurrentRate);
+TOUHP_Start(N, Voltage, Current * 10, GateCurrent, GateCurrentRate);
 TOUHP_MeasureRiseTimeId(FirstLevel, SecondLevel, Channel, Rshunt)
+TOUHP_ResourceTest(Voltage, Current, HoursTest, Sleep);
 
 // Посмотреть версию прошивки
 PrintFWInfo();
@@ -25,6 +26,10 @@ include("TestTOU_HP.js");
 TOUHP_Measure(1500, 300, 2000, 2000);
 TOUHP_Start(10, 600, 1250, 2000, 2000);
 TOMUHP_GatePulse(2000, 2000);
+
+// Ресурсный тест TOU HP
+include("TestTOU_HP.js");
+TOUHP_ResourceTest(600, 2500, 8, 10000);
 
 // Измерение скорости нарастания силового тока
 include("TestTOU_HP.js");
