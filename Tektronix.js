@@ -166,6 +166,13 @@ function TEK_Horizontal(Scale, Position)
 	TEK_Send("horizontal:position " + Position);
 }
 
+function TEK_HorizontalPosition(Sell)
+{
+	var h_scale = TEK_Exec("horizontal:scale?");
+	var h_position = h_scale * Sell;
+	TEK_Send("horizontal:position " + h_position);
+}
+
 function TEK_ChannelScale(Channel, Value)
 {
 	// 7 - number of scope grids in full scale
