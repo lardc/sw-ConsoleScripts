@@ -12,7 +12,7 @@ PulseToPulseDelay = 2000;
 // TOU HP
 function TOUHP_Start(N, Voltage, Current, GateCurrent, GateCurrentRate)
 {
-	for(i = 0; i < N; i++)
+	for(var i = 0; i < N; i++)
 	{
 		print("#" + i);
 		
@@ -131,6 +131,8 @@ function TOUHP_MeasureRiseTimeId(FirstLevel, SecondLevel, Channel, Rshunt)
 			* time_arr_min * 1e+6;
 	var di_dt = Math.round(di / dt);
 	print("dId/dt " + FirstLevel + "/" + SecondLevel + ", A/us = " + di_dt);
+
+	return di_dt;
 }
 
 // TOCU HP
@@ -221,6 +223,34 @@ function TOCUHP_ResourceTest(Voltage, Bit, HoursTest, Sleep)
 
 		i++;
 	}
+}
+
+function TOUHP_ResourceTest(Voltage, Current, HoursTest, Sleep)
+{
+	var i = 1;
+	var end = new Date();
+	var start = new Date();
+	var hours = start.getHours() + HoursTest;
+	end.setHours(hours);
+	
+	dev.w(132,1);
+	var tou_print_copy = tou_print;
+	tou_print = 0;
+	while((new Date()).getTime() < end.getTime())
+	{
+		TOUHP_Measure(Voltage, Current * 10, 2000, 2000);
+		print("------------------------");
+		print("Voltage, V  = " + Voltage);
+		print("Anode current, A  = " + dev.r(250));
+
+		var left_time = new Date(end.getTime() - (new Date()).getTime());
+		print("#" + i + " Осталось " + (left_time.getHours() - 3) + " ч и " + left_time.getMinutes() + " мин");
+		sleep(Sleep);
+		if (anykey()) break;
+
+		i++;
+	}
+	tou_print = tou_print_copy;
 }
 
 // TOMU HP
