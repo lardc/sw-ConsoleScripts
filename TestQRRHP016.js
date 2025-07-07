@@ -4,7 +4,7 @@ include("Tektronix.js")
 
 // Predefined variables
 qrr_idc_width = 2000;		// in us
-qrr_single = 0;
+qrr_single = 1;
 qrr_print = 1;
 print_plot = 0;
 CALIBRATION_PROCESS = 1;
@@ -76,6 +76,7 @@ function QRR_Start(Mode, IDC, IDCFallRate, OSV, OSVRate)
 	var pulse_counter = dev.r(199);
 	while (dev.r(192) == 5)
 	{
+		
 		if (anykey()) return;
 		if (pulse_counter != dev.r(199))
 		{
