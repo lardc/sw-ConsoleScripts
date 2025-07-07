@@ -423,3 +423,32 @@ function CAL_PrintCoefIdMes()
 	}
 }
 //--------------------
+RShunt = 0.00025; // Сопротивление шунта, Ом
+
+function KEI_Wait(Current_abt) // Функция для перевода мультиметра DMM6500 в режим измерения тока LCSU
+{
+	BufferLength = 150; // длительность записи (15 мс, 150 точек)
+	Sync_level = Current_abt*RShunt*0.2; // уровень синхронизации, 20% от ном. уровня
+	tmc.w(':TRACe:CLEar "TestBuffer"');
+
+	tmc.w(':SENSe:DIGitize:FUNCtion "VOLTage"');
+	tmc.w(':SENSe:DIGitize:VOLTage:SRATe 10000'); // fs (10 кГц)
+	tmc.w(':DIGitize:VOLTage:ATRigger:MODE EDGE');
+	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:LEVel' + Sync_level);
+	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:SLOPe RISing');
+
+	tmc.w('TRACe:MAKE "TestBuffer",' + BufferLength);
+	tmc.w('TRACe:FILL:MODE CONTinuous, "TestBuffer"');
+	tmc.w('TRACe:LOG:STATe ON , "TestBuffer"');
+
+	tmc.w(':TRIGger:LOAD "LoopUntilEvent", ATRigger, 10, ENTer, 0, "TestBuffer"');
+	tmc.w(':INITiate');
+
+	tmc.w(':DISPlay:BUFFer:ACTive "TestBuffer"');
+	tmc.w(':DISPlay:SCReen GRAPh');
+}
+//--------------------
+function KEI_Current()
+{
+	p("Ток, А " + 4000*tmc.q(':TRACe:STAT:MAXimum? "TestBuffer"'));
+}
