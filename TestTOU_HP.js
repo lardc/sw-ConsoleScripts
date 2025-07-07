@@ -1,21 +1,22 @@
-include("PrintStatus.js")
+include("PrintStatus.js");
+include("TEK_GetData.js");
 
 // Global definitions
-GateCurrentRate = 1000;
-GateCurrent = 1000;
+GateCurrentRate = 2000;
+GateCurrent = 2000;
 //
 tou_print = 1;
 PulseToPulseDelay = 2000;
 //
 
 // TOU HP
-function TOUHP_Start(N, Voltage, Current)
+function TOUHP_Start(N, Voltage, Current, GateCurrent, GateCurrentRate)
 {
-	for(i = 0; i < N; i++)
+	for(var i = 0; i < N; i++)
 	{
 		print("#" + i);
 		
-		TOUHP_Measure(Voltage, Current);
+		TOUHP_Measure(Voltage, Current, GateCurrent, GateCurrentRate);
 
 		if(dev.r(193) || dev.r(196))
 		{
@@ -69,6 +70,69 @@ function TOUHP_PrintFault()
 	print("FaultReason   	  = "+dev.r(193));
 	print("Warning       	  = "+dev.r(195));
 	print("Problem       	  = "+dev.r(196));
+}
+
+function TOUHP_MeasureRiseTimeId(FirstLevel, SecondLevel, Channel, Rshunt)
+{
+	var id_sc_arr = [];
+	id_sc_arr = TEK_GetChannelData(Channel);
+
+	var id_firstlevel_err = 0;
+	var id_secondlevel_err = 0;
+	var id_firstlevel_min_err = 0;
+	var id_secondlevel_min_err = 0;
+
+	var id_max = 0;
+
+	var id_firstlevel_index = 0;
+	var id_secondlevel_index = 0;
+
+	// Поиск максимального значения
+	var id_max = id_sc_arr[0];
+	for (var i = 0; i < id_sc_arr.length; i++)
+	{
+		if (id_sc_arr[i] > id_max)
+			id_max = id_sc_arr[i]
+	}
+
+	// Вычисление напряжения для уровней FirstLevel и SecondLevel
+	var id_firstlevel = id_max * FirstLevel / 100;
+	var id_secondlevel = id_max * SecondLevel / 100;
+
+	// Определение индекса элемента массива с наименьшей ошибкой
+	id_firstlevel_min_err = Math.abs(id_firstlevel - id_sc_arr[0]);
+	for(var k = 1; k < id_sc_arr.length; k++)
+	{
+		var id_firstlevel_err = Math.abs(id_firstlevel - id_sc_arr[k]);
+		if(id_firstlevel_err < id_firstlevel_min_err)
+		{
+			id_firstlevel_min_err = id_firstlevel_err;
+			id_firstlevel_index = k;
+		}
+	}
+
+	id_secondlevel_min_err = Math.abs(id_secondlevel - id_sc_arr[0]);
+	for(var m = 1; m < id_sc_arr.length; m++)
+	{
+		var id_secondlevel_err = Math.abs(id_secondlevel - id_sc_arr[m]);
+		if(id_secondlevel_err < id_secondlevel_min_err)
+		{
+			id_secondlevel_min_err = id_secondlevel_err;
+			id_secondlevel_index = m;
+		}
+	}
+
+	// Расстояние по горизонтали между двумя ближайшими точками
+	var time_scale = TEK_GetTimeScale();
+	var time_arr_min = time_scale / 250;
+
+	var di = Math.abs(id_sc_arr[id_secondlevel_index] - id_sc_arr[id_firstlevel_index]) / Rshunt; 
+	var dt = Math.abs(id_secondlevel_index - id_firstlevel_index)
+			* time_arr_min * 1e+6;
+	var di_dt = Math.round(di / dt);
+	print("dId/dt " + FirstLevel + "/" + SecondLevel + ", A/us = " + di_dt);
+
+	return di_dt;
 }
 
 // TOCU HP
@@ -161,6 +225,34 @@ function TOCUHP_ResourceTest(Voltage, Bit, HoursTest, Sleep)
 	}
 }
 
+function TOUHP_ResourceTest(Voltage, Current, HoursTest, Sleep)
+{
+	var i = 1;
+	var end = new Date();
+	var start = new Date();
+	var hours = start.getHours() + HoursTest;
+	end.setHours(hours);
+	
+	dev.w(132,1);
+	var tou_print_copy = tou_print;
+	tou_print = 0;
+	while((new Date()).getTime() < end.getTime())
+	{
+		TOUHP_Measure(Voltage, Current * 10, 2000, 2000);
+		print("------------------------");
+		print("Voltage, V  = " + Voltage);
+		print("Anode current, A  = " + dev.r(250));
+
+		var left_time = new Date(end.getTime() - (new Date()).getTime());
+		print("#" + i + " Осталось " + (left_time.getHours() - 3) + " ч и " + left_time.getMinutes() + " мин");
+		sleep(Sleep);
+		if (anykey()) break;
+
+		i++;
+	}
+	tou_print = tou_print_copy;
+}
+
 // TOMU HP
 function TOMUHP_GatePulse(GateCurrentRate, GateCurrent)
 {	
@@ -168,4 +260,29 @@ function TOMUHP_GatePulse(GateCurrentRate, GateCurrent)
 	dev.w(131, GateCurrentRate);
 	
 	dev.c(110);
+}
+
+function TOU_to24Bit()
+{
+	// Считываем переменные с регистров
+	number = (dev.r(209) << 12) | dev.r(208)
+
+	// Конвертируем число в 32-битное беззнаковое целое
+	bits = (number >>> 0).toString(2);
+	
+	// Берем последние 24 бита
+	bits = bits.slice(-24);
+	
+	// Дополняем нулями слева
+	while (bits.length < 24)
+		bits = '0' + bits;
+
+	// Добавляем пробелы через каждые 4 символа
+	result = '';
+	for (var i = 0; i < bits.length; i += 4) {
+		result += bits.substring(i, i + 4) + ' ';
+	}
+	
+	print(" Tgd - 90% Ud | Tgt - 10% Ud ");
+	print(result);
 }

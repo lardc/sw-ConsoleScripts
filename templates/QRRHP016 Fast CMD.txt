@@ -37,7 +37,7 @@ qrr_single = 1;
 CAL_VerifyCurrent(4,0);
 
 //Верификация Id/Ir/dIdt одного формирования
-CAL_CollectCurrentSingl(320,4)
+CAL_CollectCurrentSingl(320,4,1)
 
 //Верификация fId
 CAL_VerifyfId();
@@ -51,6 +51,13 @@ CAL_VerifyTq();
 // Верификация dV/dt
 CAL_VerifydVdt();	
 
+
+// Верификация IHSS
+CAL_VerifyIHSS(Rate);
+
+// Верификация VHSS
+CAL_VerifyVHSS(Rate);
+
 //Калибровка Idset	
 CAL_CalibrateIdSet();
 
@@ -62,6 +69,12 @@ CAL_CalibrateIrSet();
 
 //Калибровка dIdtset
 CAL_CalibratedIdtSet(4);
+
+//Калибровка IHSS
+CAL_CalibrateIHSS(Rate);
+
+//Калибровка VHSS
+CAL_CalibrateVHSS(Rate);
 
 //Ресурсный тест
 DRCU_Test(1000);

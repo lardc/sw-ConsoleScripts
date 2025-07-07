@@ -1,4 +1,4 @@
-//Скрипт для Калибровки и Верификации блока DCU
+//Скрипт для Калибровки и Верификации блока RCU
 //Подключение библиотек
 
 include("TestDRCU.js")
@@ -11,8 +11,8 @@ include("TEK_GetData.js")
 Cal_Rshunt = 1000;	// uOhm
 Cal_Points = 10;
 Cal_Iterations = 1;
-Cal_IterationsPack = 0;
-Cal_UseAvg = 1;
+Cal_IterationsPack = 1;
+Cal_UseAvg = 0;
 
 // CurrentArray
 Cal_IdMin = 100;	
@@ -62,6 +62,8 @@ Cal_IrateCorr = [];
 // Data arrays
 Cdcu_scatter = [];
 Cal_Volt = [];
+
+Mute = 0;
 
 //--------------------
 //--------------------
@@ -121,9 +123,11 @@ function CAL_VerifyId(CurrentRateNTest)
  
 	if (CAL_CollectId(CurrentArray, Cal_Iterations, CurrentRateNTest))
 		{
+		CAL_SaveId("RCU_Id_fixed");
 		CAL_SaveId("RCU_Idset_fixed");
-
+		
 		// Plot relative error distribution
+		scattern(Cal_IdSc, Cal_IdErr, "Current (in A)", "Error (in %)", "Current relative error " + CurrentRate[CurrentRateNTest] + " A/us");
 		scattern(Cal_IdSc, Cal_IdsetErr, "Current (in A)", "Error (in %)", "Current set relative error");
 		}
 	}	
@@ -238,13 +242,18 @@ function Hand_Cal_CompensationIrate(CurrentRateNTest)
 	CAL_PrintCoefIrateCompens(CurrentRateNTest);
 }
 
-function CAL_CalirateId(CurrentRateNTest) 
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Функция калибровки тока для указанной скорости 
+
+function CAL_CalibrateId(CurrentRateNTest) 
 {
 	//Reset values
 	CAL_ResetA();
 
 	// Tektronix init
 	CAL_TekInitId();
+
+	OldReg = CAL_TakeCoefId(CurrentRateNTest);
 
 	// Reload values
 	var CurrentArray = CGEN_GetRange(Cal_IdMin, Cal_IdMax, Cal_IdStp);
@@ -253,13 +262,38 @@ function CAL_CalirateId(CurrentRateNTest)
 		{
 		CAL_SaveIdset("RCU_Idset");
 		Cal_IdCorr = CGEN_GetCorrection("RCU_Idset");
-		CAL_SetCoefIdCompens(Cal_IdCorr[0], Cal_IdCorr[1], CurrentRateNTest);
+		CAL_SetCoefIdCompens(Cal_IdCorr, OldReg, CurrentRateNTest);
 		CAL_PrintCoefIdCompens(CurrentRateNTest);
 		}	
 }
 
-//--------------------
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Функция калибровки измерения тока для указанной скорости 
 
+function CAL_CalibrateImes(CurrentRateNTest) 
+{
+	CAL_ResetA();
+	CAL_ResetIdCal();
+
+	// Tektronix init
+	CAL_TekInitId();
+
+	// Reload values
+	var CurrentArray = CGEN_GetRange(Cal_IdMin, Cal_IdMax, Cal_IdStp);
+
+	if (CAL_CollectId(CurrentArray, Cal_Iterations, CurrentRateNTest))
+	{
+		CAL_SaveId("RCU_Id");
+
+		// Plot relative error distribution
+		scattern(Cal_IdSc, Cal_IdErr, "Current (in A)", "Error (in %)", "Current relative error");
+
+		// Calculate correction
+		Cal_IdCorr = CGEN_GetCorrection2("RCU_Id");
+		CAL_SetCoefId(Cal_IdCorr[0], Cal_IdCorr[1], Cal_IdCorr[2]);
+		CAL_PrintCoefId();
+	}
+}
 
 //--------------------
 //--------------------
@@ -307,7 +341,7 @@ function CAL_TekInitId()
 	TEK_ChannelInit(Cal_chMeasureId, "1", "0.02");
 	TEK_TriggerInit(Cal_chMeasureId, "0.06");
 	TEK_Send("trigger:main:edge:slope rise");
-	TEK_Horizontal("0.25e-3", "-1.5e-3");
+	TEK_Horizontal("0.25e-3", "0");
 	TEK_Send("measurement:meas" + Cal_chMeasureId + ":source ch" + Cal_chMeasureId);
 	TEK_Send("measurement:meas" + Cal_chMeasureId + ":type maximum");
 }
@@ -340,7 +374,7 @@ function CAL_CollectId(CurrentValues, IterationsCount, CurrentRateNTest)
 		{
 			print("-- result " + Cal_CntDone++ + " of " + Cal_CntTotal + " --");
 			//
-			DCU_TekScaleId(Cal_chMeasureId, CurrentValues[j] * Cal_Rshunt / 1000000);
+			DCU_TekScaleId(Cal_chMeasureId, CurrentValues[j] * Cal_Rshunt / 1e6);
 			sleep(800);
 			while (dev.r(197) !=0)
 				{
@@ -353,24 +387,32 @@ function CAL_CollectId(CurrentValues, IterationsCount, CurrentRateNTest)
 				DRCU_Pulse(CurrentValues[j], CurrentRateNTest);
 			
 			
-			// Unit data
-			
-			var IdSet = dev.r(128);
-			Cal_Idset.push(IdSet);
-			print("Idset, A: " + IdSet);
+				// Unit data
+				var Id = dev.r(202) / 10;
+				Cal_Id.push(Id);
+				print("Id, A: " + Id);
 
-			// Scope data
-			var IdSc = (CAL_MeasureId(Cal_chMeasureId) / Cal_Rshunt * 1000).toFixed(2);
-			Cal_IdSc.push(IdSc);
-			print("Idtek, A: " + IdSc);
+				var IdSet = dev.r(128);
+				Cal_Idset.push(IdSet);
+				print("Idset, A: " + IdSet);
 
-			// Relative error
-			var IdsetErr = ((IdSet - IdSc) / IdSc * 100).toFixed(2);
-			Cal_IdsetErr.push(IdsetErr);
-			print("Idseterr, %: " + IdsetErr);
-			print("--------------------");
+				// Scope data
+				var IdSc = (CAL_MeasureId(Cal_chMeasureId) / Cal_Rshunt * 1000).toFixed(2);
+				Cal_IdSc.push(IdSc);
+				print("Idtek, A: " + IdSc);
+
+				// Relative error
+
+				var IdErr = ((Id - IdSc) / IdSc * 100).toFixed(2);
+				Cal_IdErr.push(IdErr);
+				print("Iderr, %: " + IdErr);
 			
-			if (anykey()) return 0;
+				var IdsetErr = ((IdSet - IdSc) / IdSc * 100).toFixed(2);
+				Cal_IdsetErr.push(IdsetErr);
+				print("Idseterr, %: " + IdsetErr);
+				print("--------------------");
+			
+				if (anykey()) return 0;
 			}
 			
 		}
@@ -394,7 +436,7 @@ function DCU_TekScaleId(Channel, Value)
 {
 	Value = Value / 7;
 	TEK_Send("ch" + Channel + ":scale " + Value);
-	TEK_TriggerInit(Cal_chMeasureId, Value * 6); 
+	TEK_TriggerInit(Cal_chMeasureId, Value * 5); 
 	TEK_Send("trigger:main:edge:slope rise");
 }
 
@@ -510,7 +552,7 @@ function CAL_CollectIrate(CurrentValues, IterationsCount, CurrentRateNTest)
 
 				DCU_TekScaleId(Cal_chMeasureId, CurrentValues[j] * Cal_Rshunt * 1e-6);
 				TEK_Send("horizontal:scale "  + ((CurrentValues[j] / CurrentRate[CurrentRateNTest]) * 1e-6) * 0.25);
-				TEK_Send("horizontal:main:position "+ ((CurrentValues[j] / CurrentRate[CurrentRateNTest]) * 1e-6) * -0.5);
+				TEK_Send("horizontal:main:position "+ ((CurrentValues[j] / CurrentRate[CurrentRateNTest]) * 1e-6) * -0.8);
 				sleep(100);
 				while (dev.r(197) !=0)
 				{
@@ -518,6 +560,7 @@ function CAL_CollectIrate(CurrentValues, IterationsCount, CurrentRateNTest)
 				}
 				for (var m = 0; m < AvgNum; m++)
 				{
+					sleep(500)
 					if(!DRCU_Pulse(CurrentValues[j], CurrentRateN[CurrentRateNTest]))
 						return 0;
 				}
@@ -579,6 +622,7 @@ function CAL_CollectIrate50_90(CurrentValues, IterationsCount, CurrentRateNTest)
 				}
 				for (var m = 0; m < AvgNum; m++)
 				{
+					sleep(500);
 					if(!DRCU_Pulse(CurrentValues[j], CurrentRateN[CurrentRateNTest]))
 						return 0;
 				}
@@ -724,9 +768,11 @@ function CAL_CompensationIrate(CurrentValues, CurrentRateNTest, NameIintPS, Name
 			p("-------------");
 			
 			for (var n = 0; n < AvgNum; n++)
+			{	
+				sleep(500);
 				if(!DRCU_Pulse(CurrentValues[j], CurrentRateN[CurrentRateNTest]))
 					return 0;				
-
+			}
 			
 			var IrateSc = CAL_MeasureIrate(CurrentRate[CurrentRateNTest],CurrentValues[j]);
 			
@@ -852,7 +898,7 @@ function CAL_CompensationIrate50_90(CurrentValues, CurrentRateNTest, NameIintPS,
 function CAL_CompensationIratecorr(NameIintPS, NameVintPS, NameVintPScorr, CurrentRateNTest)
 {
 	CAL_ResetA();
-	P4_corr = (dev.r(43 + 4 * CurrentRateNTest));
+	P4_corr = (dev.rs(43 + 4 * CurrentRateNTest));
 	var LoadI = [];
 	var LoadV = [];
 	var Csv_array = [];
@@ -942,59 +988,70 @@ function CAL_SetCoefIrateCompens(K2, K, Offset, CurrentRateNTest)
 
 //--------------------
 //Функция записи регистров амплитуды для указаной скорости
-function CAL_SetCoefIdCompens(K, Offset, CurrentRateNTest)
+function CAL_SetCoefIdCompens(Correct, OldReg, CurrentRateNTest)
 {
-	K = parseFloat(K);
-	Offset = parseFloat(Offset);
 	
+	Offsetcorr = parseFloat(Correct[1]); //+ ((dev.r(125) + 3500) * (250 * 1e-6 / CurrentRate[CurrentRateNTest])));
+	Kcorr = parseFloat(Correct[0]);
+	OffsetOld = parseFloat(OldReg[0]);
+	KOld = parseFloat(OldReg[1]);
+
+	K = KOld * Kcorr;
+	Offset = OffsetOld + Offsetcorr;
+	if(!Mute)
+	{	
+		p("OffsetcorrO " + parseFloat(Correct[1]));
+		p("OffsetcorrN " + Offsetcorr);
+		p("Kcorr " + Kcorr);
+		p("OffsetOld " + OffsetOld);
+		p("KOld " + KOld);
+		p("Offset " + Offset);
+		p("K " + K);
+	}
 	switch(CurrentRateNTest)
 	{
-		case 0:
-			Offset = dev.rs(84) + Offset;  
+		case 0: 
 			dev.ws(84, Offset);
-			K = dev.rs(85) * K;
 			dev.ws(85, K);
 			break;
 		case 1:
 			dev.ws(86, Offset);
-			dev.ws(87, K * 1000);
+			dev.ws(87, K);
 			break;
 		case 2:
 			dev.ws(88, Offset);
-			dev.ws(89, K * 1000);
+			dev.ws(89, K);
 			break;
 		case 3:
 			dev.ws(90, Offset);
-			dev.ws(91, K * 1000);
+			dev.ws(91, K);
 			break;
 		case 4:
 			dev.ws(92, Offset);
-			dev.ws(93, K * 1000);
+			dev.ws(93, K);
 			break;
 		case 5:
 			dev.ws(94, Offset);
-			dev.ws(95, K * 1000);
+			dev.ws(95, K);
 			break;
 		case 6:
 			dev.ws(96, Offset);
-			dev.ws(97, K * 1000);
+			dev.ws(97, K);
 			break;
 		case 7:
 			dev.ws(98, Offset);
-			dev.ws(99, K * 1000);
+			dev.ws(99, K);
 			break;
 		case 8:
 			dev.ws(100, Offset);
-			dev.ws(101, K * 1000);
+			dev.ws(101, K);
 			break;
 		case 9:
 			dev.ws(102, Offset);
-			dev.ws(103, K * 1000);
+			dev.ws(103, K);
 			break;
 		case 10:
-			Offset = dev.rs(104) + Offset;  
 			dev.ws(104, Offset);
-			K = dev.rs(105) * K;
 			dev.ws(105, K);
 			break;
 	}
@@ -1082,7 +1139,6 @@ function CAL_PrintCoefIrateCompens(CurrentRateNTest)
 
 function CAL_PrintCoefIdCompens(CurrentRateNTest)
 {
-	Koef = [];
 	switch(CurrentRateNTest)
 	{
 		case 0:
@@ -1132,6 +1188,48 @@ function CAL_PrintCoefIdCompens(CurrentRateNTest)
 	}
 }
 
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Функция вызова значений регистров для измерения тока
+
+function CAL_PrintCoefId()
+{
+	print("Id P2 x1e6		: " + dev.rs(8));
+	print("Id P1 x1000		: " + dev.rs(7));
+	print("Id P0 			: " + dev.rs(6));
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Функция записи регистров измерения тока
+
+function CAL_SetCoefId(P2, P1, P0)
+{
+	dev.ws(8, Math.round(P2 * 1e6));
+	dev.w(7, Math.round(P1 * 1000));
+	dev.ws(6, Math.round(P0));	
+}
+
+//-------------------------------------------------------------------------------------------------------------------------------------------
+// Функция сброса данных измерения тока 
+
+function CAL_ResetIdCal()
+{
+	CAL_SetCoefId(0, 1, 0);
+}
+
+//--------------------
+// Функция вызова значений регистров амплитуды для указанной скорости
+
+function CAL_TakeCoefId(CurrentRateNTest)
+{
+	ReturnValues = [];
+	NOffset = (84 + (2 * CurrentRateNTest));
+	NK = (85 + (2 * CurrentRateNTest));
+
+	ReturnValues[0] = dev.rs(NOffset);
+	ReturnValues[1] = dev.rs(NK);
+
+	return ReturnValues; 
+}
 //--------------------
 //Функция соединения массивов в один файл  
 function CAL_SaveVintPS(NameIintPS, NameVintPS,NameVintPScorr)

@@ -1,4 +1,4 @@
-// Пояснения
+﻿// Пояснения
 CAL_Init(portDevice, portTek, channelMeasureId);
 DRCU_Pulse(Current, CurrentRate);
 
@@ -68,4 +68,4 @@ sleep(1000);
 CurrentRateTest = 0.75;
 
 CAL_VerifyId(0);
-CAL_CalibrateId();
+CAL_CalibrateId(4);

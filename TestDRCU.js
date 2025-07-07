@@ -2,6 +2,7 @@ include("PrintStatus.js")
 
 CurrentRateArray = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 CurrentTest = 1100;	// A
+PulseWidth = 30; // мкс * 10
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
 //Одиночное формирование 
@@ -10,6 +11,7 @@ function DRCU_Pulse(Current, CurrentRate)
 {
 	dev.w(128, Current);
 	dev.w(129, CurrentRate);
+	dev.w(131, PulseWidth);
 	
 	if(dev.r(192) == 3)
 	{

@@ -2,22 +2,11 @@ include("TestTOU_HP.js")
 include("Tektronix.js")
 include("CalGeneral.js")
 
-// Input params
-ctomu_Igmax = 20000;	// Maximum gate current [mA]
-ctomu_IgRatemax = 100;	// Maximum gate current rate [A * 10 / us]
-ctomu_Ri = 1;			// Current shunt resistance [Ohm]
 
-// Calibrate Ig and comparator level
-ctomu_Igmin = 1000;
-ctomu_Igmax = ctomu_Igmax;
-ctomu_Igstp = 2000;
-ctomu_IgRate = 1000;
-
-// Calibrate Ig rate
-ctomu_IgRatemin = 1000;
-ctomu_IgRatemax = 10000;
-ctomu_IgRatestp = 1000;
-ctomu_Ig = 20000;
+// Input parameters
+ctomu_rise_time_ig = 1; 						// in us
+ctomu_ig_array = [2000, 3000, 4000, 5000];	// in mA
+ctomu_Rshunt_gate = 2; 	// Gate current shunt resistance, in Ohm
 
 // Counters
 ctomu_cntTotal = 0;
@@ -26,279 +15,185 @@ ctomu_cntDone = 0;
 // Iterations
 ctomu_Iterations = 1;
 
-// Channels
-ctomu_chMeasureIg = 2;
-ctomu_chSync = 1;
+// Average
+ctomu_UseAvg = 0;
 
-ctomu_ig_array = [];
-ctomu_ig_rate_array = [];
-ctomu_comp_lvl_array = [];
+// Measurement errors
+EUosc = 3;
+ERg = 1;
+
+// Channels
+ctomu_chMeasureI = 1;
+ctomu_chSync = 3;
 
 // Results storage
-ctomu_ig = [];
-ctomu_ig_rate = [];
-ctomu_comp_lvl = [];
+ctomu_ig_set = [];
+ctomu_didt_set = [];
+ctomu_trig_10_ig_set = [];
 
 // Tektronix data
 ctomu_ig_sc = [];
-ctomu_ig_rate_sc = [];
-ctomu_comp_lvl_sc = [];
+ctomu_didt_sc = [];
+ctomu_trig_10_ig_sc = [];
 
 // Relative error
-ctomu_ig_err = [];
-ctomu_ig_rate_err = [];
-ctomu_comp_lvl_err = [];
+ctomu_ig_set_err = [];
+ctomu_didt_set_err = [];
+ctomu_trig_10_ig_set_err = [];
+
+// Summary error
+ctomu_ig_set_err_sum = [];
 
 // Correction
-ctomu_ig_corr = [];
-ctomu_ig_rate_corr = [];
-ctomu_comp_lvl_corr = [];
+ctomu_ig_set_corr = [];
+ctomu_didt_set_corr = [];
+ctomu_trig_10_ig_set_corr = [];
 
-ctomu_UseAvg = 1;
-
-function CTOMU_Init(portTOMU, portTek, channelMeasureIg, channelSync)
+function CTOMU_Init(portTOU, portTek, channelMeasureI, channelSync)
 {
-	if (channelMeasureIg < 1 || channelMeasureIg > 4)
+	// Init Tektronix
+	TEK_PortInit(portTek);
+	TEK_Send("RECAll:SETUp FACtory");
+
+	if (channelMeasureI < 1 || channelMeasureI > 4 || 
+		channelSync < 1 || channelSync > 4)
 	{
 		print("Wrong channel numbers");
 		return;
 	}
 
 	// Copy channel information
-	ctomu_chMeasureIg = channelMeasureIg;
+	ctomu_chMeasureI = channelMeasureI;
 	ctomu_chSync = channelSync;
 
-	// Init TOMU
+	// Init TOU
 	dev.Disconnect();
-	dev.Connect(portTOMU);
+	dev.Connect(portTOU);
 
-	// Init Tektronix
-	TEK_PortInit(portTek);
+	// Init channels
+	TEK_ChannelInit(ctomu_chMeasureI, "1", "0.8");
+	TEK_ChannelInit(ctomu_chSync, "1", "1");
+	// Init trigger
+	TEK_TriggerInit(ctomu_chSync, "2");
+	// Horizontal settings
+	TEK_Horizontal("5e-6", "15e-6");
 
-	// Tektronix init
-	CTOMU_IgScopeInit();
+	// Display channels
+	for (var i = 1; i <= 4; i++)
+	{
+		if (i == ctomu_chMeasureI || i == ctomu_chSync)
+			TEK_ChannelOn(i);
+		else
+			TEK_ChannelOff(i);
+	}
 }
 
 function CTOMU_CalibrateIg()
 {
-	CTOMU_CommutationControl(0);
-	
 	// Collect data
 	CTOMU_ResetA();
 	CTOMU_ResetIgCal();
-	
-	// Scope init
-	CTOMU_IgScopeInit();
 
-	// Reload values
-	var CurrentArray = CGEN_GetRange(ctomu_Igmin, ctomu_Igmax, ctomu_Igstp);
-
-	if (CTOMU_IgCollect(CurrentArray, ctomu_Iterations))
+	if (CTOMU_IgCollect(ctomu_ig_array, ctomu_Iterations))
 	{
-		CTOMU_SaveIg("tomuhp_ig");
+		CTOMU_SaveIg("tou_ig_set_fixed");
 
 		// Plot relative error distribution
-		scattern(ctomu_ig, ctomu_ig_err, "Current (in mA)", "Error (in %)", "Current setpoint relative error");
-
-		// Calculate correction
-		ctomu_ig_corr = CGEN_GetCorrection2("tomuhp_ig");
-		CTOMU_CalIg(ctomu_ig_corr[0], ctomu_ig_corr[1], ctomu_ig_corr[2]);
-		CTOMU_PrintIgCal();
-	}
+		scattern(ctomu_ig_sc, ctomu_ig_set_err, "Ig (in A)", "Error (in %)", "Ig set relative error");
+		
+		// Plot summary error distribution
+		scattern(ctomu_ig_sc, ctomu_ig_set_err_sum, "Ig (in A)", "Error (in %)", "Ig set summary error");
 	
-	CTOMU_CommutationControl(1);
+		// Calculate correction
+		ctomu_ig_set_corr = CGEN_GetCorrection2("tou_ig_set_fixed");
+		CTOMU_CalIgSet(ctomu_ig_set_corr[0], ctomu_ig_set_corr[1], ctomu_ig_set_corr[2]);
+		CTOMU_PrintIgSetCal();
+	}
 }
 
-function CTOMU_CalibrateIgRate()
+function CTOMU_CalibrateRateIg()
 {
-	CTOMU_CommutationControl(0);
-	
 	// Collect data
 	CTOMU_ResetA();
-	CTOMU_ResetIgRateCal();
-	
-	// Scope init
-	CTOMU_IgRateScopeInit();
+	CTOMU_ResetRateIgCal();
 
-	// Reload values
-	var CurrentRateArray = CGEN_GetRange(ctomu_IgRatemin, ctomu_IgRatemax, ctomu_IgRatestp);
-
-	if (CTOMU_IgRateCollect(CurrentRateArray, ctomu_Iterations))
-	{		
-		CTOMU_SaveIgRate("tomuhp_igrate");
+	if (CTOMU_RateIgCollect(ctomu_ig_array, ctomu_Iterations))
+	{
+		CTOMU_SaveRateIg("tou_didt_set_fixed");
 
 		// Plot relative error distribution
-		scattern(ctomu_ig_rate, ctomu_ig_rate_err, "Current rate (in mA / us)", "Error (in %)", "Current rate setpoint relative error");
-
-		// Calculate correction
-		ctomu_ig_rate_corr = CGEN_GetCorrection2("tomuhp_igrate");
-		CTOMU_CalIgRate(ctomu_ig_rate_corr[0], ctomu_ig_rate_corr[1], ctomu_ig_rate_corr[2]);
-		CTOMU_PrintIgRateCal();
-	}
+		scattern(ctomu_didt_sc, ctomu_didt_set_err, "dI/dt (in A/us)", "Error (in %)", "dI/dt set relative error");
 	
-	CTOMU_CommutationControl(1);
+		// Calculate correction
+		ctomu_didt_set_corr = CGEN_GetCorrection2("tou_didt_set_fixed");
+		CTOMU_CalRateIgSet(ctomu_didt_set_corr[0], ctomu_didt_set_corr[1], ctomu_didt_set_corr[2]);
+		CTOMU_PrintRateIgSetCal();
+	}	
 }
 
-function CTOMU_CalibrateComparatorLevel()
+function CTOMU_CalibrateTrig10Ig()
 {
-	CTOMU_CommutationControl(0);
-	
 	// Collect data
 	CTOMU_ResetA();
-	CTOMU_ResetComparatorLevelCal();
-	
-	// Scope init
-	CTOMU_ComparatorLevelScopeInit();
+	CTOMU_ResetTrig10IgCal();
 
-	// Reload values
-	var CurrentArray = CGEN_GetRange(ctomu_Igmin, ctomu_Igmax, ctomu_Igstp);
-
-	if (CTOMU_ComparatorLevelCollect(CurrentArray, ctomu_Iterations))
-	{		
-		CTOMU_SaveComparatorLevel("tomuhp_comp_level");
+	if (CTOMU_Trig10IgCollect(ctomu_ig_array, ctomu_Iterations))
+	{
+		CTOMU_SaveTrig10Ig("tou_trig_10_set_fixed");
 
 		// Plot relative error distribution
-		scattern(ctomu_comp_lvl, ctomu_comp_lvl_err, "Comparator level (in mA)", "Error (in %)", "Comparator level relative error");
-
-		// Calculate correction
-		ctomu_comp_lvl_corr = CGEN_GetCorrection2("tomuhp_comp_level");
-		CTOMU_CalComparatorLevel(ctomu_comp_lvl_corr[0], ctomu_comp_lvl_corr[1], ctomu_comp_lvl_corr[2]);
-		CTOMU_PrintComparatorLevelCal();
-	}
+		scattern(ctomu_trig_10_ig_sc, ctomu_trig_10_ig_set_err, "Trigger 10 % Ig (in mA)", "Error (in %)", "Trigger 10 % Ig set relative error");
 	
-	CTOMU_CommutationControl(1);
+		// Calculate correction
+		ctomu_trig_10_ig_set_corr = CGEN_GetCorrection2("tou_trig_10_set_fixed");
+		CTOMU_CalTrig10IgSet(ctomu_trig_10_ig_set_corr[0], ctomu_trig_10_ig_set_corr[1], ctomu_trig_10_ig_set_corr[2]);
+		CTOMU_PrintTrig10IgSetCal();
+	}
 }
 
 function CTOMU_VerifyIg()
 {
-	CTOMU_CommutationControl(0);
-	
 	// Collect data
 	CTOMU_ResetA();
-	
-	// Scope init
-	CTOMU_IgScopeInit();
 
-	// Collect data
-	var CurrentArray = CGEN_GetRange(ctomu_Igmin, ctomu_Igmax, ctomu_Igstp);
-
-	if (CTOMU_IgCollect(CurrentArray, ctomu_Iterations))
+	if (CTOMU_IgCollect(ctomu_ig_array, ctomu_Iterations))
 	{
-		CTOMU_SaveIg("tomu_ig_fixed");
+		CTOMU_SaveIg("tou_ig_set_fixed");
 
 		// Plot relative error distribution
-		scattern(ctomu_ig, ctomu_ig_err, "Current (in mA)", "Error (in %)", "Current setpoint relative error");
+		scattern(ctomu_ig_sc, ctomu_ig_set_err, "Ig (in A)", "Error (in %)", "Ig set relative error");
+		
+		// Plot summary error distribution
+		scattern(ctomu_ig_sc, ctomu_ig_set_err_sum, "Ig (in A)", "Error (in %)", "Ig set summary error");
 	}
-	
-	CTOMU_CommutationControl(1);
 }
 
-function CTOMU_VerifyIgRate()
+function CTOMU_VerifyRateIg()
 {
-	CTOMU_CommutationControl(0);
-	
 	// Collect data
 	CTOMU_ResetA();
-	
-	// Scope init
-	CTOMU_IgRateScopeInit();
 
-	// Collect data
-	var CurrentRateArray = CGEN_GetRange(ctomu_IgRatemin, ctomu_IgRatemax, ctomu_IgRatestp);
-
-	if (CTOMU_IgRateCollect(CurrentRateArray, ctomu_Iterations))
+	if (CTOMU_RateIgCollect(ctomu_ig_array, ctomu_Iterations))
 	{
-		CTOMU_SaveIg("tomu_igrate_fixed");
+		CTOMU_SaveRateIg("tou_didt_set_fixed");
 
 		// Plot relative error distribution
-		scattern(ctomu_ig_rate, ctomu_ig_rate_err, "Current rate (in mA / us)", "Error (in %)", "Current setpoint relative error");
-	}
-	
-	CTOMU_CommutationControl(1);
+		scattern(ctomu_didt_sc, ctomu_didt_set_err, "dI/dt (in A/us)", "Error (in %)", "dI/dt set relative error");
+	}	
 }
 
-function CTOMU_VerifyComparatorLevel()
+function CTOMU_VerifyTrig10Ig()
 {
-	CTOMU_CommutationControl(0);
-	
 	// Collect data
 	CTOMU_ResetA();
-	
-	// Scope init
-	CTOMU_ComparatorLevelScopeInit();
 
-	// Collect data
-	var CurrentArray = CGEN_GetRange(ctomu_Igmin, ctomu_Igmax, ctomu_Igstp);
-
-	if (CTOMU_ComparatorLevelCollect(CurrentArray, ctomu_Iterations))
+	if (CTOMU_Trig10IgCollect(ctomu_ig_array, ctomu_Iterations))
 	{
-		CTOMU_SaveComparatorLevel("tomu_ig_fixed");
+		CTOMU_SaveTrig10Ig("tou_trig_10_set_fixed");
 
 		// Plot relative error distribution
-		scattern(ctomu_comp_lvl, ctomu_comp_lvl_err, "Comparator level (in mA)", "Error (in %)", "Comparator level relative error");
+		scattern(ctomu_trig_10_ig_sc, ctomu_trig_10_ig_set_err, "Trigger 10 % Ig (in mA)", "Error (in %)", "Trigger 10 % Ig set relative error");
 	}
-	
-	CTOMU_CommutationControl(1);
-}
-
-function CTOMU_TekCursor(Channel)
-{
-	TEK_Send("cursor:select:source ch" + Channel);
-	TEK_Send("cursor:function vbars");
-	TEK_Send("cursor:vbars:position1 30e-6");
-	TEK_Send("cursor:vbars:position2 30e-6");
-}
-
-function CTOMU_IgRateTekCursor(Channel)
-{
-	TEK_Send("cursor:select:source ch" + Channel);
-	TEK_Send("cursor:function vbars");
-	TEK_Send("cursor:vbars:position1 -5e-6");
-	TEK_Send("cursor:vbars:position2 5e-6");
-}
-
-function CTOMU_ComparatorLevelTekCursor(Channel)
-{
-	TEK_Send("cursor:select:source ch" + Channel);
-	TEK_Send("cursor:function vbars");
-	TEK_Send("cursor:vbars:position1 0");
-	TEK_Send("cursor:vbars:position2 30e-6");
-}
-
-function CTOMU_Ig(Channel)
-{
-	TEK_Send("cursor:select:source ch" + Channel);
-	sleep(500);
-
-	var f = TEK_Exec("cursor:vbars:hpos2?");
-	if (Math.abs(f) > 2e+4)
-		f = 0;
-	return parseFloat(f).toFixed(4);
-}
-
-function CTOMU_IgRate(Channel)
-{
-	TEK_Send("cursor:select:source ch" + Channel);
-	sleep(500);
-	
-	var U1 = TEK_Exec("cursor:vbars:hpos1?");
-	var U2 = TEK_Exec("cursor:vbars:hpos2?");
-	var dT = TEK_Exec("cursor:vbars:delta?");
-	
-	var IgRate = (U2 - U1) / ctomu_Ri / dT / 1000;
-
-	return parseFloat(IgRate).toFixed(0);
-}
-
-function CTOMU_CompLvl(Channel)
-{
-	TEK_Send("cursor:select:source ch" + Channel);
-	sleep(500);
-
-	var f = TEK_Exec("cursor:vbars:hpos1?");
-	if (Math.abs(f) > 2e+4)
-		f = 0;
-	return parseFloat(f).toFixed(4);
 }
 
 function CTOMU_IgCollect(CurrentValues, IterationsCount)
@@ -318,40 +213,47 @@ function CTOMU_IgCollect(CurrentValues, IterationsCount)
 		TEK_AcquireSample();
 	}
 	
+	TEK_MeasMaxInit(ctomu_chMeasureI, 1);
+	TEK_TriggerInit(ctomu_chSync, "2");
+	TEK_Busy();
+
 	for (var i = 0; i < IterationsCount; i++)
 	{
 		for (var j = 0; j < CurrentValues.length; j++)
 		{
 			print("-- result " + ctomu_cntDone++ + " of " + ctomu_cntTotal + " --");
 			
-			CTOMU_TekScale(ctomu_chMeasureIg, CurrentValues[j] * ctomu_Ri / 1000);
-			TEK_TriggerInit(ctomu_chSync, 4);
+			TEK_ScaleVertical(ctomu_chMeasureI, CurrentValues[j] * ctomu_Rshunt_gate / 1000, 80);
 			sleep(1000);
-
-			//
-			var tomu_print_copy = tou_print;
-			tomu_print = 0;
 
 			for (var k = 0; k < AvgNum; k++)
 			{
-				TOMUHP_GatePulse(ctomu_IgRate, CurrentValues[j]);
-				sleep(500);
+				TOMUHP_GatePulse(CurrentValues[j] / ctomu_rise_time_ig, CurrentValues[j]);
+				sleep(2000);
+				if(anykey()) break;
 			}
 			
-			tou_print = tomu_print_copy;
-			
 			// Set data
-			var ig = dev.r(130);
-			ctomu_ig.push(ig);
-			print("Ig, mA   :" + ig);
-
+			var ig_set = CurrentValues[j];
+			ctomu_ig_set.push(ig_set);
+			print("Ig_Set, мA: " + ig_set);
+			
 			// Scope data
-			var ig_sc = (CTOMU_Ig(ctomu_chMeasureIg) / ctomu_Ri * 1000).toFixed(0);
+			var ig_sc = (TEK_Measure(1) * 1000 / ctomu_Rshunt_gate).toFixed(2);
 			ctomu_ig_sc.push(ig_sc);
-			print("Itek, mA :" + ig_sc);
+			print("Ig_Tek, мA: " + ig_sc);
 
 			// Relative error
-			ctomu_ig_err.push(((ig_sc - ig) / ig * 100).toFixed(2));
+			var ig_set_err = ((ig_sc - ig_set) / ig_set * 100).toFixed(2);
+			ctomu_ig_set_err.push(ig_set_err);
+			print("Ig_Set_Err, %: " + ig_set_err);
+
+			// Summary error
+			var E0_ig = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ERg, 2));
+			var ig_err_sum = (Math.sign_ma(ig_set_err) * (Math.abs(ig_set_err) + E0_ig)).toFixed(2);
+			ctomu_ig_set_err_sum.push(ig_err_sum);
+			print("Ig_Sum_Err, %: " + ig_err_sum);
+
 			print("--------------------");
 			
 			if (anykey()) return 0;
@@ -361,66 +263,7 @@ function CTOMU_IgCollect(CurrentValues, IterationsCount)
 	return 1;
 }
 
-function CTOMU_IgRateCollect(CurrentRateValues, IterationsCount)
-{
-	ctomu_cntTotal = IterationsCount * CurrentRateValues.length;
-	ctomu_cntDone = 1;
-	
-	var AvgNum;
-	if (ctomu_UseAvg)
-	{
-		AvgNum = 4;
-		TEK_AcquireAvg(AvgNum);
-	}
-	else
-	{
-		AvgNum = 1;
-		TEK_AcquireSample();
-	}
-	
-	for (var i = 0; i < IterationsCount; i++)
-	{
-		for (var j = 0; j < CurrentRateValues.length; j++)
-		{
-			print("-- result " + ctomu_cntDone++ + " of " + ctomu_cntTotal + " --");
-			
-			CTOMU_HorizontalScale(ctomu_chMeasureIg, ctomu_Ig / CurrentRateValues[j], 0);
-			sleep(1000);
-			
-			//
-			var tomu_print_copy = tou_print;
-			tomu_print = 0;
-
-			for (var k = 0; k < AvgNum; k++)
-			{
-				TOMUHP_GatePulse(CurrentRateValues[j], ctomu_Ig);
-				sleep(500);
-			}
-			
-			tou_print = tomu_print_copy;
-			
-			// Set data
-			var ig_rate = dev.r(131);
-			ctomu_ig_rate.push(ig_rate);
-			print("Ig rate, mA / us :" + ig_rate);
-
-			// Scope data
-			var ig_rate_sc = CTOMU_IgRate(ctomu_chMeasureIg);
-			ctomu_ig_rate_sc.push(ig_rate_sc);
-			print("Iscope, mA / us  :" + ig_rate_sc);
-
-			// Relative error
-			ctomu_ig_rate_err.push(((ig_rate_sc - ig_rate) / ig_rate * 100).toFixed(2));
-			print("--------------------");
-			
-			if (anykey()) return 0;
-		}
-	}
-
-	return 1;
-}
-
-function CTOMU_ComparatorLevelCollect(CurrentValues, IterationsCount)
+function CTOMU_RateIgCollect(CurrentValues, IterationsCount)
 {
 	ctomu_cntTotal = IterationsCount * CurrentValues.length;
 	ctomu_cntDone = 1;
@@ -437,40 +280,46 @@ function CTOMU_ComparatorLevelCollect(CurrentValues, IterationsCount)
 		TEK_AcquireSample();
 	}
 	
+	TEK_Horizontal("2.5e-7", "7.5e-7");
+	TEK_MeasPk2PkInit(ctomu_chMeasureI, 1);
+	TEK_MeasRiseTimeInit(ctomu_chMeasureI, 2);
+	TEK_TriggerInit(ctomu_chSync, "2");
+	TEK_Busy();
+
 	for (var i = 0; i < IterationsCount; i++)
 	{
 		for (var j = 0; j < CurrentValues.length; j++)
 		{
 			print("-- result " + ctomu_cntDone++ + " of " + ctomu_cntTotal + " --");
 			
-			CTOMU_TekScale(ctomu_chMeasureIg, CurrentValues[j] * ctomu_Ri / 1000);
-			TEK_TriggerInit(ctomu_chSync, 2);
-			sleep(1500);
-
-			//
-			var tomu_print_copy = tou_print;
-			tomu_print = 0;
+			TEK_ScaleVertical(ctomu_chMeasureI, CurrentValues[j] * ctomu_Rshunt_gate / 1000, 80);
+			sleep(1000);
 
 			for (var k = 0; k < AvgNum; k++)
 			{
-				TOMUHP_GatePulse(ctomu_IgRate, CurrentValues[j]);
-				sleep(500);
+				TOMUHP_GatePulse(CurrentValues[j] / ctomu_rise_time_ig, CurrentValues[j]);
+				sleep(2000);
+				if(anykey()) break;
 			}
 			
-			tou_print = tomu_print_copy;
+			// Set data
+			var dIdt_set = CurrentValues[j] / ctomu_rise_time_ig;
+			ctomu_didt_set.push(dIdt_set);
+			print("Ig_set, мA: " + CurrentValues[j]);
+			print("dI/dt_Set, мA/us: " + dIdt_set);
 			
 			// Scope data
-			var comp_lvl_sc = (CTOMU_CompLvl(ctomu_chMeasureIg) / ctomu_Ri * 1000).toFixed(0);
-			ctomu_comp_lvl_sc.push(comp_lvl_sc);
-			print("Copmarator level tek, mA :" + comp_lvl_sc);
-			
-			// Set data
-			var comp_lvl = ((CTOMU_Ig(ctomu_chMeasureIg)  / ctomu_Ri * 1000) * 0.1).toFixed(0);
-			ctomu_comp_lvl.push(comp_lvl);
-			print("Comparator level, mA     :" + comp_lvl);
+			var rise_time = TEK_Measure(2) * 1e6;
+			var rise_current = TEK_Measure(1) * 0.8 * 1000 / ctomu_Rshunt_gate;
+			var didt_sc = (rise_current / rise_time).toFixed(2);
+			ctomu_didt_sc.push(didt_sc);
+			print("dI/dt_Tek, мA/us: " + didt_sc);
 
 			// Relative error
-			ctomu_comp_lvl_err.push(((comp_lvl_sc - comp_lvl) / comp_lvl * 100).toFixed(2));
+			var didt_set_err = ((didt_sc - dIdt_set) / dIdt_set * 100).toFixed(2);
+			ctomu_didt_set_err.push(didt_set_err);
+			print("dI/dt_Set_Err, %: " + didt_set_err);
+
 			print("--------------------");
 			
 			if (anykey()) return 0;
@@ -480,191 +329,163 @@ function CTOMU_ComparatorLevelCollect(CurrentValues, IterationsCount)
 	return 1;
 }
 
-function CTOMU_IgRateScopeInit()
+function CTOMU_Trig10IgCollect(CurrentValues, IterationsCount)
 {
-	// Display channels
-	for (var i = 1; i <= 4; i++)
+	ctomu_cntTotal = IterationsCount * CurrentValues.length;
+	ctomu_cntDone = 1;
+
+	var AvgNum;
+	if (ctomu_UseAvg)
 	{
-		if (i == ctomu_chMeasureIg)
-			TEK_ChannelOn(i);
-		else
-			TEK_ChannelOff(i);
+		AvgNum = 4;
+		TEK_AcquireAvg(AvgNum);
 	}
-
-	// Init measurement
-	CTOMU_Ig(ctomu_chMeasureIg, "4");
-	// Init channels	
-	TEK_ChannelInit(ctomu_chMeasureIg, "-4", "2");
-	TEK_Horizontal("2.5e-6", "0");
-	TEK_TriggerInit(ctomu_chMeasureIg, 8);
-	// Init cursors
-	CTOMU_IgRateTekCursor(ctomu_chMeasureIg);
-}
-
-function CTOMU_IgScopeInit()
-{
-	// Display channels
-	for (var i = 1; i <= 4; i++)
+	else
 	{
-		if (i == ctomu_chMeasureIg || i == ctomu_chSync)
-			TEK_ChannelOn(i);
-		else
-			TEK_ChannelOff(i);
+		AvgNum = 1;
+		TEK_AcquireSample();
 	}
-
-	// Init measurement
-	CTOMU_Ig(ctomu_chMeasureIg, "4");
-	// Init channels
-	TEK_ChannelInit(ctomu_chMeasureIg, "1", "0.2");
-	TEK_ChannelInit(ctomu_chSync, "1", "1");
-	TEK_TriggerInit(ctomu_chSync, "4");
-	TEK_Horizontal("5e-6", "20e-6");
-	// Init cursors
-	CTOMU_TekCursor(ctomu_chMeasureIg);
-}
-
-function CTOMU_ComparatorLevelScopeInit()
-{
-	// Display channels
-	for (var i = 1; i <= 4; i++)
-	{
-		if (i == ctomu_chMeasureIg || i == ctomu_chSync)
-			TEK_ChannelOn(i);
-		else
-			TEK_ChannelOff(i);
-	}
-
-	// Init measurement
-	CTOMU_Ig(ctomu_chMeasureIg, "4");
-	// Init channels	
-	TEK_ChannelInit(ctomu_chMeasureIg, "-4", "2.5");
-	TEK_Horizontal("5e-6", "15e-6");
-	TEK_TriggerInit(ctomu_chMeasureIg, 2);
-	// Init cursors
-	CTOMU_ComparatorLevelTekCursor(ctomu_chMeasureIg);
-}
-
-function CTOMU_TekScale(Channel, Value)
-{
-	Value = Value / 7;
 	
-	TEK_Send("ch" + Channel + ":scale " + Value);
-	//TEK_ChannelScale(Channel, Value);
-}
+	TEK_Horizontal("50e-9", "0");
+	TEK_TriggerInit(ctomu_chSync, "2.5");
+	TEK_CursorTimeInit(ctomu_chMeasureI);
+	TEK_CursorTimeРosition(ctomu_chMeasureI, 0, 0);
+	TEK_Busy();
 
-function CTOMU_HorizontalScale(Channel, Value, Position)
-{
-	Value = Value / 6;
-	
-	if(Value >= 2.5)
-		TEK_Horizontal('2.5e-6', Position);
-	else if(Value >= 1.0)
-		TEK_Horizontal('1e-6', Position);
-	else if(Value >= 0.5)
-		TEK_Horizontal('0.5e-6', Position);
-	else if(Value >= 0.25)
-		TEK_Horizontal('0.25e-6', Position);
+	for (var i = 0; i < IterationsCount; i++)
+	{
+		for (var j = 0; j < CurrentValues.length; j++)
+		{
+			print("-- result " + ctomu_cntDone++ + " of " + ctomu_cntTotal + " --");
+			
+			TEK_ScaleVertical(ctomu_chMeasureI, CurrentValues[j] * ctomu_Rshunt_gate / 1000, 600);
+			sleep(1000);
+
+			for (var k = 0; k < AvgNum; k++)
+			{
+				TOMUHP_GatePulse(CurrentValues[j] / ctomu_rise_time_ig, CurrentValues[j]);
+				sleep(2000);
+				if(anykey()) break;
+			}
+
+			// Set data
+			var trig_10_ig_set = CurrentValues[j] * 0.1;
+			ctomu_trig_10_ig_set.push(trig_10_ig_set);
+			print("Trig_10%_Ig, мA: " + trig_10_ig_set);
+						
+			// Scope data
+			var trig_10_ig_sc = (TEK_MeasureCursor(1) * 1000 / ctomu_Rshunt_gate).toFixed(2);
+			ctomu_trig_10_ig_sc.push(trig_10_ig_sc);
+			print("Trig_10%_Ig_Tek, мA: " + trig_10_ig_sc);
+
+			// Relative error
+			var trig_10_ig_set_err = ((trig_10_ig_sc - trig_10_ig_set) / trig_10_ig_set * 100).toFixed(2);
+			ctomu_trig_10_ig_set_err.push(trig_10_ig_set_err);
+			print("Trig_10%_Ig_Set_Err, %: " + trig_10_ig_set_err);
+
+			print("--------------------");
+			
+			if (anykey()) return 0;
+		}
+	}
+
+	return 1;
 }
 
 function CTOMU_ResetA()
 {
 	// Results storage
-	ctomu_ig = [];
-	ctomu_ig_rate = [];
-	ctomu_comp_lvl = [];
+	ctomu_ig_set = [];
+	ctomu_didt_set = [];
+	ctomu_trig_10_ig_set = [];
 
 	// Tektronix data
 	ctomu_ig_sc = [];
-	ctomu_ig_rate_sc = [];
-	ctomu_comp_lvl_sc = [];
+	ctomu_didt_sc = [];
+	ctomu_trig_10_ig_sc = [];
 
 	// Relative error
-	ctomu_ig_err = [];
-	ctomu_ig_rate_err = [];
-	ctomu_comp_lvl_err = [];
+	ctomu_ig_set_err = [];
+	ctomu_didt_set_err = [];
+	ctomu_trig_10_ig_set_err = [];
 
 	// Correction
-	ctomu_ig_corr = [];
-	ctomu_ig_rate_corr = [];
-	ctomu_comp_lvl_corr = [];
+	ctomu_ig_set_corr = [];
+	ctomu_didt_set_corr = [];
+	ctomu_trig_10_ig_set_corr = [];
+
+	// Summary error
+	ctomu_ig_set_err_sum = [];
 }
 
-function CTOMU_SaveIg(NameIg)
+function CTOMU_SaveIg(NameIgset)
 {
-	CGEN_SaveArrays(NameIg, ctomu_ig_sc, ctomu_ig, ctomu_ig_err);
+	CGEN_SaveArrays(NameIgset, ctomu_ig_sc, ctomu_ig_set, ctomu_ig_set_err);
 }
 
-function CTOMU_SaveIgRate(NameIgRate)
+function CTOMU_SaveRateIg(NameRateIgset)
 {
-	CGEN_SaveArrays(NameIgRate, ctomu_ig_rate_sc, ctomu_ig_rate, ctomu_ig_rate_err);
+	CGEN_SaveArrays(NameRateIgset, ctomu_didt_sc, ctomu_didt_set, ctomu_didt_set_err);
 }
 
-function CTOMU_SaveComparatorLevel(NameComparatorLevel)
+function CTOMU_SaveTrig10Ig(NameTrig10Ig)
 {
-	CGEN_SaveArrays(NameComparatorLevel, ctomu_comp_lvl_sc, ctomu_comp_lvl, ctomu_comp_lvl_err);
+	CGEN_SaveArrays(NameTrig10Ig, ctomu_trig_10_ig_sc, ctomu_trig_10_ig_set, ctomu_trig_10_ig_set_err);
 }
 
-function CTOMU_PrintIgCal()
+function CTOMU_PrintIgSetCal()
 {
-	print("Ig P2 x1e6:	" + dev.rs(17));
-	print("Ig P1 x1000:	" + dev.r(18));
-	print("Ig P0 :		" + dev.rs(19));
+	print("Ig P2 x1e6   :" + dev.rs(17));
+	print("Ig P1 x1000  :" + dev.rs(18));
+	print("Ig P0        :" + dev.rs(19));
 }
 
-function CTOMU_PrintIgRateCal()
+function CTOMU_PrintRateIgSetCal()
 {
-	print("IgRate P2 x1e6:	" + dev.rs(22));
-	print("IgRate P1 x1000:	" + dev.r(23));
-	print("IgRate P0 :		" + dev.rs(24));
+	print("dIg/dt P2 x1e6   :" + dev.rs(22));
+	print("dIg/dt P1 x1000  :" + dev.rs(23));
+	print("dIg/dt P0        :" + dev.rs(24));
 }
 
-function CTOMU_PrintComparatorLevelCal()
+function CTOMU_PrintTrig10IgSetCal()
 {
-	print("Comparator level P2 x1e6:	" + dev.rs(27));
-	print("Comparator level P1 x1000:	" + dev.r(28));
-	print("Comparator level P0 :		" + dev.rs(29));
+	print("Trig10Ig P2 x1e6   :" + dev.rs(27));
+	print("Trig10Ig P1 x1000  :" + dev.rs(28));
+	print("Trig10Ig P0        :" + dev.rs(29));
 }
 
 function CTOMU_ResetIgCal()
 {
-	CTOMU_CalIg(0, 1, 0);
+	CTOMU_CalIgSet(0, 1, 0);
 }
 
-function CTOMU_ResetIgRateCal()
+function CTOMU_ResetRateIgCal()
 {
-	CTOMU_CalIgRate(0, 1, 0);
+	CTOMU_CalRateIgSet(0, 1, 0);
 }
 
-function CTOMU_ResetComparatorLevelCal()
+function CTOMU_ResetTrig10IgCal()
 {
-	CTOMU_CalComparatorLevel(0, 1, 0);
+	CTOMU_CalTrig10IgSet(0, 1, 0);
 }
 
-function CTOMU_CalIg(P2, P1, P0)
+function CTOMU_CalIgSet(P2, P1, P0)
 {
 	dev.ws(17, Math.round(P2 * 1e6));
 	dev.w(18, Math.round(P1 * 1000));
-	dev.ws(19, Math.round(P0));
+	dev.ws(19, Math.round(P0));	
 }
 
-function CTOMU_CalIgRate(P2, P1, P0)
+function CTOMU_CalRateIgSet(P2, P1, P0)
 {
 	dev.ws(22, Math.round(P2 * 1e6));
 	dev.w(23, Math.round(P1 * 1000));
-	dev.ws(24, Math.round(P0));
+	dev.ws(24, Math.round(P0));	
 }
 
-function CTOMU_CalComparatorLevel(P2, P1, P0)
+function CTOMU_CalTrig10IgSet(P2, P1, P0)
 {
 	dev.ws(27, Math.round(P2 * 1e6));
 	dev.w(28, Math.round(P1 * 1000));
-	dev.ws(29, Math.round(P0));
-}
-
-function CTOMU_CommutationControl(Control)
-{
-	if(Control)
-		dev.w(14,0);
-	else
-		dev.w(14,1);
+	dev.ws(29, Math.round(P0));	
 }

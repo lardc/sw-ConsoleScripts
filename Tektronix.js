@@ -1,5 +1,7 @@
 tek_measuring_device = "TPS2024";	// "TPS2014" "TPS2024"
 
+Rshunt = 1e4;	// uOhm
+
 function TEK_PortInit(PortNumber, BaudeRate)
 {
 	if (typeof devTek !== 'undefined')
@@ -66,6 +68,16 @@ function TEK_TriggerInit(Channel, Level)
 	TEK_Send("trigger:main:edge:source ch" + Channel);
 }
 
+function TEK_TriggerInitFall(Channel, Level)
+{
+	TEK_Send("trigger:main:level " + Level);
+	TEK_Send("trigger:main:mode normal");
+	TEK_Send("trigger:main:type edge");
+	TEK_Send("trigger:main:edge:coupling dc");
+	TEK_Send("trigger:main:edge:slope fall");
+	TEK_Send("trigger:main:edge:source ch" + Channel);
+}
+
 function TEK_TriggerPulseInit(Channel, Level)
 {
 	TEK_TriggerPulseExtendedInit(Channel, Level, "hfrej", "5e-3", "positive", "outside");
@@ -87,6 +99,12 @@ function TEK_MeasMaxInit(Channel, NumMeas)
 {
 	TEK_Send("measurement:meas" + NumMeas + ":source ch" + Channel);
 	TEK_Send("measurement:meas" + NumMeas + ":type maximum");
+}
+
+function TEK_MeasMinInit(Channel, NumMeas)
+{
+	TEK_Send("measurement:meas" + NumMeas + ":source ch" + Channel);
+	TEK_Send("measurement:meas" + NumMeas + ":type minimum");
 }
 
 function TEK_MeasPk2PkInit(Channel, NumMeas)
@@ -120,6 +138,12 @@ function TEK_CursorTimeРosition(Channel, TimeCursor1, TimeCursor2)
 	TEK_Send("cursor:vbars:position2 " + TimeCursor2);
 }
 
+function TEK_Cursor2TimeРosition(Channel, TimeCursor2)
+{
+	TEK_Send("cursor:select:source ch" + Channel);
+	TEK_Send("cursor:vbars:position2 " + TimeCursor2);
+}
+
 function TEK_AcquireSample()
 {
 	TEK_Send("acquire:mode sample");
@@ -140,6 +164,13 @@ function TEK_Horizontal(Scale, Position)
 {
 	TEK_Send("horizontal:scale " + Scale);
 	TEK_Send("horizontal:position " + Position);
+}
+
+function TEK_HorizontalPosition(Sell)
+{
+	var h_scale = TEK_Exec("horizontal:scale?");
+	var h_position = h_scale * Sell;
+	TEK_Send("horizontal:position " + h_position);
 }
 
 function TEK_ChannelScale(Channel, Value)
@@ -270,9 +301,23 @@ function TEK_GetChannelData(Channel)
 	return res;
 }
 
+function TEK_MesDataProbe(Data)
+{
+	var res = [];
+	for (var i = 0; i < Data.length; i++)
+		res[i] = (Data[i] * Rshunt).toFixed(0);
+
+	return res;
+}
+
 function TEK_GetTimeScale()
 {
 	return parseFloat(TEK_Exec("horizontal:main:scale?"));
+}
+
+function TEK_GetTimePosition()
+{
+	return parseFloat(TEK_Exec("horizontal:main:position?"));
 }
 
 function TEK_CALC_dVdt(Data, LowLevel10, HighLevel90)

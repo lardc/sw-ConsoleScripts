@@ -50,16 +50,19 @@ include("CalRCU016.js");
 CAL_Init(1,2,1);
 dev.w(140,1);
 dev.c(1);
+Cal_UseAvg = 1;
 CAL_CalibrateIrate(0);
 CAL_CalibrateIrate50_90(1);
+Hand_Cal_CompensationIrate(2);
 
 i("CalRCU016.js");
 CAL_Init(1,2,1);
+Cal_UseAvg = 0;
+Cal_IterationsPack = 1;
 CAL_VerifyIrate(4);
 CAL_VerifyIrate50_90(1);
 
 CAL_PrintCoefIrateCompens(1);
-CAL_PrintCoefIdCompens(1);
 
 // Диапазон Id
 i("CalRCU016.js");
@@ -67,6 +70,11 @@ CAL_Init(1,2,1);
 dev.w(140,1);
 dev.c(1);
 sleep(1000);
+
+CAL_CalibrateImes(4); 
+CAL_CalibrateId(1);
+
+
 CAL_VerifyId(1);
 
 // Полная верификация
