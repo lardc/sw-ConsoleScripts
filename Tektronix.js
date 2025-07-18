@@ -385,3 +385,25 @@ function TEK_CALC_dVdt(Data, LowLevel10, HighLevel90)
 
 	return dVdt;
 }
+
+function TEK_SaveImage(NameFile)
+{
+	var SaveImage = "save:image \"A:\\" + NameFile + ".BMP\"";
+	TEK_Send(SaveImage);
+	sleep(3000);
+	TEK_Busy();
+}
+
+function TEK_SaveCSV(Channel, NameFile)
+{
+	var SaveCSV = "SAVe:WAVEform CH" + Channel + " \"A:\\" + NameFile + ".CSV\"";
+	TEK_Send(SaveCSV);
+	sleep(3000);
+	TEK_Busy();
+}
+
+function TEK_SaveSET(NameFile)
+{
+	// SAVe:WAVEform CH1, “A:\PROD-TST\FRQTST03.CSV”
+
+}

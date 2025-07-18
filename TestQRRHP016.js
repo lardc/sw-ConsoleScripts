@@ -10,7 +10,7 @@ print_plot = 0;
 CALIBRATION_PROCESS = 1;
 
 
-function Cal_Reg(En)
+function QRR_Cal_Reg(En)
 {
 	if(dev.r(2) == 0)
 		QSU_WriteReg(160, 140, En);
@@ -23,7 +23,7 @@ function Cal_Reg(En)
 	if(dev.r(6) == 0)
 		QSU_WriteReg(171, 140, En);
 	if(dev.r(7) == 0)
-		QSU_WriteReg(171, 140, En);
+		QSU_WriteReg(172, 140, En);
 	dev.w(140,En);
 }
 // QRR
@@ -76,10 +76,10 @@ function QRR_Start(Mode, IDC, IDCFallRate, OSV, OSVRate)
 	var pulse_counter = dev.r(199);
 	while (dev.r(192) == 5)
 	{
-		
 		if (anykey()) return;
 		if (pulse_counter != dev.r(199))
 		{
+			
 			pulse_counter = dev.r(199);
 			if(qrr_print)
 				print("Pulse #" + pulse_counter);
@@ -245,9 +245,9 @@ function QRR_Result()
 	var op_result = dev.r(198);
 	print("Result " + ((op_result == 0) ? "NONE" : (op_result == 1) ? "OK" : "FAILED"));
 	print("Qrr (GOST), uC: " + (dev.r(218) << 16 | dev.r(210)) / 100);
-	print("Qrr,        uC: " + (dev.r(219) << 16 | dev.r(216)));
+	print("Qrr,        uC: " + (dev.r(219) << 16 | dev.r(216)) / 10);
 	print("Irr,         A: -" + (dev.r(211) / 10));
-	print("trr,        us: " + (dev.r(212) / 10));
+	print("trr,        us: " + (dev.r(212) / 100));
 	print("tq,         us: " + (dev.r(213) / 10));
 	print("Idc,         A: " + dev.r(214));
 	print("dIdt,     A/us: " + (dev.r(215) / 100));
