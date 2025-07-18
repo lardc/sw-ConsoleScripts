@@ -1,5 +1,5 @@
 include("CalGeneral.js")
-include("6500.js")
+include("DMM6500.js")
 include("TestLCSU.js")
 
 PulseType = 0; // 0 - синус, 1 - модифицированный синус, 2 - трапеция
