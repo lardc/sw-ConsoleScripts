@@ -175,3 +175,30 @@ function KEI_ReadArray()
 	return FloatArray;
 }
 
+function KEI_Wait()
+{
+	tmc.w('*RST');
+	sleep(100);
+	var Current = 0;
+	BufferLength = 150;
+	tmc.w(':SENSe:DIGitize:FUNCtion "VOLTage"');
+	tmc.w(':SENSe:DIGitize:VOLTage:SRATe 10000');
+	tmc.w(':DIGitize:VOLTage:ATRigger:MODE EDGE');
+	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:LEVel 0.01');
+	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:SLOPe RISing');
+	tmc.w('TRACe:MAKE "TestBuffer",' + BufferLength);
+	tmc.w('TRACe:FILL:MODE CONTinuous, "TestBuffer"');
+	tmc.w('TRACe:LOG:STATe ON , "TestBuffer"');
+	tmc.w(':TRIGger:LOAD "LoopUntilEvent", ATRigger, 10, ENTer, 0, "TestBuffer"');
+	tmc.w(':INITiate');
+	tmc.w(':DISPlay:BUFFer:ACTive "TestBuffer"');
+	tmc.w(':DISPlay:SCReen GRAPh');
+}
+function KEI_Current()
+{
+	MultimeterMax = tmc.q(':TRACe:STAT:MAXimum? "TestBuffer"');
+	tmc.w(':TRACe:DELete "TestBuffer"');
+	sleep(500);
+	Current = MultimeterMax * 4000;
+	return Current;
+}
