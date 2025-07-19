@@ -5,7 +5,7 @@ include("TEK_GetData.js")
 include("CaldVdt.js")
 
 // Calibration setup parameters
-cal_Rshunt = 1000;	// uOhm
+cal_Rshunt = 1007;	// uOhm
 cal_Probe = 1000;	// 
 DirectCurrentTest = 1600; // in A
 DirectCurrentRateTest = 3; // in A/us
@@ -21,8 +21,9 @@ MinPort = 2;
 FallPort = 3;
 //
 def_UseSaveImage = true; 
+print_plot = 0;
 // 
-SetCurrentTest = [320, 500, 1000, 1500, 2000, 2500, 3000, 3200]; // in A  320, 500, 1000, 1500, 2000, 2500, 3000, 3200
+SetCurrentTest = [320, 500, 1000, 1500, 2000]; // in A  320, 500, 1000, 1500, 2000, 2500, 3000, 3200
 CurrentRateN = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 CurrentRate = [1, 1.5, 2, 5, 10, 15, 20, 30, 50, 60, 100]; // in А/us  1, 1.5, 2, 5, 10, 15, 20, 30, 50, 60, 100
 IrrMeasured = [150, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50]; // in A
@@ -39,9 +40,15 @@ MinVHSSRate = 5;
 //
 QrrGOST = 1;
 //
-cal_Iterations = 1;
+cal_Iterations = 3;
 //		
 cal_Invert = 1;
+//
+// Use averages in OSC
+cQrrTq_NO_AVERAGES = 1;
+cQrrTq_AVERAGES_4 = 4;
+cQrrTq_AVERAGES_16 = 16;
+cQrrTq_def_UseAverage = cQrrTq_NO_AVERAGES;
 
 // Counters
 cal_CntTotal = 0;
@@ -51,12 +58,16 @@ cal_CntDone = 0;
 cal_chMeasureI = 1;
 cal_chMeasureU = 2;
 
-SumCI = 3.197
+SumCI = 3.197;
+SumCI_Irr = 3.515;
+SumCI_Trr = 3.197;
+SumCI_Qrr = 4.751;
 
 // Results storage
 cal_Trr = [];
 cal_Irr = [];
 cal_Qrr = [];
+cal_Time0_90 = [];
 cal_Tq = [];
 //
 cal_IdcSet = []; 
@@ -79,6 +90,7 @@ cal_VUnitErr = [];
 cal_TrrSc = [];
 cal_IrrSc = [];
 cal_QrrSc = [];
+cal_Time0_90Sc = [];
 cal_TqSc = [];
 //
 cal_IdcSc = [];
@@ -88,8 +100,12 @@ cal_dIdtSc = [];
 
 // Relative error
 cal_TrrErr = [];
+cal_TrrErrSum = [];
 cal_IrrErr = [];
+cal_IrrErrSum = [];
 cal_QrrErr = [];
+cal_QrrErrSum = [];
+cal_Time0_90Err = [];
 cal_TqSetErr = [];
 cal_TqErr = [];
 //
@@ -168,7 +184,7 @@ function CAL_Init(portDevice, portTek, channelMeasureI, channelMeasureU)
 			TEK_ChannelOff(i);
 	}
 
-	Cal_Reg(1);
+	QRR_Cal_Reg(1);
 }
 
 //-------------------------------------------------------------------------------------------------------------------------------------------
@@ -285,18 +301,28 @@ function CAL_VerifyQrr()
 	// Tektronix init
 	CAL_TekInitQrr();
 
-	if (CAL_CollectQrr(cal_Iterations))
-	{
-		CAL_SaveIrr("QSU_Irr");
-		CAL_SaveTrr("QSU_Trr");
-		CAL_SaveQrr("QSU_Qrr");
-		
-		// Plot relative error distribution
-		scattern(cal_IrrSc, cal_IrrErr, "Irr (in A)", "Error (in %)", "Irr relative error");
-		scattern(cal_TrrSc, cal_TrrErr, "Trr (in us)", "Error (in %)", "Trr relative error");
-		scattern(cal_QrrSc, cal_QrrErr, "Qrr (in uQ)", "Error (in %)", "Qrr relative error");
-		scattern(cal_IrrSc, cal_TrrErr, "Irr (in A)", "Trr Error (in %)","Trr relative error in Irr")
-	}
+	while (CAL_CollectQrr(cal_Iterations)){sleep(100)}
+	
+	CAL_SaveIrr("QSU_Irr");
+	CAL_SaveTrr("QSU_Trr");
+	CAL_SaveQrr("QSU_Qrr");
+	CAL_SaveTime090("QSU_Time090");
+
+	
+	// Plot relative error distribution
+	scattern(cal_IrrSc, cal_IrrErr, "Irr (in A)", "Error (in %)", "Irr relative error");
+	scattern(cal_IrrSc, cal_IrrErrSum, "Irr (in A)", "Error (in %)", "Irr relative summary error");
+
+	scattern(cal_TrrSc, cal_TrrErr, "Trr (in us)", "Error (in %)", "Trr relative error");
+	scattern(cal_TrrSc, cal_TrrErrSum, "Trr (in us)", "Error (in %)", "Trr relative summary error");
+
+	scattern(cal_QrrSc, cal_QrrErr, "Qrr (in uQ)", "Error (in %)", "Qrr relative error");
+	scattern(cal_QrrSc, cal_QrrErrSum, "Qrr (in uQ)", "Error (in %)", "Qrr relative summary error");
+
+	scattern(cal_Time0_90Sc, cal_Time0_90Err, "Time0_90 (in us)", "Error (in %)", "Time0_90 relative error");
+
+	scattern(cal_IrrSc, cal_TrrErr, "Irr (in A)", "Trr Error (in %)","Trr relative error in Irr");
+	scattern(cal_IrrSc, cal_TrrErrSum, "Irr (in A)", "Trr Error (in %)","Trr relative summary error in Irr")
 	
 	dev.w(153,0);
 	dev.c(111);
@@ -823,16 +849,23 @@ function CAL_CollectCurrentSingl(Current,Rate,Singl)
 		while(dev.r(198) == 0 && !anykey()){sleep(100)};
 			if(dev.r(198) == 1)
 			{	
-				IrrScale = -IrrScale * 2 / 1000;
-				var TimeScale = dev.r(212) / 10 * 2 / 5 * 1e-6;
+				// IrrScale = -IrrScale * 2 / 1000;
+				var IrrScale = dev.r(211) / 8 / cal_Rshunt;
+				var TimeScale = dev.r(212) / 100 * 3 / 10 * 1e-6;
 
+				TEK_Send("ch" + cal_chMeasureI + ":position 2");
 				TEK_Horizontal(TimeScale, "0");
-				TEK_HorizontalPosition(5);
-				CAL_TekScale(cal_chMeasureI, IrrScale); 
+				TEK_HorizontalPosition(4);
+				CAL_TekScale(cal_chMeasureI, IrrScale);
+				if(cal_Invert) 
+					TEK_TriggerInit(cal_chMeasureI, -IrrScale/4);
+				else
+					TEK_TriggerInitFall(cal_chMeasureI, IrrScale/4);
+				CQrrTq_ClearDisplay();
 				sleep(2000);
 				QRR_Start(0, Current, CurrentRateN[Rate], DirectVoltageTest, DirectVoltageRateTest);
 
-				var Qrr = Qrr = (dev.r(219) << 16 | dev.r(216)) / 10;
+				var Qrr = Qrr = (dev.r(219) << 16 | dev.r(216)) / 100;
 				if(QrrGOST)
 					var Qrr = (dev.r(218) << 16 | dev.r(210)) / 100;				
 				cal_Qrr.push(Qrr);
@@ -840,7 +873,7 @@ function CAL_CollectCurrentSingl(Current,Rate,Singl)
 				var Irr = dev.r(211) / 10;
 				cal_Irr.push(Irr);
 		
-				var Trr = dev.r(212) / 10;
+				var Trr = dev.r(212) / 100;
 				cal_Trr.push(Trr);
 
 				// Scope data
@@ -1270,95 +1303,123 @@ function CAL_CollectTq(IterationsCount)
 
 function CAL_CollectQrr(IterationsCount)
 {
-	cal_CntTotal = SetCurrentTest.length * CurrentRateN.length * IterationsCount;
-	cal_CntDone = 1;
-	
+
+	print("Set Id, (A)");			
+		var Idkey = parseFloat(readline());
+	print("Set dI/dt, (Number)");	
+		var dIdtkey = parseFloat(readline());
+
+	while(dev.r(192) == 5 && !anykey()){sleep(100)};
+	qrr_single = 1;
+	QRR_Start(0, Idkey, CurrentRateN[dIdtkey], DirectVoltageTest, DirectVoltageRateTest);
+	qrr_single = 0;
+	while(dev.r(198) == 0 && !anykey()){sleep(100)};
+	if(dev.r(198) == 1)
+	{	
+		var IrrScale = dev.r(211) / 8 / cal_Rshunt;
+		var TimeScale =	dev.r(212) / 100 * 2 / 10 * 1e-6;
+
+		TEK_Horizontal(TimeScale, "0");
+		TEK_HorizontalPosition(4);
+		CAL_TekScale(cal_chMeasureI, IrrScale); 
+		if(cal_Invert) 
+			TEK_TriggerInit(cal_chMeasureI, -IrrScale/4);
+		else
+			TEK_TriggerInitFall(cal_chMeasureI, IrrScale/4);
+		sleep(2000);
+			
+	}	
 	for (var i = 0; i < IterationsCount; i++)
 	{
-		for (var j = 0; j < CurrentRateN.length; j++)
-		{
-			for (var k = 0; k < SetCurrentTest.length; k++)
-			{
-				sleep(1000);
-				while(dev.r(192) == 5 || QSU_ReadReg(160, 192) == 5 || QSU_ReadReg(161, 192) == 5 || QSU_ReadReg(162, 192) == 5 
-					|| QSU_ReadReg(170, 192) == 5 || QSU_ReadReg(171, 192) == 5 || QSU_ReadReg(172, 192) == 5) sleep(500);
+		while(dev.r(192) == 5 && !anykey()){sleep(100)};
 
-				print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
-				qrr_single = 1;
-				QRR_Start(0, SetCurrentTest[k], CurrentRateN[j], DirectVoltageTest, DirectVoltageRateTest);
-				qrr_single = 0;
-				sleep(2000);
-				while(dev.r(192) == 5) sleep(500);
-				if(dev.r(198) == 1)
-				{	
-					var IrrScale = dev.r(211) / 8 / cal_Rshunt;
-					var TimeScale = dev.r(212) / 10 * 2 / 10 * 1e-6;
-
-					TEK_Horizontal(TimeScale, "0");
-					TEK_HorizontalPosition(5);
-					CAL_TekScale(cal_chMeasureI, IrrScale); 
-					sleep(2000);
-					QRR_Start(0, SetCurrentTest[k], CurrentRateN[j], DirectVoltageTest, DirectVoltageRateTest);
-				}	
-
-				while(dev.r(198) == 0 && !anykey()){sleep(100)};
-
-				// Unit data
-				if(dev.r(196) == 0)
-				{	
-					var Qrr = Qrr = (dev.r(219) << 16 | dev.r(216)) / 10;
-					if(QrrGOST)
-						var Qrr = (dev.r(218) << 16 | dev.r(210)) / 100;				
-					cal_Qrr.push(Qrr);
-			
-					var Irr = dev.r(211) / 10;
-					cal_Irr.push(Irr);
-			
-					var Trr = dev.r(212) / 10;
-					cal_Trr.push(Trr);
-
-					// Scope data
-					var ScopeData = CAL_MeasureQrr(cal_chMeasureI);
-					var IrrSc = parseFloat(ScopeData[0]).toFixed(2);
-					var TrrSc = parseFloat(ScopeData[1]).toFixed(2);
-					var QrrSc = parseFloat(ScopeData[2]).toFixed(2);
-					if(QrrGOST)
-						QrrSc = parseFloat(ScopeData[3]).toFixed(2);			
-					cal_IrrSc.push(IrrSc);
-					cal_TrrSc.push(TrrSc);
-					cal_QrrSc.push(QrrSc);
-			
-					// Relative error
-					var IrrErr = ((Irr - IrrSc) / IrrSc * 100).toFixed(2);
-					var TrrErr = ((Trr - TrrSc) / TrrSc * 100).toFixed(2);
-					var QrrErr = ((Qrr - QrrSc) / QrrSc * 100).toFixed(2);
+		CQrrTq_ClearDisplay();
 		
-					cal_IrrErr.push(IrrErr);
-					cal_TrrErr.push(TrrErr);
-					cal_QrrErr.push(QrrErr);
-			
-					ChannelDataPlot(cal_chMeasureI, SetCurrentTest[k] + "A " + CurrentRate[j] + " A/us");
+		QRR_Start(0, Idkey, CurrentRateN[dIdtkey], DirectVoltageTest, DirectVoltageRateTest);
 
-					// Print results
-					print(SetCurrentTest[k] + " A" + " , " + CurrentRate[j] + "A/us ")
-					print("");
-					print("Irr, A	 : " + Irr);
-					print("IrrTek,  A: " + IrrSc);
-					print("IrrErr,  %: " + IrrErr);
-					print("");
-					print("Trr, us	 : " + Trr);
-					print("TrrTek, us: " + TrrSc);
-					print("TrrErr,  %: " + TrrErr);
-					print("");
-					print("Qrr, uQ	 : " + Qrr);
-					print("QrrTek, uQ: " + QrrSc);
-					print("QrrErr,  %: " + QrrErr);
-					print("--------------------");
-				}	
-			// if (anykey()) return 0;	
-			}				
-		}
+		while(dev.r(198) == 0 && !anykey()){sleep(100)};
+
+		// Unit data
+		if(dev.r(196) == 0)
+		{	
+			var Qrr = Qrr = (dev.r(219) << 16 | dev.r(216)) / 10;
+			if(QrrGOST)
+				var Qrr = (dev.r(218) << 16 | dev.r(210)) / 100;				
+			cal_Qrr.push(Qrr);
+	
+			var Irr = dev.r(211) / 10;
+			cal_Irr.push(Irr);
+	
+			var Trr = dev.r(212) / 100;
+			cal_Trr.push(Trr);
+
+			var Time0_90 = QSU_ReadReg(0,210) / 100;
+			cal_Time0_90.push(Time0_90);
+
+			// Scope data
+			var ScopeData = CAL_MeasureQrr(cal_chMeasureI);
+			var IrrSc = parseFloat(ScopeData[0]).toFixed(2);
+			var TrrSc = parseFloat(ScopeData[1]).toFixed(2);
+			var QrrSc = parseFloat(ScopeData[2]).toFixed(2);
+			if(QrrGOST)
+				QrrSc = parseFloat(ScopeData[3]).toFixed(2);
+			var Time0_90Sc = parseFloat(ScopeData[4]).toFixed(2); 				
+			cal_IrrSc.push(IrrSc);
+			cal_TrrSc.push(TrrSc);
+			cal_QrrSc.push(QrrSc);
+			cal_Time0_90Sc.push(Time0_90Sc);
+	
+			// Relative error
+			var IrrErr = ((Irr - IrrSc) / IrrSc * 100).toFixed(2);
+			var IrrErrSum = (IrrErr < 0) ? (+IrrErr - SumCI_Irr) : (+IrrErr + SumCI_Irr); 
+			var TrrErr = ((Trr - TrrSc) / TrrSc * 100).toFixed(2);
+			var TrrErrSum = (TrrErr < 0) ? (+TrrErr - SumCI_Trr) : (+TrrErr + SumCI_Trr); 
+			var QrrErr = ((Qrr - QrrSc) / QrrSc * 100).toFixed(2);
+			var QrrErrSum = (QrrErr < 0) ? (+QrrErr - SumCI_Qrr) : (+QrrErr + SumCI_Qrr) ; 
+			var Time0_90Err = ((Time0_90 - Time0_90Sc) / Time0_90Sc * 100).toFixed(2);
+			
+
+			cal_IrrErr.push(IrrErr);
+			cal_TrrErr.push(TrrErr);
+			cal_QrrErr.push(QrrErr);
+			cal_Time0_90Err.push(Time0_90Err);
+
+			cal_IrrErrSum.push(IrrErrSum);
+			cal_TrrErrSum.push(TrrErrSum);
+			cal_QrrErrSum.push(QrrErrSum);
+
+			if(print_plot)
+				ChannelDataPlot(cal_chMeasureI, SetCurrentTest[k] + "A " + CurrentRate[j] + " A/us");
+
+			// Print results
+			print(Idkey + " A" + " , " + CurrentRate[dIdtkey] + "A/us ")
+			print("");
+			print("Irr, A	 : " + Irr);
+			print("IrrTek,  A: " + IrrSc);
+			print("IrrErr,  %: " + IrrErr);
+			print("IrrErrSum,  %: " + IrrErrSum);
+			print("");
+			print("Trr, us	 : " + Trr);
+			print("TrrTek, us: " + TrrSc);
+			print("TrrErr,  %: " + TrrErr);
+			print("TrrErrSum,  %: " + TrrErrSum);
+			print("");
+			print("Time090, us	 : " + Time0_90);
+			print("Time090Tek, us: " + Time0_90Sc);
+			print("Time090Err,  %: " + Time0_90Err);
+			print("");
+			print("Qrr, uQ	 : " + Qrr);
+			print("QrrTek, uQ: " + QrrSc);
+			print("QrrErr,  %: " + QrrErr);
+			print("QrrErrSum,  %: " + QrrErrSum);
+			print("--------------------");
+		}		
+			
 	}
+	print("Next ? y / n")
+	var key = readkey();
+	if (key == 'n')
+		return 0;
 
 	return 1;
 }
@@ -1750,6 +1811,8 @@ function CAL_MeasureQrr(Channel)
 	k = (Current[Index025] - Current[Index09]) / (Index025 - Index09);
 	IndexTrr = Math.round(-b / k + Index09);
 	ResultTrr = ((IndexTrr - Index0) * TimeFraction).toFixed(2);
+
+	ResultTime090 = ((Index09 - Index0) * TimeFraction).toFixed(2);
 	
 	// Qrr calculate
 	for(i = Index0; i < IndexTrr; i++)
@@ -1762,6 +1825,7 @@ function CAL_MeasureQrr(Channel)
 	ReturnValues[1] = ResultTrr;
 	ReturnValues[2] = ResultQrr;
 	ReturnValues[3] = ResultQrrGOST;
+	ReturnValues[4] = ResultTime090;
 	
 	return ReturnValues;
 }
@@ -1865,6 +1929,7 @@ function CAL_ResetA()
 	cal_Trr = [];
 	cal_Irr = [];
 	cal_Qrr = [];
+	cal_Time0_90 = [];
 	cal_Tq = [];
 	//
 	cal_IdcSet = []; 
@@ -1887,6 +1952,7 @@ function CAL_ResetA()
 	cal_TrrSc = [];
 	cal_IrrSc = [];
 	cal_QrrSc = [];
+	cal_Time0_90Sc = [];
 	cal_TqSc = [];
 	//
 	cal_IdcSc = [];
@@ -1896,8 +1962,12 @@ function CAL_ResetA()
 
 	// Relative error
 	cal_TrrErr = [];
+	cal_TrrErrSum = [];
 	cal_IrrErr = [];
+	cal_IrrErrSum = [];
 	cal_QrrErr = [];
+	cal_QrrErrSum = [];
+	cal_Time0_90Err = [];
 	cal_TqSetErr = [];
 	cal_TqErr = [];
 	//
@@ -1993,21 +2063,28 @@ function CAL_SavedIdtHSS(NamedIdtHSS)
 
 function CAL_SaveIrr(NameIrr)
 {
-	CGEN_SaveArrays(NameIrr, cal_Irr, cal_IrrSc, cal_IrrErr);
+	CGEN_SaveArrays(NameIrr, cal_Irr, cal_IrrSc, cal_IrrErr, cal_IrrErrSum);
 }
 
 //--------------------
 
 function CAL_SaveTrr(NameTrr)
 {
-	CGEN_SaveArrays(NameTrr, cal_Trr, cal_TrrSc, cal_TrrErr);
+	CGEN_SaveArrays(NameTrr, cal_Trr, cal_TrrSc, cal_TrrErr, cal_TrrErrSum);
 }
 
 //--------------------
 
 function CAL_SaveQrr(NameQrr)
 {
-	CGEN_SaveArrays(NameQrr, cal_Qrr, cal_QrrSc, cal_QrrErr);
+	CGEN_SaveArrays(NameQrr, cal_Qrr, cal_QrrSc, cal_QrrErr, cal_QrrErrSum);
+}
+
+//--------------------
+
+function CAL_SaveTime090(NameTime090)
+{
+	CGEN_SaveArrays(NameTime090, cal_Time0_90, cal_Time0_90Sc, cal_Time0_90Err);
 }
 
 //--------------------
@@ -2101,14 +2178,25 @@ function CAL_TekInitQrr()
 {
 	TEK_Horizontal("1e-4", "4");
 	
-	TEK_ChannelInit(cal_chMeasureI, "1", "0.1");
-	TEK_Send("ch" + cal_chMeasureI + ":position 2");
 	
+	TEK_Send("ch" + cal_chMeasureI + ":position 2");
+	if(cal_Invert)
+	{
+		TEK_ChannelInvInit(cal_chMeasureI, "1", "0.1");
+		TEK_Send("ch" + cal_chMeasureI + ":position 2");
+		TEK_TriggerInit(cal_chMeasureI, "-0.05");
+		TEK_Send("trigger:main:edge:slope rise");
+	}
+	else
+	{
+		TEK_ChannelInit(cal_chMeasureI, "1", "0.1");
+		TEK_Send("ch" + cal_chMeasureI + ":position 2");
+		TEK_TriggerInit(cal_chMeasureI, "0.05");
+		TEK_Send("trigger:main:edge:slope rise");
+	}	
+
 	TEK_ChannelInit(cal_chMeasureU, "100", "20");
 	TEK_Send("ch" + cal_chMeasureU + ":position 3");
-	
-	TEK_TriggerInit(cal_chMeasureI, "-0.05");
-	TEK_Send("trigger:main:edge:slope rise");
 	
 	TEK_AcquireAvg(4);
 
@@ -2443,3 +2531,11 @@ function CAL_PrintCoefdIdtSet(Rate)
 }
 
 //--------------------
+
+function CQrrTq_ClearDisplay()
+{
+	TEK_AcquireSample();
+	if(cQrrTq_def_UseAverage > 1)
+		TEK_AcquireAvg(cQrrTq_def_UseAverage);
+	TEK_Busy();
+}
