@@ -720,7 +720,7 @@ function CTOU_IdCollect(CurrentValues, IterationsCount)
 			print("-- result " + ctou_cntDone++ + " of " + ctou_cntTotal + " --");
 			
 			TEK_ScaleVertical(ctou_chMeasureI, CurrentValues[j] * ctou_Ri, 80);
-			TEK_TriggerInit(ctou_chMeasureI, (CurrentValues[j] * ctou_Ri) / 2);
+			TEK_TriggerInit(ctou_chMeasureI, (CurrentValues[j] * ctou_Ri) / 1.5);
 			sleep(1000);
 
 			var tou_print_copy = tou_print;
@@ -904,13 +904,11 @@ function CTOU_TimeCollect(CurrentValues, IterationsCount)
 
 			var tou_print_copy = tou_print;
 			tou_print = 0;
-			for (var k = 0; k < AvgNum; k++)
-			{
+			if(ctou_UseAvg)
+				dev.w(80,4);
+
 				TOUHP_Measure(ctou_ud_test, CurrentValues[j] * 10, ctou_ig_test, ctou_ig_test / ctou_rise_time_ig);
 				sleep(1000);
-				if(anykey())
-				break;
-			}
 			tou_print = tou_print_copy;
 
 			// Измерение времени по курсорам
@@ -971,6 +969,7 @@ function CTOU_TimeCollect(CurrentValues, IterationsCount)
 	}
 	
 	dev.w(132,0);
+	dev.w(80,0);
 
 	return 1;
 }
@@ -1074,10 +1073,10 @@ function CTOU_TekHorizontal(VoltageValues, CurrentValues)
 	
 	// Расчет и установка шкалы
 	var ctou_fall_time_ud = TEK_Measure(1);
-	if (ctou_fall_time_ud < 900e-9)
+	if (ctou_fall_time_ud < 500e-9)
 		TEK_Horizontal(500e-9, -500e-9);
 	
-	else if (ctou_fall_time_ud > 1e-6)
+	else if (ctou_fall_time_ud > 1.3e-6)
 		TEK_Horizontal(2.5e-6, 8.8e-6);
 
 	else
