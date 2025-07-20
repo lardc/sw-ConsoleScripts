@@ -210,6 +210,15 @@ function CdVdt_CursorMeasureV()
 
 function CdVdt_MeasureVfast()
 {
+	var i = 0
+	while(TEK_Measure(1) > 10e+6)
+	{
+		sleep(300);
+		p("Error Ud");
+
+		if(i++ >= 3)
+			break;
+	}
 	return Math.round(TEK_Measure(1));
 }
 
