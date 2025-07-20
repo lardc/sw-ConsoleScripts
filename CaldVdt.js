@@ -122,7 +122,7 @@ function CdVdt_Init(portdVdt, portTek, channelMeasure)
 	dev.Connect(portdVdt);
 	
 	// Init Tektronix
-	TEK_PortInit(portTek);
+	TEK_GD_Init(portTek)
 	
 	// Tektronix init
 	// Init channels
