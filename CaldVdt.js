@@ -986,3 +986,47 @@ function CdVdt_ClearDisplay()
 	TEK_Busy();
 }
 
+function CdVdt_ShiftRegisters(regDumpArray, from, to)
+{
+	const COUNT = 84;
+	const clearValues = [3000, 100];
+	var addr = 0; val = 0;
+
+	// Сброс регистров
+	if(from < to)
+		for (var i = 0; i < COUNT + (to - from); i++)
+		{
+			addr = from + i;
+
+			if(addr < to)
+				val = 0;
+			else
+				val = clearValues[i % clearValues.length];
+			
+			//p("dev.w(" + addr + "," + val + ")");
+			dev.w(addr, val);
+		}
+	else if (from > to)
+		for (var i = 0; i < COUNT + (from - to); i++)
+		{
+			addr = to + i;
+
+			if(addr < to + COUNT)
+				val = clearValues[i % clearValues.length];
+			else
+				val = 0;
+
+			//p("dev.w(" + addr + "," + val + ")");
+			dev.w(addr, val);
+		}
+	
+	// Запись новых регистров
+	for (var i = 0; i < COUNT; i++)
+		{
+			addr = to + i;
+			val = regDumpArray[(from + i) * 2 + 1];
+			
+			//p("dev.w(" + addr + "," + val + ")");
+			dev.w(addr, val);
+		}
+}
