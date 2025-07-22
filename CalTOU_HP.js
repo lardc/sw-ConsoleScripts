@@ -436,7 +436,7 @@ function CTOU_IdTekInit()
 	// Init trigger
 	TEK_TriggerInit(ctou_chMeasureI, "0.05");
 	// Horizontal settings
-	TEK_Horizontal("5e-6", "10e-6");
+	TEK_Horizontal("5e-6", "0e-6");
 	
 		// Display channels
 	for (var i = 1; i <= 4; i++)
@@ -460,7 +460,7 @@ function CTOU_UdTekInit()
 	// Init trigger
 	TEK_TriggerInit(ctou_chMeasureU, "300");
 	// Horizontal settings
-	TEK_Horizontal("25e-6", "75e-6");
+	TEK_Horizontal("25e-6", "150e-6");
 	
 		// Display channels
 	for (var i = 1; i <= 4; i++)
@@ -694,6 +694,7 @@ function CTOU_IdCollect(CurrentValues, IterationsCount)
 {
 	ctou_cntTotal = IterationsCount * CurrentValues.length;
 	ctou_cntDone = 1;
+	ctou_exp = (Math.exp(1) - Math.exp(0))
 
 	if (ctou_verify_i_bit)
 		id_bit_csv_array.push("Id set, A; Id meas, A; Id tek, A; di/dt 10/90; Bit NID180; Bit NID181; Bit NID182 & NID183; Bit summary");
@@ -720,7 +721,8 @@ function CTOU_IdCollect(CurrentValues, IterationsCount)
 			print("-- result " + ctou_cntDone++ + " of " + ctou_cntTotal + " --");
 			
 			TEK_ScaleVertical(ctou_chMeasureI, CurrentValues[j] * ctou_Ri, 80);
-			TEK_TriggerInit(ctou_chMeasureI, (CurrentValues[j] * ctou_Ri) / 1.5);
+			TEK_TriggerInit(ctou_chMeasureI, (CurrentValues[j] * ctou_Ri) * 0.63);
+			TEK_Horizontal((ctou_exp * CurrentValues[j] / (200 * 1e+6)) / 3, "0e-6");
 			sleep(1000);
 
 			var tou_print_copy = tou_print;
@@ -770,10 +772,10 @@ function CTOU_IdCollect(CurrentValues, IterationsCount)
 				// Scope data
 				var didt_sc = TOUHP_MeasureRiseTimeId(10, 63, ctou_chMeasureI, ctou_Ri);
 
-				var bit_tocu_hp_180 = CTOU_ReadRegisterNID(180, 129);
-				var bit_tocu_hp_181 = CTOU_ReadRegisterNID(181, 129);
-				var bit_tocu_hp_182 = CTOU_ReadRegisterNID(182, 129);
-				dev.nid(11);
+				var bit_tocu_hp_180 = TOMUHP_ReadReg(180, 129);
+				var bit_tocu_hp_181 = TOMUHP_ReadReg(181, 129);
+				var bit_tocu_hp_182 = TOMUHP_ReadReg(182, 129);
+				//dev.nid(11);
 
 				var bit_sum = bit_tocu_hp_180 + bit_tocu_hp_181 + bit_tocu_hp_182;
 				ctou_id_bit_sum.push(bit_sum);
@@ -812,7 +814,7 @@ function CTOU_UdCollect(VoltageValues, IterationsCount)
 			}
 
 			TEK_ScaleVertical(ctou_chMeasureU, VoltageValues[j], 80);
-			TEK_TriggerInit(ctou_chMeasureU, VoltageValues[j] / 2);
+			TEK_TriggerInit(ctou_chMeasureU, VoltageValues[j] * 0.85);
 			sleep(1500);
 
 			for (var m = 0; m < ctou_id_test_arr.length; m++)
