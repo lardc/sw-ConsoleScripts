@@ -286,3 +286,33 @@ function TOU_to24Bit()
 	print(" Tgd - 90% Ud | Tgt - 10% Ud ");
 	print(result);
 }
+
+function TOMUHP_ReadReg(NodeID, Reg)
+{
+	dev.w(180, NodeID);
+	dev.w(181, Reg);
+	dev.c(41);
+	
+	return dev.r(182);
+}
+
+function TOMUHP_NodeStatus(Node, BaseReg)
+{
+	print("Node = " + Node);
+	print("Registers [" + BaseReg + " - " + (BaseReg + 6) + "]");
+	print("Device state:	" + TOMUHP_ReadReg(Node, BaseReg));
+	print("Fault reason:	" + TOMUHP_ReadReg(Node, BaseReg + 1));
+	print("Disable reason:	" + TOMUHP_ReadReg(Node, BaseReg + 2));
+	print("Warning:	" + TOMUHP_ReadReg(Node, BaseReg + 3));
+	print("Problem:	" + TOMUHP_ReadReg(Node, BaseReg + 4));
+	print("Op result:	" + TOMUHP_ReadReg(Node, BaseReg + 6));
+	print("SubDevice state:" + TOMUHP_ReadReg(Node, BaseReg + 6));
+	print("_-_-_-_-");
+}
+
+function TOMUHP_CheckStatusTOCUHP(NumBlocks)
+{
+	for(var i = 0; i < NumBlocks; i++)
+		TOMUHP_NodeStatus((180 + i), 192);
+}
+
