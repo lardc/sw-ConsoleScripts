@@ -28,11 +28,11 @@ TOMUHP_GatePulse(2000, 2000);
 // [P0: 19] [P1: 18] [P2: 17]
 i("CalTOMU_HP.js");
 ctomu_ig_array = [2000, 3000, 4000, 5000];
-ctomu_Rshunt_gate = 2;
-ctomu_UseAvg = 0;
-ctomu_Iterations = 1;
-CTOMU_Init(3, 7, 1, 3);
-dev.nid(11);
+ctomu_Rshunt_gate = 1.997;
+ctomu_UseAvg = 1;
+ctomu_Iterations = 3;
+CTOMU_Init(14, 16, 2, 3);
+//dev.nid(11);
 
 CTOMU_VerifyIg();
 
@@ -43,12 +43,12 @@ CTOMU_CalibrateIg();
 // [P0: 24] [P1: 23] [P2: 22]
 i("CalTOMU_HP.js");
 ctomu_ig_array = [2000, 3000, 4000, 5000];
-ctomu_Rshunt_gate = 2;
+ctomu_Rshunt_gate = 1.997;
 ctomu_rise_time_ig = 1;
-ctomu_UseAvg = 0;
+ctomu_UseAvg = 1;
 ctomu_Iterations = 3;
-CTOMU_Init(3, 7, 1, 3);
-dev.nid(11);
+CTOMU_Init(14, 16, 2, 3);
+//dev.nid(11);
 
 CTOMU_VerifyRateIg();
 
