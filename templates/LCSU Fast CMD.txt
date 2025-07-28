@@ -1,0 +1,27 @@
+// Пояснения
+CAL_Init(portDevice, portTek, channelMeasureId) // не CAL_, а CLSLPS_!!!!!!!!!!
+LCSU_Start(Current)
+LSLPC_ResourceTest(Current, hours_resource_test)
+Nid = 150...
+
+// Посмотреть версию прошивки
+i("PrintStatus.js")
+PrintFWInfo()
+
+// Обновление прошивки
+i("STM_FWUpdate.js")
+FWU_LCSU()
+
+// Скачать дамп регистров
+i("STM_FWUpdate.js")
+FWU_DumpLCSU()
+
+// Загрузить дамп регистров
+i("STM_FWUpdate.js")
+FWU_RestoreLCSU()
+
+// Грубая калибровка ЦАП
+tmc.co()
+include("CalLCSU.js")
+CLCSU_VerifyId()
+
