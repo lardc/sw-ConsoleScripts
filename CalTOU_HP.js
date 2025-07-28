@@ -150,6 +150,8 @@ function CTOU_СalibrateIdset()
 
 function CTOU_СalibrateId()
 {
+	CTOMU_CommutationControl(ctou_ud_test);
+
 	// Collect data
 	CTOU_ResetA();
 	CTOU_ResetIdCal();
@@ -172,6 +174,7 @@ function CTOU_СalibrateId()
 		CTOU_CalId(ctou_id_corr[0], ctou_id_corr[1], ctou_id_corr[2]);
 		CTOU_PrintIdCal();
 	}
+	CTOMU_CommutationControl(0);
 }
 
 function CTOU_СalibrateTOCUHP_Ud()
@@ -286,9 +289,8 @@ function CTOU_CalibrateTgt()
 }
 
 function CTOU_VerifyId()
-{	
-	// dev.nid(ctou_nid);
- 	// CTOMU_CommutationControl(0);
+{
+	CTOMU_CommutationControl(ctou_ud_test);
 
 	// Collect data
 	CTOU_ResetA();
@@ -322,7 +324,7 @@ function CTOU_VerifyId()
 		scattern(ctou_id_bit_sum, ctou_id_sc, "Bit", "Id (in A)", "Id / Bit");
 	}
 
-	// CTOMU_CommutationControl(1);
+	CTOMU_CommutationControl(0);
 }
 
 function CTOU_VerifyUd()
@@ -350,6 +352,7 @@ function CTOU_VerifyUd()
 
 function CTOU_VerifyTime()
 {
+	CTOMU_CommutationControl(ctou_ud_test);
 	// Collect data
 	CTOU_ResetA();
 
@@ -371,8 +374,10 @@ function CTOU_VerifyTime()
 			// Plot relative and summary error distribution
 			scattern(ctou_tgd_sc, ctou_tgd_err, "Tgd (in ns)", "Error (in %)", "Tgd relative error, Vd = " +
 						ctou_ud_test + " V, Id = [" + ctou_idmin + ";" + ctou_idmax + "] A, REGUref = " + UrefTimeObject.UrefTgd);
+			sleep(200);
 			scattern(ctou_tgd_sc, ctou_tgd_err_sum, "Tgd (in ns)", "Error (in %)", "Tgd summary error, Vd = " + 
 						ctou_ud_test + " V, Id = [" + ctou_idmin + ";" + ctou_idmax + "] A, REGUref = " + UrefTimeObject.UrefTgd);
+			sleep(200);
 		}
 
 		if (ctou_tgt_plot)
@@ -380,10 +385,12 @@ function CTOU_VerifyTime()
 			// Plot relative and summary error distribution
 			scattern(ctou_tgt_sc, ctou_tgt_err, "Tgt (in ns)", "Error (in %)", "Tgt relative error, Vd = " + 
 						ctou_ud_test + " V, Id = [" + ctou_idmin + ";" + ctou_idmax + "] A, REGUref = " + UrefTimeObject.UrefTgt);
+			sleep(200);
 			scattern(ctou_tgt_sc, ctou_tgt_err_sum, "Tgt (in ns)", "Error (in %)", "Tgt summary error, Vd = " + 
 						ctou_ud_test + " V, Id = [" + ctou_idmin + ";" + ctou_idmax + "] A, REGUref = " + UrefTimeObject.UrefTgt);
 		}
 	}
+	CTOMU_CommutationControl(0);
 }
 
 function CTOU_VerifyCEP1()
@@ -436,7 +443,7 @@ function CTOU_IdTekInit()
 	// Init trigger
 	TEK_TriggerInit(ctou_chMeasureI, "0.05");
 	// Horizontal settings
-	TEK_Horizontal("5e-6", "10e-6");
+	TEK_Horizontal("5e-6", "0e-6");
 	
 		// Display channels
 	for (var i = 1; i <= 4; i++)
@@ -460,7 +467,7 @@ function CTOU_UdTekInit()
 	// Init trigger
 	TEK_TriggerInit(ctou_chMeasureU, "300");
 	// Horizontal settings
-	TEK_Horizontal("25e-6", "75e-6");
+	TEK_Horizontal("25e-6", "150e-6");
 	
 		// Display channels
 	for (var i = 1; i <= 4; i++)
@@ -483,7 +490,7 @@ function CTOU_TimeTekInit()
 	TEK_ChannelInit(ctou_chMeasureU, "100", "85");
 	TEK_ChannelInit(ctou_chSync, "1", "1");
 	// Init trigger
-	TEK_TriggerInit(ctou_chSync, "2");
+	TEK_TriggerInit(ctou_chSync, "4");
 	// Horizontal settings
 	TEK_Horizontal("2.5e-6", "7.5e-6");
 
@@ -694,6 +701,7 @@ function CTOU_IdCollect(CurrentValues, IterationsCount)
 {
 	ctou_cntTotal = IterationsCount * CurrentValues.length;
 	ctou_cntDone = 1;
+	ctou_exp = (Math.exp(1) - Math.exp(0))
 
 	if (ctou_verify_i_bit)
 		id_bit_csv_array.push("Id set, A; Id meas, A; Id tek, A; di/dt 10/90; Bit NID180; Bit NID181; Bit NID182 & NID183; Bit summary");
@@ -720,7 +728,8 @@ function CTOU_IdCollect(CurrentValues, IterationsCount)
 			print("-- result " + ctou_cntDone++ + " of " + ctou_cntTotal + " --");
 			
 			TEK_ScaleVertical(ctou_chMeasureI, CurrentValues[j] * ctou_Ri, 80);
-			TEK_TriggerInit(ctou_chMeasureI, (CurrentValues[j] * ctou_Ri) / 2);
+			TEK_TriggerInit(ctou_chMeasureI, (CurrentValues[j] * ctou_Ri) * 0.63);
+			TEK_Horizontal((ctou_exp * CurrentValues[j] / (200 * 1e+6)) / 3, "0e-6");
 			sleep(1000);
 
 			var tou_print_copy = tou_print;
@@ -770,10 +779,10 @@ function CTOU_IdCollect(CurrentValues, IterationsCount)
 				// Scope data
 				var didt_sc = TOUHP_MeasureRiseTimeId(10, 63, ctou_chMeasureI, ctou_Ri);
 
-				var bit_tocu_hp_180 = CTOU_ReadRegisterNID(180, 129);
-				var bit_tocu_hp_181 = CTOU_ReadRegisterNID(181, 129);
-				var bit_tocu_hp_182 = CTOU_ReadRegisterNID(182, 129);
-				dev.nid(11);
+				var bit_tocu_hp_180 = TOMUHP_ReadReg(180, 129);
+				var bit_tocu_hp_181 = TOMUHP_ReadReg(181, 129);
+				var bit_tocu_hp_182 = TOMUHP_ReadReg(182, 129);
+				//dev.nid(11);
 
 				var bit_sum = bit_tocu_hp_180 + bit_tocu_hp_181 + bit_tocu_hp_182;
 				ctou_id_bit_sum.push(bit_sum);
@@ -812,7 +821,7 @@ function CTOU_UdCollect(VoltageValues, IterationsCount)
 			}
 
 			TEK_ScaleVertical(ctou_chMeasureU, VoltageValues[j], 80);
-			TEK_TriggerInit(ctou_chMeasureU, VoltageValues[j] / 2);
+			TEK_TriggerInit(ctou_chMeasureU, VoltageValues[j] * 0.85);
 			sleep(1500);
 
 			for (var m = 0; m < ctou_id_test_arr.length; m++)
@@ -881,16 +890,19 @@ function CTOU_TimeCollect(CurrentValues, IterationsCount)
 
 	// Отключение проверки на КЗ
 	dev.w(132,1);
+	
 
 	for (var i = 0; i < IterationsCount; i++)
 	{
 		if(i == 0)
 		{
+			dev.w(80, 1)
 			// Настройка развертки по горизонтали
-			TEK_TriggerPulseExtendedInit(ctou_chSync, "2", "dc", "2.5e-6", "positive", "outside");
+			TEK_TriggerPulseExtendedInit(ctou_chSync, "4", "dc", "2.5e-6", "positive", "outside");
 			CTOU_TekHorizontal(ctou_ud_test, CurrentValues[0]);
 			sleep(1000);
 		}
+		dev.w(80, AvgNum)
 
 		for (var j = 0; j < CurrentValues.length; j++)
 		{
@@ -900,17 +912,17 @@ function CTOU_TimeCollect(CurrentValues, IterationsCount)
 			TEK_ScaleVertical(ctou_chMeasureI, ctou_ig_test * ctou_Rshunt_gate / 1000, 80);
 			TEK_ScaleVertical(ctou_chMeasureU, ctou_ud_test, 80);
 			TEK_MeasMaxInit(ctou_chMeasureI, 2);
+			TEK_ForceTrig();
+			CTOMU_ClearDisplay();
 			sleep(1000);
+
+			
 
 			var tou_print_copy = tou_print;
 			tou_print = 0;
-			for (var k = 0; k < AvgNum; k++)
-			{
-				TOUHP_Measure(ctou_ud_test, CurrentValues[j] * 10, ctou_ig_test, ctou_ig_test / ctou_rise_time_ig);
-				sleep(1000);
-				if(anykey())
-				break;
-			}
+				
+			TOUHP_Measure(ctou_ud_test, CurrentValues[j] * 10, ctou_ig_test, ctou_ig_test / ctou_rise_time_ig);
+			sleep(1000);
 			tou_print = tou_print_copy;
 
 			// Измерение времени по курсорам
@@ -971,6 +983,7 @@ function CTOU_TimeCollect(CurrentValues, IterationsCount)
 	}
 	
 	dev.w(132,0);
+	dev.w(80,1);
 
 	return 1;
 }
@@ -1074,12 +1087,10 @@ function CTOU_TekHorizontal(VoltageValues, CurrentValues)
 	
 	// Расчет и установка шкалы
 	var ctou_fall_time_ud = TEK_Measure(1);
-	if (ctou_fall_time_ud < 900e-9)
+	if (ctou_fall_time_ud < 1100e-9)
 		TEK_Horizontal(500e-9, -500e-9);
-	
-	else if (ctou_fall_time_ud > 1e-6)
+	else if (ctou_fall_time_ud > 1.4e-6)
 		TEK_Horizontal(2.5e-6, 8.8e-6);
-
 	else
 		TEK_Horizontal(1e-6, 2e-6);
 
@@ -1428,30 +1439,38 @@ function CTOU_CalTgt(P2, P1, P0)
 	}
 }
 
-function CTOU_ReadRegisterNID(NID, Register)
+function CTOU_CalUdApllySettings()
 {
-	dev.nid(NID);
-	return dev.r(Register);
+	dev.w(180, ctou_TOCUHP_nid);
+	dev.w(183, 200);
+	dev.c(40);
+
+	sleep(10);
 }
 
- function CTOU_CalUdApllySettings()
- {
- 	dev.w(180, ctou_TOCUHP_nid);
- 	dev.w(183, 200);
- 	dev.c(40);
- 
- 	sleep(10);
- }
- 
- function CTOMU_CommutationControl(Control)
- {
- 	if(Control)
- 	{
- 		dev.w(14, 0);
- 		dev.w(190, 0);
- 		dev.c(21);
- 		dev.c(22);
- 	}
- 	else
- 		dev.w(14, 1);
- }
+function CTOMU_CommutationControl(Control)
+{
+	if(Control)
+	{
+		dev.w(14, 1);
+		dev.w(190, Control);
+		dev.c(21);
+		dev.c(22);
+	}
+	else
+	{
+		dev.w(14, 0);
+		dev.w(190, 0);
+		dev.c(21);
+		dev.c(22);
+	}
+}
+
+function CTOMU_ClearDisplay()
+{
+	TEK_AcquireSample();
+	if(ctou_UseAvg == 1)
+		TEK_AcquireAvg(4);
+
+	TEK_Busy();
+}

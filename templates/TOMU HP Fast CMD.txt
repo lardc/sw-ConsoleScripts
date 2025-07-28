@@ -27,12 +27,12 @@ TOMUHP_GatePulse(2000, 2000);
 // (Offset: 16) (K: 15)
 // [P0: 19] [P1: 18] [P2: 17]
 i("CalTOMU_HP.js");
-ctou_ig_array = [2000, 3000, 4000, 5000];
-ctou_Rshunt_gate = 2;
-ctou_UseAvg = 0;
-ctou_Iterations = 3;
-CTOU_Init(3, 7, 1, 3);
-dev.nid(11);
+ctomu_ig_array = [2000, 3000, 4000, 5000];
+ctomu_Rshunt_gate = 1.997;
+ctomu_UseAvg = 1;
+ctomu_Iterations = 3;
+CTOMU_Init(14, 16, 2, 3);
+//dev.nid(11);
 
 CTOMU_VerifyIg();
 
@@ -42,13 +42,13 @@ CTOMU_CalibrateIg();
 // (Offset: 21) (K: 20)
 // [P0: 24] [P1: 23] [P2: 22]
 i("CalTOMU_HP.js");
-ctou_ig_array = [2000, 3000, 4000, 5000];
-ctou_Rshunt_gate = 2;
-ctou_rise_time_ig = 1;
-ctou_UseAvg = 0;
-ctou_Iterations = 3;
-CTOU_Init(3, 7, 1, 3);
-dev.nid(11);
+ctomu_ig_array = [2000, 3000, 4000, 5000];
+ctomu_Rshunt_gate = 1.997;
+ctomu_rise_time_ig = 1;
+ctomu_UseAvg = 1;
+ctomu_Iterations = 3;
+CTOMU_Init(14, 16, 2, 3);
+//dev.nid(11);
 
 CTOMU_VerifyRateIg();
 
@@ -58,11 +58,11 @@ CTOMU_CalibrateRateIg();
 // (Offset: 51) (K: 50)
 // [P0: 29] [P1: 28] [P2: 27]
 i("CalTOMU_HP.js");
-ctou_ig_array = [2000, 3000, 4000, 5000];
-ctou_Rshunt_gate = 1;
-ctou_UseAvg = 0;
-ctou_Iterations = 5;
-CTOU_Init(3, 7, 1, 3);
+ctomu_ig_array = [2000, 3000, 4000, 5000];
+ctomu_Rshunt_gate = 1;
+ctomu_UseAvg = 0;
+ctomu_Iterations = 5;
+CTOMU_Init(3, 7, 1, 3);
 dev.nid(11);
 
 CTOMU_VerifyTrig10Ig();

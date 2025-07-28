@@ -7,6 +7,7 @@ include("CalGeneral.js")
 ctomu_rise_time_ig = 1; 						// in us
 ctomu_ig_array = [2000, 3000, 4000, 5000];	// in mA
 ctomu_Rshunt_gate = 2; 	// Gate current shunt resistance, in Ohm
+ctomu_dVdt_Approx = 0;
 
 // Counters
 ctomu_cntTotal = 0;
@@ -35,14 +36,17 @@ ctomu_trig_10_ig_set = [];
 ctomu_ig_sc = [];
 ctomu_didt_sc = [];
 ctomu_trig_10_ig_sc = [];
+ctomu_front_time_sc = [];
 
 // Relative error
 ctomu_ig_set_err = [];
 ctomu_didt_set_err = [];
 ctomu_trig_10_ig_set_err = [];
+ctomu_front_time_set_err = [];
 
 // Summary error
 ctomu_ig_set_err_sum = [];
+ctomu_front_time_set_err_sum = [];
 
 // Correction
 ctomu_ig_set_corr = [];
@@ -76,7 +80,7 @@ function CTOMU_Init(portTOU, portTek, channelMeasureI, channelSync)
 	// Init trigger
 	TEK_TriggerInit(ctomu_chSync, "2");
 	// Horizontal settings
-	TEK_Horizontal("5e-6", "15e-6");
+	TEK_Horizontal("2.5e-6", "15e-6");
 
 	// Display channels
 	for (var i = 1; i <= 4; i++)
@@ -179,7 +183,11 @@ function CTOMU_VerifyRateIg()
 
 		// Plot relative error distribution
 		scattern(ctomu_didt_sc, ctomu_didt_set_err, "dI/dt (in A/us)", "Error (in %)", "dI/dt set relative error");
-	}	
+		scattern(ctomu_front_time_sc, ctomu_front_time_set_err, "Front time (in us)", "Error (in %)", "Front time relative error");
+		
+		// Plot summary error distribution
+		scattern(ctomu_front_time_sc, ctomu_front_time_set_err_sum, "Front time (in us)", "Error (in %)", "Front time summary error");
+	}
 }
 
 function CTOMU_VerifyTrig10Ig()
@@ -236,12 +244,12 @@ function CTOMU_IgCollect(CurrentValues, IterationsCount)
 			// Set data
 			var ig_set = CurrentValues[j];
 			ctomu_ig_set.push(ig_set);
-			print("Ig_Set, мA: " + ig_set);
+			print("Ig_Set, mA: " + ig_set);
 			
 			// Scope data
 			var ig_sc = (TEK_Measure(1) * 1000 / ctomu_Rshunt_gate).toFixed(2);
 			ctomu_ig_sc.push(ig_sc);
-			print("Ig_Tek, мA: " + ig_sc);
+			print("Ig_Tek, mA: " + ig_sc);
 
 			// Relative error
 			var ig_set_err = ((ig_sc - ig_set) / ig_set * 100).toFixed(2);
@@ -305,20 +313,39 @@ function CTOMU_RateIgCollect(CurrentValues, IterationsCount)
 			// Set data
 			var dIdt_set = CurrentValues[j] / ctomu_rise_time_ig;
 			ctomu_didt_set.push(dIdt_set);
-			print("Ig_set, мA: " + CurrentValues[j]);
-			print("dI/dt_Set, мA/us: " + dIdt_set);
+			print("Ig_set, mA: " + CurrentValues[j]);
+			print("dI/dt_Set, mA/us: " + dIdt_set);
 			
 			// Scope data
 			var rise_time = TEK_Measure(2) * 1e6;
 			var rise_current = TEK_Measure(1) * 0.8 * 1000 / ctomu_Rshunt_gate;
-			var didt_sc = (rise_current / rise_time).toFixed(2);
+
+			if(ctomu_dVdt_Approx)
+				var didt_sc = (TEK_CALC_dVdt(TEK_GetChannelData(ctomu_chMeasureI),10,90) * 1000 / ctomu_Rshunt_gate).toFixed(1)
+			else
+				var didt_sc = (rise_current / rise_time).toFixed(2);
+
 			ctomu_didt_sc.push(didt_sc);
-			print("dI/dt_Tek, мA/us: " + didt_sc);
+			print("dI/dt_Tek, mA/us: " + didt_sc);
 
 			// Relative error
 			var didt_set_err = ((didt_sc - dIdt_set) / dIdt_set * 100).toFixed(2);
 			ctomu_didt_set_err.push(didt_set_err);
 			print("dI/dt_Set_Err, %: " + didt_set_err);
+
+			var front_time_sc = (rise_time * 1.25).toFixed(3);
+			ctomu_front_time_sc.push(front_time_sc);
+			print("Front time_Tek, us: " + front_time_sc);
+
+			var front_time_set_err = ((front_time_sc - ctomu_rise_time_ig) / ctomu_rise_time_ig * 100).toFixed(2);
+			ctomu_front_time_set_err.push(front_time_set_err);
+			print("Front time_Err, %: " + front_time_set_err);
+
+			// Summary error
+			var E0_ig = 1.1 * Math.sqrt(Math.pow(EUosc, 2) + Math.pow(ERg, 2));
+			var front_time_set_err_sum = (Math.sign_ma(front_time_set_err) * (Math.abs(front_time_set_err) + E0_ig)).toFixed(2);
+			ctomu_front_time_set_err_sum.push(front_time_set_err_sum);
+			print("Front time_Sum_Err, %: " + front_time_set_err_sum);
 
 			print("--------------------");
 			
@@ -371,12 +398,12 @@ function CTOMU_Trig10IgCollect(CurrentValues, IterationsCount)
 			// Set data
 			var trig_10_ig_set = CurrentValues[j] * 0.1;
 			ctomu_trig_10_ig_set.push(trig_10_ig_set);
-			print("Trig_10%_Ig, мA: " + trig_10_ig_set);
+			print("Trig_10%_Ig, mA: " + trig_10_ig_set);
 						
 			// Scope data
 			var trig_10_ig_sc = (TEK_MeasureCursor(1) * 1000 / ctomu_Rshunt_gate).toFixed(2);
 			ctomu_trig_10_ig_sc.push(trig_10_ig_sc);
-			print("Trig_10%_Ig_Tek, мA: " + trig_10_ig_sc);
+			print("Trig_10%_Ig_Tek, mA: " + trig_10_ig_sc);
 
 			// Relative error
 			var trig_10_ig_set_err = ((trig_10_ig_sc - trig_10_ig_set) / trig_10_ig_set * 100).toFixed(2);
@@ -398,24 +425,27 @@ function CTOMU_ResetA()
 	ctomu_ig_set = [];
 	ctomu_didt_set = [];
 	ctomu_trig_10_ig_set = [];
-
+	
 	// Tektronix data
 	ctomu_ig_sc = [];
 	ctomu_didt_sc = [];
 	ctomu_trig_10_ig_sc = [];
-
+	ctomu_front_time_sc = [];
+	
 	// Relative error
 	ctomu_ig_set_err = [];
 	ctomu_didt_set_err = [];
 	ctomu_trig_10_ig_set_err = [];
-
+	ctomu_front_time_set_err = [];
+	
+	// Summary error
+	ctomu_ig_set_err_sum = [];
+	ctomu_front_time_set_err_sum = [];
+	
 	// Correction
 	ctomu_ig_set_corr = [];
 	ctomu_didt_set_corr = [];
 	ctomu_trig_10_ig_set_corr = [];
-
-	// Summary error
-	ctomu_ig_set_err_sum = [];
 }
 
 function CTOMU_SaveIg(NameIgset)

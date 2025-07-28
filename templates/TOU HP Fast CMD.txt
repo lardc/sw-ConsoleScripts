@@ -48,7 +48,7 @@ include("CalTOU_HP.js");
 ctou_idmax = 1000;
 ctou_idmin = 30;
 ctou_id_points = 8;
-ctou_ud_test = 1000;
+ctou_ud_test = 600;
 ctou_ig_test = 2000; 
 ctou_rise_time_ig = 1;
 ctou_Rshunt_gate = 1;
@@ -69,19 +69,19 @@ CTOU_CalibrateTgd();
 // 1000 V: [P0: 75] [P1: 74] [P2: 73]
 // 1500 V: [P0: 78] [P1: 77] [P2: 76]
 include("CalTOU_HP.js");
-ctou_idmax = 1000;
+ctou_idmax = 2000;
 ctou_idmin = 125;
-ctou_id_points = 5;
-ctou_ud_test = 1000;
+ctou_id_points = 8;
+ctou_ud_test = 600;
 ctou_ig_test = 2000; 
 ctou_rise_time_ig = 1;
 ctou_Rshunt_gate = 1;
 ctou_tgd_plot = 1;
 ctou_tgt_plot = 1;
-ctou_UseAvg = 0;
+ctou_UseAvg = 1;
 ctou_Iterations = 1;
-CTOU_Init(3, 7, 1, 2, 3);
-dev.nid(11);
+CTOU_Init(14, 16, 2, 1, 3);
+//dev.nid(11);
 
 CTOU_VerifyTime();
 
@@ -137,8 +137,8 @@ ctou_id_test_arr = [125, 1000, 2500];
 ctou_TOCUHP_nid = 180;
 ctou_UseAvg = 0;
 ctou_Iterations = 1;
-CTOU_Init(3, 7, 1, 2, 3);
-dev.nid(11);
+CTOU_Init(14, 16, 2, 1, 3);
+//dev.nid(11);
 
 CTOU_VerifyUd();
 
@@ -167,14 +167,14 @@ include("CalTOU_HP.js");
 ctou_verify_i_bit = 1;
 ctou_ud_test = 600;
 ctou_idmin = 125;
-ctou_idmax = 2500;
+ctou_idmax = 2000;
 ctou_r_0_bit = 480;
-ctou_k_idstp = 25; // множитель минимального шага Id
-ctou_Ri = 0.001;
+ctou_k_idstp = 100; // множитель минимального шага Id
+ctou_Ri = 0.002492;
 ctou_UseAvg = 0;
 ctou_Iterations = 1;
-CTOU_Init(3, 7, 1, 2, 3);
-dev.nid(11);
+CTOU_Init(14, 16, 2, 1, 3);
+//dev.nid(11);
 
 CTOU_VerifyId();
 
@@ -189,11 +189,11 @@ ctou_ud_test = 1500;
 ctou_idmin = 125;
 ctou_idmax = 2500;
 ctou_id_points = 10;
-ctou_Ri = 0.001;
+ctou_Ri = 0.002492;
 ctou_UseAvg = 0;
-ctou_Iterations = 3;
-CTOU_Init(3, 7, 1, 2, 3);
-dev.nid(11);
+ctou_Iterations = 1;
+CTOU_Init(14, 16, 2, 1, 3);
+//dev.nid(11);
 
 CTOU_VerifyId();
 
@@ -207,11 +207,11 @@ ctou_ud_test = 1000;
 ctou_idmin = 125;
 ctou_idmax = 2500;
 ctou_id_points = 10;
-ctou_Ri = 0.001;
+ctou_Ri = 0.002492;
 ctou_UseAvg = 0;
-ctou_Iterations = 3;
-CTOU_Init(3, 7, 1, 2, 3);
-dev.nid(11);
+ctou_Iterations = 1;
+CTOU_Init(14, 16, 2, 1, 3);
+//dev.nid(11);
 
 CTOU_VerifyId();
 
