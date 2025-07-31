@@ -23,5 +23,5 @@ FWU_RestoreLCSU()
 // Грубая калибровка ЦАП
 tmc.co()
 include("CalLCSU.js")
-CLCSU_VerifyId()
+CLCSU_VerifyId6500()
 

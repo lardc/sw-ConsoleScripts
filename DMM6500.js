@@ -1,5 +1,6 @@
 CoefEmaFilter = 0.07
 KEI_SampleRate = 1000000;
+RShunt = 0.00025; // Сопротивление токоизмерительного шунта (Ом)
 
 function KEI_Reset()
 {
@@ -198,7 +199,9 @@ function KEI_Current()
 {
 	MultimeterMax = tmc.q(':TRACe:STAT:MAXimum? "TestBuffer"');
 	tmc.w(':TRACe:DELete "TestBuffer"');
+	tmc.w('TRIGger:CONTinuous AUTO');
+	tmc.w(':INITiate');
 	sleep(500);
-	Current = MultimeterMax * 4000;
+	Current = MultimeterMax / RShunt;
 	return Current;
 }

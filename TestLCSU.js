@@ -61,7 +61,10 @@ function LCSU_Start(Type,Current)
 	//		return false;
 	//	}
 	//}
-	print("Ток, А   " + dev.rf(200));
+	print("IdUnit, A: " + dev.rf(200));
+	Id_DACArray = dev.raff(6)
+	p("DAC " + Math.max.apply(null, Id_DACArray))
+
 	return true;
 }
 
