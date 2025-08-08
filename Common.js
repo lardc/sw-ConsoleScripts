@@ -36,3 +36,23 @@ function rlf(Address)
 		p("Register limits are not supported")
 	}
 }
+
+function fucntionsList(substr)
+{
+	var functions = Object.getOwnPropertyNames(this).filter(function(name) {
+		return typeof this[name] === 'function';
+	})
+
+	if (substr)
+		functions = functions.filter(function(name) {
+			return name.indexOf(substr) !== -1;
+		});
+
+	for (var f in functions)
+		print(functions[f]);
+}
+
+function fl(substr)
+{
+	fucntionsList(substr);
+}
