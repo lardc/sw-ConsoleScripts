@@ -704,7 +704,7 @@ function CTOU_IdCollect(CurrentValues, IterationsCount)
 	ctou_exp = (Math.exp(1) - Math.exp(0))
 
 	if (ctou_verify_i_bit)
-		id_bit_csv_array.push("Id set, A; Id meas, A; Id tek, A; di/dt 10/90; Bit NID180; Bit NID181; Bit NID182 & NID183; Bit summary");
+		id_bit_csv_array.push("Id set, A; Id meas, A; Id tek, A; di/dt 10/63; Bit NID180; Bit NID181; Bit NID182 & NID183; Bit summary");
 	
 	// Отключение проверки на КЗ
 	dev.w(132,1);
