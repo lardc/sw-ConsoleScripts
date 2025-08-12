@@ -9,6 +9,20 @@ qrr_print = 1;
 print_plot = 0;
 CALIBRATION_PROCESS = 1;
 
+// Параметры для ресурсного теста
+CurrentMin = 320; 			// в А
+CurrentMax = 1250; 			// в А
+// 
+CurrentRateN = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+CurrentRate = [0.167, 0.25, 0.334, 0.834, 1.667, 2.5, 3.334, 5, 8.334, 10, 16.667];
+//
+VoltageMin = 402;			// в В
+VoltageMax = 2000;			// в В
+//
+VoltageRare = [20, 50, 100, 200];
+// 
+TqMin = 3;					// в мкс
+TqMax = 1000;				// в мкс
 
 function QRR_Cal_Reg(En)
 {
@@ -105,38 +119,64 @@ function QRR_Start(Mode, IDC, IDCFallRate, OSV, OSVRate)
 	}
 }
 
-function QRR_Resource()
+// Рандомное значение из диапазона
+function QRR_GetRandom(min, max) 
 {
-	CurrentRateN = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-	CurrentRate = [0.167, 0.25, 0.334, 0.834, 1.667, 2.5, 3.334, 5, 8.334, 10, 16.667];
-	
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1) + min); 
+}
+
+// Рандомное значение из диапазона с дискретностью 10
+function QRR_GetRandomTen(min, max) 
+{
+  min = Math.ceil(min) / 10;
+  max = Math.floor(max) / 10;
+  return Math.floor(Math.random() * (max - min + 1) + min) * 10; 
+}
+
+// Рандомное значение из массива
+function QRR_GetRandomАrray(Data)
+{
+	return Data[Math.floor(Math.random() * Data.length)]
+}
+
+function QRR_Resource(Mode)
+{
 	var qrr_resource_test = 8;
-	var i, k = 0;
+	var i, k = 1;
 	var today = new Date();								// Узнаем и сохраняем текущее время
 	var hours = today.getHours() + qrr_resource_test;	// Узнаем кол-во часов в текущем времени и прибавляем к нему продолжительность ресурсного теста
 	today.setHours(hours);								// Задаем новое количество часов в дату
 
 	while((new Date()).getTime() < today.getTime() || (!anykey()))		// Сравниваем текущее время на компьютере в мс, с конечным временем в мс
 	{
-		for (var i = 0; i < CurrentRateN.length; i++)
-		{
-			sleep(2000);
-			if (dev.r(201) == 1) break;
-			QRR_Start(0, 3200, CurrentRateN[i], 100, 10);
-			sleep(3000);
-			var left_time = new Date((today.getTime()) - ((new Date()).getTime()));
-			print("#" + k + "скорость" + (CurrentRate[i] * 6).toFixed(1) + " Осталось " + (left_time.getHours()-3) + " ч " + left_time.getMinutes() + " мин");
-			k++;
-			if (dev.r(201) == 1) break;
-			// if (anykey()) break;
-		}
+		SetCurrent = QRR_GetRandomTen(CurrentMin, CurrentMax);
+		SetCurrentRate = QRR_GetRandomАrray(CurrentRateN);
+		SetVoltage = QRR_GetRandom(VoltageMin, VoltageMax);
+		SetVoltageRare = QRR_GetRandomАrray(VoltageRare);
+		SetTq = QRR_GetRandom(TqMin, TqMax);
+		dev.w(135,SetTq);
+		while(dev.r(192) != 4 && !anykey()){sleep(100)};
+		QRR_Start(Mode, SetCurrent, SetCurrentRate, SetVoltage, SetVoltageRare);
+		while(dev.r(198) == 0 && !anykey()){sleep(100)};
 
-		
-		if(dev.r(201) == 1) {
-			p("QRR FAULT");
+		print("-------------------------")
+		var left_time = new Date((today.getTime()) - ((new Date()).getTime()));
+		print("Номер " + k + " измерения, Осталось " + (left_time.getHours()-3) + " ч " + left_time.getMinutes() + " мин");
+		k++;
+		print("Id: " + SetCurrent + ", А");
+		print("dI/dt: " + SetCurrentRate + ", А/мкс");
+		print("Ud: " + SetVoltage + ", В");
+		print("dU/dt: " + SetVoltageRare + ", В/мкс");
+		print("Tq: " + SetTq + ", мкс");
+
+		if(dev.r(193) == 1) 
+		{
+			print("QRR FAULT");
 			break;
 		}
-		// if (anykey()) break;
+		if (anykey()) break;
 	}	
 }	
 
