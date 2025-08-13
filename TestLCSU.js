@@ -1,4 +1,5 @@
 include("PrintStatus.js")
+include("DMM6500.js")
 
 DS_None = 0,
 DS_Fault = 1,
@@ -99,4 +100,16 @@ function LCSU_SyncTest(Current,sync_time)
 	}
 
 	return true;
+}
+
+function LCSU_Cycle(Current,Quantity)
+{
+	for (var i = 0; i < Quantity; i++)
+	{
+		KEI_Scope(100,15);
+		sleep(100);
+		LCSU_Start(0,Current);
+		sleep(7000);
+		if (anykey()) return 0;
+	}
 }

@@ -8,22 +8,22 @@ PulseType = 0; // 0 - синус, 1 - модифицированный сину�
 // Calibration setup parameters
 
 // Обозначение диапазонов калибровки
-clcsu_CurrentRange = 0; // 0 = диапазон [ <= 350 A]; 1 = диапазон [ < 1100 A]; 2 = диапазон [ < 6500 A]
-var LCSU_Range = new Array(2); // массив номеров регистров К и B для разных диапазонов
+clcsu_CurrentRange = 2; // 0 = диапазон [ <= 350 A]; 1 = диапазон [ < 1100 A]; 2 = диапазон [ < 6500 A]
+var LCSU_Range = new Array(3); // массив номеров регистров К и B для разных диапазонов (0,1), задержек между формированиями импульсов для разных диапазонов (2), кол-ва задействованных плат (3)
 CLCSU_Range(clcsu_CurrentRange); 
-var CLCSU_K_start = 2.2;
-var CLCSU_B_start = 1000;
-dev.wf(LCSU_Range[0], CLCSU_K_start);
-dev.wf(LCSU_Range[1], CLCSU_B_start);
+var CLCSU_K_start = dev.rf(LCSU_Range[0]);
+var CLCSU_B_start = dev.rf(LCSU_Range[1]);
+//dev.wf(LCSU_Range[0], CLCSU_K_start);
+//dev.wf(LCSU_Range[1], CLCSU_B_start);
 
 //
-clcsu_Points = 5; // кол-во точек калибровки (токов) внутри диапазона калибровки
+clcsu_Points = 4; // кол-во точек калибровки (токов) внутри диапазона калибровки
 //
-clcsu_IdMin = [160, 351, 1100]; 
-clcsu_IdMax = [349, 1099, 6500]; 
+clcsu_IdMin = [160, 351, 1101]; 
+clcsu_IdMax = [350, 1100, 6500]; 
 clcsu_IdStp = (clcsu_IdMax[clcsu_CurrentRange] - clcsu_IdMin[clcsu_CurrentRange]) / clcsu_Points;
 //
-clcsu_Iterations = 1; // количество итераций накопления статистики
+clcsu_Iterations = 6; // количество итераций накопления статистики
 clcsu_SaveImage = 0;
 
 function CLCSU_VerifyId6500()
@@ -32,7 +32,8 @@ function CLCSU_VerifyId6500()
 	// Reload values
 	var CurrentArray = CGEN_GetRangeLogarithm(clcsu_IdMin[clcsu_CurrentRange], clcsu_IdMax[clcsu_CurrentRange], clcsu_Points);
 
-	if (CLCSU_CollectId6500(CurrentArray, clcsu_Iterations))
+	CLCSU_CollectId6500(CurrentArray, clcsu_Iterations, PulseType);
+/*	if (CLCSU_CollectId6500(CurrentArray, clcsu_Iterations))
 	{
 		CLSLPC_SaveId("LCSU_Id_fixed");
 
@@ -41,7 +42,7 @@ function CLCSU_VerifyId6500()
 				+ clcsu_IdMin[clslpc_CurrentRange] + " A ... " + clcsu_IdMax[clslpc_CurrentRange] + " A");
 		scattern(clcsu_IdSc, clcsu_IdUnitErr, "Current (in A)", "Error (in %)", "Current unit relative error "
 				+ clcsu_IdMin[clcsu_CurrentRange] + " A ... " + clcsu_IdMax[clslpc_CurrentRange] + " A");
-	}
+	}*/
 }
 
 function CLCSU_CollectId6500(CurrentArray, clcsu_Iterations, PulseType)
@@ -55,6 +56,7 @@ function CLCSU_CollectId6500(CurrentArray, clcsu_Iterations, PulseType)
 	var DACValues = new Array(clcsu_CntTotal); // массив значений ЦАП
 	var deltaCurrents = new Array(clcsu_CntTotal); // массив отклонений измеренных LCSU CtrlBrd значений от измеренных 6500
 	var CurrentArray_repeat = new Array(clcsu_CntTotal); // массив задаваемых токов, повторяемый clcsu_Iterations раз, используется для вывода графика погрешности
+
 	var sum_Current_square = 0, sum_Current  = 0, sum_DAC = 0, sum_Common = 0; // коэффициенты для расчета аппроксимационной прямой
 	var index = 0; 
 	var CurrentCheckCorrect = false; // переменная для цикла проверки корректности полученного от 6500 значения тока
@@ -62,14 +64,16 @@ function CLCSU_CollectId6500(CurrentArray, clcsu_Iterations, PulseType)
 
 	for (var i = 0; i < clcsu_Iterations; i++)
 	{
+		print("First cycle");
 		for (var j = 0; j < CurrentArray.length; j++)
 		{
+			print("Second cycle");
 			while(CurrentCheckCorrect === false)
 			{
 				KEI_Wait();
-				sleep(1500);
+				sleep(500);
 				LCSU_Start(PulseType, CurrentArray[j]);
-				sleep(200);
+				sleep(LCSU_Range[2]);
 
 				CurrentTemp = KEI_Current();
 				if (CurrentTemp > 5)
@@ -78,9 +82,12 @@ function CLCSU_CollectId6500(CurrentArray, clcsu_Iterations, PulseType)
 				}
 				else
 				{
+					print("IdSc, A: " + CurrentTemp);
 					print("Incorrect measurement. Repeat...");
 					print("--------------------");
+								if (anykey()) return 0;
 				}
+				if (anykey()) return 0;
 			}
 
 				CurrentCheckCorrect = false;
@@ -90,31 +97,36 @@ function CLCSU_CollectId6500(CurrentArray, clcsu_Iterations, PulseType)
 				var IdUnit = dev.rf(200); // Ток измеренный LCSU CtrlBrd
 				var IdSc = CurrentTemp; // Ток измеренный DMM6500, он же realCurrent в старом скрипте
 				var IdSet = dev.rf(128); // Задаваемый ток, он же Current_actual в старом скрипте
-				var IdErr = ((IdUnit - IdSc) / IdSc * 100).toFixed(2); // погрешность заданного тока относительно измеренного dmm6500
+				var IdErr = ((IdSet - IdSc) / IdSc * 100); // погрешность заданного тока относительно измеренного dmm6500
 				//clcsu_Id.push(IdSet);
 				//clcsu_IdSc.push(IdSc);
 				//clcsu_IdErr.push(IdErr);
 				sum_Current_square += (IdSc * IdSc);
 				sum_Current += IdSc;
 				sum_DAC += IdDAC;
-				sum_Common += IdSc*IdDAC;
-				index = (i * CurrentValues.length) + j;
+				sum_Common += IdSc * IdDAC;
+				index = (i * (clcsu_Iterations)) + j;
+				//print("Index: " + index + "; i: " + i + "; j: " + j);
 
 				CurrentValues[index] = IdSc;
 				DACValues[index] = IdDAC;
-				deltaCurrents[index] = IdErr;
-				CurrentArray_repeat[index] = CurrentArray[j];
+				deltaCurrents[index] = +IdErr;
+				CurrentArray_repeat[index] = +CurrentArray[j].toFixed(2);
 
 				//print("DAC: " + IdDAC);
-				//print("IdSet, A: " + IdSet);
+				print("IdSet, A: " + IdSet);
 				print("IdSc, A: " + IdSc);
-				print("IdUnit, A: " + IdUnit);
+				//print("IdUnit, A: " + IdUnit);
 				print("IdErrSet, %: " + IdErr);
 				print("--------------------");
 		}
 	}
-	scattern(CurrentArray_repeat, deltaCurrents, "IdSet, A", "IdErrSet, %", "Deviation");
+	scattern(CurrentArray_repeat, deltaCurrents, "IdSet, A", "IdErrSet, %", "Set deviation");
 	CLCSU_CalibrateDAC(sum_Current_square, sum_Current, sum_DAC, sum_Common, clcsu_CntTotal, clcsu_CntTotal);
+	/*for (var i = 0; i < clcsu_CntTotal; i++)
+	{
+		print("Current: " + CurrentArray_repeat[i] + "; delta: " + deltaCurrents[i]	);
+	}*/
 }
 
 function CLCSU_CalibrateDAC(sum_Current_square, sum_Current, sum_DAC, sum_Common, clcsu_CntTotal, clcsu_CntTotal)
@@ -123,8 +135,8 @@ function CLCSU_CalibrateDAC(sum_Current_square, sum_Current, sum_DAC, sum_Common
 	var coeff_b1 = sum_Current_square * (-(clcsu_CntTotal)) / sum_Current;
 	var coeff_b2 = coeff_b1 + sum_Current;
 	var coeff_n2 = sum_Common - coeff_n1;
-	var CLCSU_B = coeff_n2 / coeff_b2;
-	var CLCSU_K = (sum_DAC - (clcsu_CntTotal * CLCSU_B)) / sum_Current;
+	var CLCSU_B = (coeff_n2 / coeff_b2);
+	var CLCSU_K = LCSU_Range[3] * ((sum_DAC - (clcsu_CntTotal * CLCSU_B)) / sum_Current);
 	p("Coeff K: " + CLCSU_K);
 	p("Coeff B: " + CLCSU_B);
 	sum_Current_square = 0, sum_Current  = 0, sum_DAC = 0, sum_Common = 0;
@@ -132,16 +144,16 @@ function CLCSU_CalibrateDAC(sum_Current_square, sum_Current, sum_DAC, sum_Common
 	if (CLCSU_K < 0.01 || CLCSU_K > 250 || CLCSU_B<500 || CLCSU_B>2000)
 		{
 			p("Wrong values! Write previous coefficients.");
-			dev.wf(LCSU_Range[0], CLCSU_K_start);
-			dev.wf(LCSU_Range[1], CLCSU_B_start);	
+			//dev.wf(LCSU_Range[0], CLCSU_K_start);
+			//dev.wf(LCSU_Range[1], CLCSU_B_start);	
 		}
 		else 
 		{
 			p("Good values! Remember about saving data in ROM by dev.c(200) directive.");
 			CLCSU_K_start = CLCSU_K;
 			CLCSU_B_start = CLCSU_B;
-			dev.wf(LCSU_Range[0], CLCSU_K);
-			dev.wf(LCSU_Range[1], CLCSU_B);	
+			//dev.wf(LCSU_Range[0], CLCSU_K);
+			//dev.wf(LCSU_Range[1], CLCSU_B);	
 		}
 }
 
@@ -153,65 +165,130 @@ function CLCSU_Range(clcsu_CurrentRange) // Функция для определ
 			{
 				LCSU_Range[0] = 23; // номера регистров
 				LCSU_Range[1] = 24;
+				LCSU_Range[2] = 500; // задержка в мс
+				LCSU_Range[3] = 1; // кол-во задействованных плат
 				break;
 			}
 		case 1:
 			{
 				LCSU_Range[0] = 28;
 				LCSU_Range[1] = 29;
+				LCSU_Range[2] = 2000; // задержка в мс
+				LCSU_Range[3] = 6; // кол-во задействованных плат
 				break;
 			}
 		case 2:
 			{
 				LCSU_Range[0] = 67;
 				LCSU_Range[1] = 68;
+				LCSU_Range[2] = 15000; // задержка в мс
+				LCSU_Range[3] = 6; // кол-во задействованных плат
 				break;
 			}
 		default:
-			{
+		{
 				p("Incorrect value. 0 = 70...350 A, 1 = 350...1100 A, 2 = 1100...6500 A. Please rewrite number of range in clcsu_CurrentRange var.");
+				break;
+		}
+	}
+}
+
+function CLCSU_Regulator(Range, OnOff) // диапазон 0,1,2; вкл (1), выкл (0)
+{
+	switch(OnOff)
+	{
+		case 0:
+		{
+			CLCSU_RegulatorSave(Range);
+			dev.wf(53,1);
+			p("Regulator off. Range: " +Range);
+			break;
+		}
+		case 1:
+		{
+			CLCSU_RegulatorCall(Range);
+			dev.wf(53,0);
+			p("Regulator on. Range: " +Range);
+			break;
+		}
+		default:
+		{
+			p("Incorrect value");
+			break;
+		}
+	}
+}
+
+var RegulatorProp = 0;
+var RegulatorIntegral = 0;
+
+function CLCSU_RegulatorSave(Range)
+{
+	switch(Range)
+	{
+		case 0:
+			{
+				RegulatorProp = dev.rf(44);
+				RegulatorIntegral = dev.rf(45);
+				dev.wf(44,0);
+				dev.wf(45,0);
+				break;
+			}
+		case 1:
+			{
+				RegulatorProp = dev.rf(46);
+				RegulatorIntegral = dev.rf(47);
+				dev.wf(45,0);
+				dev.wf(46,0);
+				break;
+			}
+		case 2:
+			{
+				RegulatorProp = dev.rf(70);
+				RegulatorIntegral = dev.rf(71);
+				dev.wf(70,0);
+				dev.wf(71,0);
+				break;
+			}
+			default:
+			{
+				p("Incorrect value");
 				break;
 			}
 	}
 }
+function CLCSU_RegulatorCall(Range)
+{
+	switch(Range)
+	{
+		case 0:
+			{
+				dev.wf(44,RegulatorProp);
+				dev.wf(45,RegulatorIntegral);
+				break;
+			}
+		case 1:
+			{
+				dev.wf(46,RegulatorProp);
+				dev.wf(47,RegulatorIntegral);
+				break;
+			}
+		case 2:
+			{
+				dev.wf(70,RegulatorProp);
+				dev.wf(71,RegulatorIntegral);
+				break;
+			}
+			default:
+			{
+				p("Incorrect value");
+				break;
+			}
+	}
+}
+
+
 ///--- Функции для осциллографа Tektronix и иных прочих ---///
-
-// Calibration setup parameters
-cal_Points = 13;
-
-cal_Rshunt = 999;	// uOhm
-
-cal_CurrentRange = 1;
-
-cal_IdMin = [50, 301];	
-cal_IdMax = [300, 1700];
-cal_IdStp = (cal_IdMax[cal_CurrentRange] - cal_IdMin[cal_CurrentRange]) / cal_Points;
-
-cal_Iterations = 1;
-cal_UseAvg = 1;
-//		
-
-// Counters
-cal_CntTotal = 0;
-cal_CntDone = 0;
-
-// Channels
-cal_chMeasureId = 1;
-cal_chSync = 3;
-
-// Results storage
-cal_Id = [];
-cal_IdMes = [];
-// Tektronix data
-cal_IdSc = [];
-
-// Relative error
-cal_IdErr = [];
-cal_IdErrMes = [];
-//
-
-// Correction
-cal_IdCorr = [];
 
 function CAL_Init(portDevice, portTek, channelMeasureId)
 {
@@ -322,7 +399,7 @@ function CAL_CollectId(CurrentValues, IterationsCount)
 	if (cal_UseAvg)
 	{
 		AvgNum = 4;
-		TEK_AcquireAvg(AvgNum);
+		TEK_AcquireAvg(AvgNum);p
 	}
 	else
 	{
