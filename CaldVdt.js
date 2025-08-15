@@ -21,6 +21,7 @@ DS_InProcess = 4;
 cdvdt_def_SetpointCount = 7;
 cdvdt_def_VGateMin = 1800;
 cdvdt_def_VGateMax = 5000;
+cdvdt_def_RateMin = 100; // V/us
 
 cdvdt_iterations = 1;
 
@@ -46,7 +47,7 @@ cdvdt_def_SetpointStartAddr[cdvdt_def_RANGE_MID]  = 410;
 cdvdt_def_SetpointStartAddr[cdvdt_def_RANGE_HIGH] = 40;
 cdvdt_def_SetpointStartAddr[cdvdt_def_NO_RANGE] = 30;
 //
-cdvdt_CalVoltage = 900;
+cdvdt_VbatSet = [900];
 cdvdt_SelectedRange = cdvdt_def_RANGE_LOW;
 cdvdt_HVProbeScale = 1000					// Коэффициент деления щупа
 cdvdt_DeviderRate = 10; 					// Делитель скорости. Установить равным 1 если плата без диапазонов 
@@ -78,6 +79,7 @@ cdvdt_AVERAGES_16 = 16;
 cdvdt_def_UseAverage = cdvdt_NO_AVERAGES;
 
 cdvdt_gate = [];
+cdvdt_vbat_arr = [];
 
 // { rate_set: { voltage: [], rate: [], rate_err: [] } }
 cdvdt_CollectedData = {};
@@ -104,7 +106,7 @@ EProbe = 2;
 
 E0dvdt = 0;
 E0V = 0;
-ETosc = 0;
+ETosc = 0.5;
 
 function CdVdt_Init(portdVdt, portTek, channelMeasure)
 {
@@ -152,8 +154,8 @@ function CdVdt_TekCursor(Channel)
 {
 	TEK_Send("cursor:select:source ch" + Channel);
 	TEK_Send("cursor:function vbars");
-	TEK_Send("cursor:vbars:position1 100e-6");
-	TEK_Send("cursor:vbars:position2 -100e-6");
+	TEK_Send("cursor:vbars:position1 -100e-6");
+	TEK_Send("cursor:vbars:position2 100e-6");
 }
 
 function CdVdt_SetTekCursor(Channel, Cursor1, Cursor2)
@@ -255,8 +257,9 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 		cdvdt_u_hpos1 = parseFloat(TEK_Exec("cursor:vbars:hpos1?"));
 		cdvdt_u_hpos1.toFixed(1);
 		cdvdt_u_hpos2 = parseFloat(TEK_Exec("cursor:vbars:hpos2?"));
-		cdvdt_u_hpos2.toFixed(1);		
-		if (anykey()) return 0;
+		cdvdt_u_hpos2.toFixed(1);
+
+		if (anykey()){ print("Stopped from user!"); return};
 	} while(cdvdt_u_hpos1 > 10e+6 || cdvdt_u_hpos2 > 10e+6)
 
 	while((cdvdt_u_hpos2 > cdvdt_u90_err_high || cdvdt_u_hpos2 < cdvdt_u90_err_low) ||
@@ -274,7 +277,7 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 		cdvdt_u_hpos2 = parseFloat(TEK_Exec("cursor:vbars:hpos2?"));
 		cdvdt_u_hpos2.toFixed(1);
 
-		if (anykey()) return 0;
+		if (anykey()){ print("Stopped from user!"); return};
 
 		cdvdt_u_err = cdvdt_u_hpos1 - cdvdt_u10;
 		if(cdvdt_u_err > 0)
@@ -288,7 +291,7 @@ function CdVdt_MeasureAutoCursor(Voltage, Rate, LowLevel, HighLevel)
 		cdvdt_u_hpos1 = parseFloat(TEK_Exec("cursor:vbars:hpos1?"));
 		cdvdt_u_hpos1.toFixed(1);
 
-		if (anykey()) return 0;
+		if (anykey()){ print("Stopped from user!"); return};
 	}
 
 	var U1 = TEK_Exec("cursor:vbars:hpos1?");
@@ -321,6 +324,10 @@ function CdVdt_TekHScale(Channel, Voltage, Rate)
 
 function CdVdt_CellCalibrateRateA(CellArray)
 {
+	csv_array = [];
+	csv_array.push("CellNumber; Ubat, V; Ugate, mV; dUdt, V/us; RangeRate; " + new Date());
+	append("data/CdVdt_Cell.csv", csv_array);
+
 	// Power disable all cells
 	p("Disabling all flyback.");
 	dev.c(2);
@@ -335,6 +342,8 @@ function CdVdt_CellCalibrateRateA(CellArray)
 	
 	for (var i = 0; i < CellArray.length; i++)
 	{
+		cdvdt_def_VGateMin = dev.r(cdvdt_def_SetpointStartAddr[cdvdt_SelectedRange] + i * cdvdt_def_SetpointCount * 2);
+		p("Old Vgt, mV: " + cdvdt_def_VGateMin);
 		CdVdt_ResetA();
 		print("CELL       : " + CellArray[i] + " #RangeRate = " + cdvdt_SelectedRange);
 		if (CdVdt_CellCalibrateRate(CellArray[i]) == 1) 
@@ -347,122 +356,187 @@ function CdVdt_CellCalibrateRateA(CellArray)
 function CdVdt_CellCalibrateRate(CellNumber)
 {
 	var GateSetpointV = CGEN_GetRange(cdvdt_def_VGateMin, cdvdt_def_VGateMax, (cdvdt_def_VGateMax - cdvdt_def_VGateMin) / (cdvdt_def_SetpointCount - 1));
-	
+
 	// Power enable cell
 	dVdt_CellCall(CellNumber, 1);
-	
-	// Configure amplitude
-	if(cdvdt_SelectedRange != cdvdt_def_NO_RANGE)
-		dVdt_SelectRange(CellNumber, cdvdt_SelectedRange);
-	dVdt_CellSetV(CellNumber, cdvdt_CalVoltage);
 
-	CdVdt_TekVScale(cdvdt_chMeasure, cdvdt_CalVoltage);
-	TEK_TriggerInit(cdvdt_chMeasure, cdvdt_CalVoltage / 2);
-	
 	// Base DataTable address
 	var BaseDTAddress = cdvdt_def_SetpointStartAddr[cdvdt_SelectedRange] + (CellNumber - 1) * cdvdt_def_SetpointCount * 2;
 	
-	for (var i = 0; i < GateSetpointV.length; i++)
+	for(var k = 0; k < cdvdt_VbatSet.length; k++)
 	{
-		// Force triggering
-		CdVdt_ClearDisplay();
+		// Configure amplitude
+		if(cdvdt_SelectedRange != cdvdt_def_NO_RANGE)
+			dVdt_SelectRange(CellNumber, cdvdt_SelectedRange);
+		dVdt_CellSetV(CellNumber, cdvdt_VbatSet[k]);
+	
+		CdVdt_TekVScale(cdvdt_chMeasure, cdvdt_VbatSet[k]);
+		TEK_TriggerInit(cdvdt_chMeasure, cdvdt_VbatSet[k] / 2);
 
-		// Coarse horizontal setting
-		if (i == 0)
-		{ 
-			TEK_Horizontal("50e-6", "0");
-			TEK_Busy();
-		}
-		
-		while (dVdt_CellReadReg(CellNumber, 14) == 0) sleep(100);
-
-		dVdt_CellSetGate(CellNumber, GateSetpointV[i]);
-
-		// Start pulse
-		dev.c(114);
-		while(_dVdt_Active()) sleep(50);
-		sleep(1500);
-		// Fine horizontal setting
-		CdVdt_TekHScale(cdvdt_chMeasure, cdvdt_CalVoltage, CdVdt_MeasureRate() * 2);
-		//TEK_TriggerInit(cdvdt_chMeasure, cdvdt_CalVoltage / 2);
-		TEK_Busy();
-		CdVdt_ClearDisplay();
-		
-		// Start pulse
-		for(var CounterAverages = 0; CounterAverages < cdvdt_def_UseAverage; CounterAverages++)
+		for (var i = 0; i < GateSetpointV.length; i++)
 		{
-			for (var count_p = 0; count_p < 3; count_p++)
-			{
-				dev.c(114);
-				sleep(500);
-				while(_dVdt_Active()) sleep(100);
-				while(dVdt_CellReadReg(CellNumber, 14) == 0) sleep(100);
+			// Force triggering
+			CdVdt_ClearDisplay();
+			csv_array = [];
+	
+			// Coarse horizontal setting
+			if (i == 0)
+			{ 
+				TEK_Horizontal("25e-6", "0");
+				TEK_Busy();
 			}
+			
+			while (dVdt_CellReadReg(CellNumber, 14) == 0)
+			{
+				if (anykey()){ print("Stopped from user!"); return};
+				sleep(100);
+			}
+	
+			dVdt_CellSetGate(CellNumber, GateSetpointV[i]);
+	
+			// Start pulse
+			dev.c(114);
+			while(_dVdt_Active())
+			{
+				if (anykey()){ print("Stopped from user!"); return};
+				sleep(100);
+			}
+
+			sleep(1500);
+			// Fine horizontal setting
+			CdVdt_TekHScale(cdvdt_chMeasure, cdvdt_VbatSet[k], CdVdt_MeasureRate() * 2);
+			TEK_Busy();
+			CdVdt_ClearDisplay();
+	
+			if (i === 0 && cdvdt_VbatSet.length === 1)
+			{
+				while(CdVdt_MeasureRate() < cdvdt_def_RateMin * 0.91 || CdVdt_MeasureRate() > cdvdt_def_RateMin * 0.93)
+				{
+					if(CdVdt_MeasureRate() - cdvdt_def_RateMin * 0.92 > 0)
+						GateSetpointV[i] = GateSetpointV[i] - 1;
+					else
+						GateSetpointV[i] = GateSetpointV[i] + 1;
+			
+					pinline('\rVgt,         mV: ' + GateSetpointV[i])
+					pinline('\rdVdtFast, V/us: ' + CdVdt_MeasureRate())
+					dVdt_CellSetGate(CellNumber, GateSetpointV[i]);
+					dev.c(114); // Start pulse
+					sleep(500);
+					while(_dVdt_Active())
+					{
+						if (anykey()){ print("Stopped from user!"); return};
+						sleep(100);
+					}
+					while(dVdt_CellReadReg(CellNumber, 14) == 0) sleep(100);
+					{
+						if (anykey()){ print("Stopped from user!"); return};
+						sleep(100);
+					}
+
+					if (anykey()){ print("Stopped from user!"); return};
+				}
+				pinline('\rdVdtFast, V/us: ' + CdVdt_MeasureRate())
+				print('                        ');
+			}
+	
+			for(var CounterAverages = 0; CounterAverages < cdvdt_def_UseAverage; CounterAverages++)
+			{
+				for (var count_p = 0; count_p < 3; count_p++)
+				{
+					dev.c(114); // Start pulse
+					sleep(500);
+					while(_dVdt_Active())
+					{
+						if (anykey()){ print("Stopped from user!"); return};
+						sleep(100);
+					}
+					while(dVdt_CellReadReg(CellNumber, 14) == 0) sleep(100);
+					{
+						if (anykey()){ print("Stopped from user!"); return};
+						sleep(100);
+					}
+				}
+			}
+	
+			TEK_Busy();
+			sleep(600);
+			var v = CdVdt_MeasureVfast();
+			TEK_Busy();
+	
+			switch(cdvdt_MeasureMethod)
+			{
+				case dVdt_HandCursors:
+					print("Enter delta voltage value (in V):");
+					var dV	=	readline();
+					print("Enter delta time value (in us):");
+					var dt	=	readline();
+					var rate = (dV / dt).toFixed(2);
+					CdVdt_TekMeasurement(cdvdt_chMeasure);
+					sleep(1000);
+					break;
+	
+				case dVdt_RiseTime:
+					var rate = CdVdt_MeasureRate();
+					break;
+	
+				case dVdt_Approx:
+					var rate = TEK_CALC_dVdt(TEK_GetChannelData(cdvdt_chMeasure),20,80).toFixed(1);
+					break;
+	
+				case dVdt_AutoCursor:
+					var rate = CdVdt_MeasureRate();
+					CdVdt_SwitchToCursor();
+					rate = CdVdt_MeasureAutoCursor(v, rate, 10, 90).toFixed(1);
+					CdVdt_TekMeasurement(cdvdt_chMeasure);
+					break;
+			}
+	
+			TEK_Busy();
+			if (rate == 0 || rate == Infinity || rate > 3000)
+			{
+				print("Cell " + CellNumber + ". No pulse at gate voltage " + GateSetpointV[i] + "mV.");
+				return 1;
+			}
+			
+			cdvdt_gate.push(GateSetpointV[i]);
+			cdvdt_rate_sc.push(rate);
+			cdvdt_vbat_arr.push(cdvdt_VbatSet[k]);
+	
+			print("Vgt,     mV: " + GateSetpointV[i]);
+			print("dV/dt, V/us: " + rate);
+			print("Vmax,     V: " + v);
+			print("-- result " + (i + 1) + " of " + GateSetpointV.length + " --");
+			
+			// Write to DataTable
+			dev.w(BaseDTAddress + i * 2, GateSetpointV[i]);
+			dev.w(BaseDTAddress + i * 2 + 1, rate * cdvdt_DeviderRate);
+
+			csv_array.push(CellNumber + ";" + cdvdt_VbatSet[k] + ";" + GateSetpointV[i] + ";"
+				+ rate + ";" + cdvdt_SelectedRange);
+			append("data/CdVdt_Cell.csv", csv_array);
+			
+			if (anykey()) return 1;
 		}
-
-		TEK_Busy();
-		sleep(600);
-		var v = CdVdt_MeasureVfast();
-		TEK_Busy();
-
-		switch(cdvdt_MeasureMethod)
-		{
-			case dVdt_HandCursors:
-				print("Enter delta voltage value (in V):");
-				var dV	=	readline();
-				print("Enter delta time value (in us):");
-				var dt	=	readline();
-				var rate = (dV / dt).toFixed(2);
-				CdVdt_TekMeasurement(cdvdt_chMeasure);
-				sleep(1000);
-				break;
-
-			case dVdt_RiseTime:
-				var rate = CdVdt_MeasureRate();
-				break;
-
-			case dVdt_Approx:
-				var rate = TEK_CALC_dVdt(TEK_GetChannelData(cdvdt_chMeasure),10,90).toFixed(1);
-				break;
-
-			case dVdt_AutoCursor:
-				var rate = CdVdt_MeasureRate();
-				CdVdt_SwitchToCursor();
-				rate = CdVdt_MeasureAutoCursor(v, rate, 10, 90).toFixed(1);
-				CdVdt_TekMeasurement(cdvdt_chMeasure);
-				break;
-		}
-
-		TEK_Busy();
-		if (rate == 0 || rate == Infinity || rate > 3000)
-		{
-			print("Cell " + CellNumber + ". No pulse at gate voltage " + GateSetpointV[i] + "mV.");
-			return 1;
-		}
-		
-		cdvdt_gate.push(GateSetpointV[i]);
-		cdvdt_rate_sc.push(rate);
-
-		print("Vgt,     mV: " + GateSetpointV[i]);
-		print("dV/dt, V/us: " + rate);
-		print("Vmax,     V: " + v);
-		print("-- result " + (i + 1) + " of " + GateSetpointV.length + " --");
-		
-		// Write to DataTable
-		dev.w(BaseDTAddress + i * 2, GateSetpointV[i]);
-		dev.w(BaseDTAddress + i * 2 + 1, rate * cdvdt_DeviderRate);
-		
-		if (anykey()) return 1;
 	}
+
 	scattern(cdvdt_gate, cdvdt_rate_sc, "Gate voltage (in mV)", "Rate voltage (in V/us)", "Cell #" +
-			CellNumber + " range: " + cdvdt_SelectedRange + "; Vd = " + cdvdt_CalVoltage + " V; " +
+			CellNumber + " range: " + cdvdt_SelectedRange + "; " +
 			cdvdt_rate_sc[0] + ".." + cdvdt_rate_sc[cdvdt_rate_sc.length - 1] +" V/us");
 
 	CdVdt_NonlinearityCell(cdvdt_gate, cdvdt_rate_sc, CellNumber, cdvdt_SelectedRange);
 
 	// Power disable cell
-	sleep(3000);
 	dVdt_CellCall(CellNumber, 2);
+
+	while (dVdt_CellReadReg(CellNumber, 15) > 10)
+	{
+		pinline('\rUbatN' + CellNumber + ' = ' + dVdt_CellReadReg(CellNumber, 15))
+		if (anykey()){ print("Stopped from user!"); return};
+		sleep(100);
+	}
+	pinline('\rUbatN' + CellNumber + ' = ' + dVdt_CellReadReg(CellNumber, 15) + '  ')
+	p('\r');
+
 	return 0;
 }
 
@@ -502,8 +576,8 @@ function CdVdt_CalibrateRate()
 		scattern(cdvdt_rate_sc, cdvdt_rate_err, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt relative error " + cdvdt_RatePoint.join(", ") + " V/us");
 		scattern(cdvdt_v_sc, cdvdt_rate_err, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt relative error " + cdvdt_RatePoint.join(", ") + " V/us");
 
-		scattern(cdvdt_rate_sc, cdvdt_rate_err_sum, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
-		scattern(cdvdt_v_sc, cdvdt_rate_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
+		//scattern(cdvdt_rate_sc, cdvdt_rate_err_sum, "Voltage / Time (in V/us)", "Error relative Rate (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
+		//scattern(cdvdt_v_sc, cdvdt_rate_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "dVdt summary error " + cdvdt_RatePoint.join(", ") + " V/us");
 	}
 
 	CdVdt_PrintRateCal();
@@ -552,7 +626,7 @@ function CdVdt_CalibrateV()
 		CdVdt_CalV(cdvdt_v_corr[2], cdvdt_v_corr[1], cdvdt_v_corr[0]);
 
 		scattern(cdvdt_v_sc, cdvdt_v_err, "Voltage (in V)", "Error relative Voltage (in %)", "Ud relative error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
-		scattern(cdvdt_v_sc, cdvdt_v_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "Ud summary error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
+		//scattern(cdvdt_v_sc, cdvdt_v_err_sum, "Voltage (in V)", "Error relative Voltage (in %)", "Ud summary error " + cdvdt_Vmin + "..." + cdvdt_Vmax + " V");
 	}
 
 	CdVdt_PrintVCal();
@@ -663,11 +737,14 @@ function CdVdt_CollectFixedRate(Repeat)
 				dev.c(1);
 
 			while(_dVdt_Active())
+			{
+				if (anykey()){ print("Stopped from user!"); return};
 				sleep(100);
+			}
 		}	
 	}
 	
-	var VoltageArray = CGEN_GetRange(cdvdt_Vmin, cdvdt_Vmax, (cdvdt_Vmax - cdvdt_Vmin) / (cdvdt_Points - 1));
+	var VoltageArray = CGEN_GetRangeLogarithm(cdvdt_Vmin, cdvdt_Vmax, cdvdt_Points);
 	dvdt_array_offset = VoltageArray.length;
 	
 	var cntDone = 0;
@@ -708,8 +785,13 @@ function CdVdt_CollectFixedRate(Repeat)
 					{
 						if(cdvdt_QSUAction)
 						{
-							while (dev.r(192) == 5){sleep(100)};
-								dev.c(102);
+							while (dev.r(192) == 5)
+							{
+								if (anykey()){ print("Stopped from user!"); return};
+								sleep(100)
+							}
+
+							dev.c(102);
 						}
 						else
 						{	
@@ -762,7 +844,17 @@ function CdVdt_CollectFixedRate(Repeat)
 							}
 						}
 					}	
-					while(TEK_Exec("TRIGger:STATE?") == "REA") sleep(50);
+					
+					var REA = 0
+					while(TEK_Exec("TRIGger:STATE?") == "REA")
+					{
+						if (anykey()){ print("Stopped from user!"); return};
+						sleep(100);
+						print("REA = " + REA);
+
+						if(REA++ >= 3)
+							break;
+					}
 				}
 				TEK_Busy();
 				sleep(500);
@@ -786,7 +878,7 @@ function CdVdt_CollectFixedRate(Repeat)
 						break;
 
 					case dVdt_Approx:
-						var rate = TEK_CALC_dVdt(TEK_GetChannelData(cdvdt_chMeasure),10,90).toFixed(1);
+						var rate = TEK_CALC_dVdt(TEK_GetChannelData(cdvdt_chMeasure),20,80).toFixed(1);
 						break;
 
 					case dVdt_AutoCursor:
@@ -807,9 +899,7 @@ function CdVdt_CollectFixedRate(Repeat)
 				V_err = Math.abs(V_err) < 0.1 ? parseFloat(0).toFixed(1) : V_err.toFixed(1);
 
 				if(cdvdt_MeasureMethod == dVdt_AutoCursor)
-					var ETosc = rateObject.TimeErr;
-				else
-					var ETosc = 0;
+					ETosc = rateObject.TimeErr;
 
 				cdvdt_rate_set.push(cdvdt_RatePoint[i]);
 				cdvdt_v_set.push(VoltageArray[k]);
@@ -895,11 +985,15 @@ function CdVdt_StabCheck(CellNumber, Voltage, Gate)
 	TEK_Horizontal("1.0e-6", "0");
 	
 	// Wait for power ready
-	while (dVdt_CellReadReg(CellNumber, 14) == 0) sleep(100);
+	while (dVdt_CellReadReg(CellNumber, 14) == 0)
+	{
+		if (anykey()){ print("Stopped from user!"); return};
+		sleep(100);
+	}
+
 	sleep(1000);
 	TEK_ForceTrig();
 	
-	// Set gate cdvdt_CalVoltage
 	dVdt_CellSetGate(CellNumber, Gate);
 	sleep(500);
 	
@@ -908,7 +1002,10 @@ function CdVdt_StabCheck(CellNumber, Voltage, Gate)
 		// Start pulse
 		dev.c(114);
 		while(_dVdt_Active()) sleep(50);
-		sleep(500);
+		{
+			if (anykey()){ print("Stopped from user!"); return};
+			sleep(100);
+		}
 		
 		if (anykey())
 		{
@@ -940,6 +1037,7 @@ function CdVdt_PrintSetpoints(CellNumber)
 function CdVdt_ResetA()
 {
 	cdvdt_gate = [];
+	cdvdt_vbat_arr = [];
 
 	// Tektronix data
 	cdvdt_rate_sc = [];
@@ -997,7 +1095,8 @@ function CdVdt_ClearDisplay()
 
 function CdVdt_ShiftRegisters(regDumpArray, from, to)
 {
-	const COUNT = 84;
+	const NumberOfCells = 5;
+	const COUNT = (cdvdt_def_SetpointCount * 2) * NumberOfCells;
 	const clearValues = [3000, 100];
 	var addr = 0; val = 0;
 
@@ -1012,7 +1111,7 @@ function CdVdt_ShiftRegisters(regDumpArray, from, to)
 			else
 				val = clearValues[i % clearValues.length];
 			
-			//p("dev.w(" + addr + "," + val + ")");
+			p("dev.w(" + addr + "," + val + ")");
 			dev.w(addr, val);
 		}
 	else if (from > to)
@@ -1025,7 +1124,7 @@ function CdVdt_ShiftRegisters(regDumpArray, from, to)
 			else
 				val = 0;
 
-			//p("dev.w(" + addr + "," + val + ")");
+			p("dev.w(" + addr + "," + val + ")");
 			dev.w(addr, val);
 		}
 	
@@ -1033,9 +1132,12 @@ function CdVdt_ShiftRegisters(regDumpArray, from, to)
 	for (var i = 0; i < COUNT; i++)
 		{
 			addr = to + i;
-			val = regDumpArray[(from + i) * 2 + 1];
-			
-			//p("dev.w(" + addr + "," + val + ")");
+			if(i % 2 === 0)
+				val = regDumpArray[(from + i) * 2 + 1];
+			else
+				val = regDumpArray[(from + i) * 2 + 1] * cdvdt_DeviderRate;
+
+			p("dev.w(" + addr + "," + val + ")");
 			dev.w(addr, val);
 		}
 }

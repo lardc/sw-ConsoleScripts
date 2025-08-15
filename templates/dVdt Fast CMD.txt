@@ -19,6 +19,7 @@ PrintFWInfo();
 dev.co(7); //  номер COM-порта блока pp()
 dev.nid(7);
 i("FWUpdate.js");
+PrintFWInfo()
 FWU_CROVU();
 
 // Скачать дамп регистров
@@ -87,6 +88,12 @@ dvdt_DeviderRate = 1;
 dvdt_RatePoint = [500, 1000, 1600, 2000, 2500];
 dVdt_IdleShortTestDetector()
 
+// Переместить сместить серию регистров с одного места, в другое
+include(“CaldVdt.js”)
+cdvdt_DeviderRate = 10 // для того чтобы из старой ппрошивки подстройки ячеек перенсти в регистры нового
+per = load("D:\\reserve hardware\\sw-ConsoleScripts\\regdump\\CROVU_020.regdump")
+CdVdt_ShiftRegisters(per, 30, 40)
+
 /// ПРЕДКАЛИБРОВКА ЯЧЕЕК С 3-МЯ АППАРТАНЫМИ ДИАПАЗОНАМИ
 // Предкалибровка диапазаона LOW всех ячеек
 include(“CaldVdt.js”);
@@ -95,7 +102,6 @@ cdvdt_def_VGateMax = 5000;
 cdvdt_CalVoltage = 900;
 cdvdt_DeviderRate = 10;						// Делитель скорости. Установить равным 1 если плата без диапазонов
 cdvdt_HVProbeScale = 1000;
-cdvdt_def_SetpointCount = 7;
 cdvdt_MeasureMethod = dVdt_AutoCursor;		// dVdt_HandCursors, dVdt_RiseTime, dVdt_Approx, dVdt_AutoCursor
 cdvdt_SelectedRange = cdvdt_def_RANGE_LOW;	// cdvdt_def_RANGE_LOW, cdvdt_def_RANGE_MID, cdvdt_def_RANGE_HIGH
 cdvdt_def_UseAverage = cdvdt_NO_AVERAGES;	// cdvdt_NO_AVERAGES, cdvdt_AVERAGES_4
@@ -110,7 +116,6 @@ cdvdt_def_VGateMax = 5000;
 cdvdt_CalVoltage = 900;
 cdvdt_DeviderRate = 10;						// Делитель скорости. Установить равным 1 если плата без диапазонов
 cdvdt_HVProbeScale = 1000;
-cdvdt_def_SetpointCount = 7;
 cdvdt_MeasureMethod = dVdt_AutoCursor;		// dVdt_HandCursors, dVdt_RiseTime, dVdt_Approx, dVdt_AutoCursor
 cdvdt_SelectedRange = cdvdt_def_RANGE_MID;	// cdvdt_def_RANGE_LOW, cdvdt_def_RANGE_MID, cdvdt_def_RANGE_HIGH
 cdvdt_def_UseAverage = cdvdt_NO_AVERAGES;	// cdvdt_NO_AVERAGES, cdvdt_AVERAGES_4
@@ -125,7 +130,6 @@ cdvdt_def_VGateMax = 5000;
 cdvdt_CalVoltage = 900;
 cdvdt_DeviderRate = 10;						// Делитель скорости. Установить равным 1 если плата без диапазонов
 cdvdt_HVProbeScale = 1000;
-cdvdt_def_SetpointCount = 7;
 cdvdt_MeasureMethod = dVdt_AutoCursor;		// dVdt_HandCursors, dVdt_RiseTime, dVdt_Approx, dVdt_AutoCursor
 cdvdt_SelectedRange = cdvdt_def_RANGE_HIGH;	// cdvdt_def_RANGE_LOW, cdvdt_def_RANGE_MID, cdvdt_def_RANGE_HIGH
 cdvdt_def_UseAverage = cdvdt_NO_AVERAGES;	// cdvdt_NO_AVERAGES, cdvdt_AVERAGES_4
@@ -133,23 +137,36 @@ CdVdt_Init(1, 5, 1);
 // dev.nid(7);
 CdVdt_CellCalibrateRateA([1,2,3,4,5]);
 
-// Предкалибровка ячеек без диапазонов
+// ПРЕДКАЛИБРОВКА ЯЧЕЕК БЕЗ ДИАПАЗОНОВ
 include(“CaldVdt.js”);
 cdvdt_def_VGateMin = 3000;
 cdvdt_def_VGateMax = 5000;
 cdvdt_CalVoltage = 900;
 cdvdt_DeviderRate = 1;						// Делитель скорости. Установить равным 1 если плата без диапазонов
 cdvdt_HVProbeScale = 1000;
-cdvdt_def_SetpointCount = 7;
 cdvdt_MeasureMethod = dVdt_Approx;		// dVdt_HandCursors, dVdt_RiseTime, dVdt_Approx, dVdt_AutoCursor
 cdvdt_SelectedRange = cdvdt_def_NO_RANGE;
 cdvdt_def_UseAverage = cdvdt_NO_AVERAGES;	// cdvdt_NO_AVERAGES, cdvdt_AVERAGES_4
-CdVdt_Init(1, 5, 1);
+CdVdt_Init(12, 13, 1);
 // dev.nid(7);
 CdVdt_CellCalibrateRateA([1,2,3,4,5]);
 
 
 /// АВТОМАТИЧЕСКАЯ КАЛИБРОВКА БЛОКА
+// ПРЕДКАЛИБРОВКА ЯЧЕЕК с одним диапазоном в High регистрах
+include(“CaldVdt.js”);
+cdvdt_def_VGateMax = 5000;
+cdvdt_def_RateMin = 100; // V/us
+cdvdt_VbatSet = [800];
+cdvdt_DeviderRate = 10;
+cdvdt_HVProbeScale = 1000;
+cdvdt_MeasureMethod = dVdt_Approx;		// dVdt_HandCursors, dVdt_RiseTime, dVdt_Approx, dVdt_AutoCursor
+cdvdt_SelectedRange = cdvdt_def_RANGE_HIGH;
+cdvdt_def_UseAverage = cdvdt_NO_AVERAGES;	// cdvdt_NO_AVERAGES, cdvdt_AVERAGES_4
+CdVdt_Init(12, 13, 1);
+// dev.nid(7);
+CdVdt_CellCalibrateRateA([1,2,3,4,5]);
+
 // Калибровка скорости для универсальной прошивки
 dev.co(11)
 dev.nid(1)
@@ -157,19 +174,20 @@ dev.c(1)
 dev.c(115)
 include(“CaldVdt.js”);
 cdvdt_HVProbeScale = 1000;
-cdvdt_RatePoint = [200, 320, 500, 1000, 1600, 2000, 2500];
+cdvdt_RatePoint = [500, 1000, 1600, 2000, 2500];
 cdvdt_Vmin = 500;
-cdvdt_Vmax = 4400;
+cdvdt_Vmax = 4500;
 cdvdt_Points = 10;
-cdvdt_MeasureMethod = dVdt_AutoCursor; // dVdt_AutoCursor, dVdt_Approx
+cdvdt_iterations = 1;
+cdvdt_MeasureMethod = dVdt_Approx; // dVdt_AutoCursor, dVdt_Approx
 cdvdt_def_UseSaveImage = false;
 cdvdt_def_UseAverage = cdvdt_NO_AVERAGES
-CdVdt_Init(1, 2, 1);
+CdVdt_Init(12, 13, 1);
 // dev.nid(7)
 
-CdVdt_CalibrateRate()
-
 CdVdt_VerifyRate()
+
+CdVdt_CalibrateRate()
 
 // Калибровка напряжения для универсальной прошивки
 dev.co(11)
@@ -178,14 +196,15 @@ dev.c(1)
 dev.c(115)
 include(“CaldVdt.js”);
 cdvdt_HVProbeScale = 1000;
-cdvdt_RatePoint = [200, 320, 500, 1000, 1600, 2000, 2500];
-cdvdt_Vmin = 500;
-cdvdt_Vmax = 4400;
+cdvdt_RatePoint = [500, 1000, 1600, 2000, 2500];
+cdvdt_Vmin = 1000;
+cdvdt_Vmax = 3500;
 cdvdt_Points = 10;
-cdvdt_MeasureMethod = dVdt_AutoCursor; // dVdt_AutoCursor, dVdt_Approx
+cdvdt_iterations = 1;
+cdvdt_MeasureMethod = dVdt_Approx; // dVdt_AutoCursor, dVdt_Approx
 cdvdt_def_UseSaveImage = false;
 cdvdt_def_UseAverage = cdvdt_NO_AVERAGES
-CdVdt_Init(1, 2, 1);
+CdVdt_Init(12, 13, 1);
 // dev.nid(7)
 
 CdVdt_CalibrateV()

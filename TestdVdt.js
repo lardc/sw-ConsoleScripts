@@ -258,9 +258,9 @@ function dVdt_StartPulse(Voltage, Rate)
 	dev.w(129, Rate * dvdt_DeviderRate);
 	dev.c(100);
 	while(_dVdt_Active()) sleep(50);
-	if (dev.r(197) == 2)
+	if (dev.r(198) == 2)
 		print("Test Failed");
-	else if (dev.r(197) == 1)
+	else if (dev.r(198) == 1)
 		print("Test OK");
 }
 
