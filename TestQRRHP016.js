@@ -11,13 +11,13 @@ CALIBRATION_PROCESS = 1;
 
 // Параметры для ресурсного теста
 CurrentMin = 320; 			// в А
-CurrentMax = 1250; 			// в А
+CurrentMax = 3200; 			// в А
 // 
 CurrentRateN = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-CurrentRate = [0.167, 0.25, 0.334, 0.834, 1.667, 2.5, 3.334, 5, 8.334, 10, 16.667];
+CurrentRateB = [0.167, 0.25, 0.334, 0.834, 1.667, 2.5, 3.334, 5, 8.334, 10, 16.667];
 //
 VoltageMin = 402;			// в В
-VoltageMax = 2000;			// в В
+VoltageMax = 3000;		// в В
 //
 VoltageRare = [20, 50, 100, 200];
 // 
@@ -152,7 +152,7 @@ function QRR_Resource(Mode)
 	while((new Date()).getTime() < today.getTime() || (!anykey()))		// Сравниваем текущее время на компьютере в мс, с конечным временем в мс
 	{
 		SetCurrent = QRR_GetRandomTen(CurrentMin, CurrentMax);
-		SetCurrentRate = QRR_GetRandomАrray(CurrentRateN);
+		SetCurrentRateB = QRR_GetRandomАrray(CurrentRateN);
 		SetVoltage = QRR_GetRandom(VoltageMin, VoltageMax);
 		SetVoltageRare = QRR_GetRandomАrray(VoltageRare);
 		SetTq = QRR_GetRandom(TqMin, TqMax);
@@ -166,7 +166,7 @@ function QRR_Resource(Mode)
 		print("Номер " + k + " измерения, Осталось " + (left_time.getHours()-3) + " ч " + left_time.getMinutes() + " мин");
 		k++;
 		print("Id: " + SetCurrent + ", А");
-		print("dI/dt: " + SetCurrentRate + ", А/мкс");
+		print("dI/dt: " + SetCurrentRateB + ", А/мкс");
 		print("Ud: " + SetVoltage + ", В");
 		print("dU/dt: " + SetVoltageRare + ", В/мкс");
 		print("Tq: " + SetTq + ", мкс");
