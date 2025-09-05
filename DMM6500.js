@@ -173,24 +173,30 @@ function KEI_ReadArray()
 	StringArray = SourceArray.split(",");
 	FloatArray = StringArray.map(Number);
 
+	for (var i = 0; i<FloatArray.length; i++)
+	{
+		p(FloatArray[i]);
+	}
+
 	return FloatArray;
+
 }
 
 function KEI_Wait()
 {
 	tmc.w('*RST');
-	sleep(100);
+	sleep(300);
 	var Current = 0;
-	BufferLength = 150;
+	BufferLengthWait = 15;
 	tmc.w(':SENSe:DIGitize:FUNCtion "VOLTage"');
-	tmc.w(':SENSe:DIGitize:VOLTage:SRATe 10000');
+	tmc.w(':SENSe:DIGitize:VOLTage:SRATe 1000');
 	tmc.w(':DIGitize:VOLTage:ATRigger:MODE EDGE');
 	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:LEVel 0.01');
 	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:SLOPe RISing');
-	tmc.w('TRACe:MAKE "TestBuffer",' + BufferLength);
+	tmc.w('TRACe:MAKE "TestBuffer",' + BufferLengthWait);
 	tmc.w('TRACe:FILL:MODE CONTinuous, "TestBuffer"');
 	tmc.w('TRACe:LOG:STATe ON , "TestBuffer"');
-	tmc.w(':TRIGger:LOAD "LoopUntilEvent", ATRigger, 10, ENTer, 0, "TestBuffer"');
+	tmc.w(':TRIGger:LOAD "LoopUntilEvent", ATRigger, 30, ENTer, 0, "TestBuffer"');
 	tmc.w(':INITiate');
 	tmc.w(':DISPlay:BUFFer:ACTive "TestBuffer"');
 	tmc.w(':DISPlay:SCReen GRAPh');
@@ -199,18 +205,18 @@ function KEI_Wait()
 function KEI_Scope(SampleRate, Time) // SampleRate - частота дискретизации в кГц, Time - время записи в миллисекундах
 {
 	tmc.w('*RST');
-	sleep(100);
+	sleep(300);
 	var Current = 0;
-	BufferLength = SampleRate * Time;
+	Buffer_Length = SampleRate * Time;
 	tmc.w(':SENSe:DIGitize:FUNCtion "VOLTage"');
 	tmc.w(':SENSe:DIGitize:VOLTage:SRATe ' + SampleRate*1e3);
 	tmc.w(':DIGitize:VOLTage:ATRigger:MODE EDGE');
 	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:LEVel 0.005');
 	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:SLOPe RISing');
-	tmc.w('TRACe:MAKE "TestBuffer",' + BufferLength);
+	tmc.w(':TRACe:MAKE "TestBuffer",' +Buffer_Length);
 	tmc.w('TRACe:FILL:MODE CONTinuous, "TestBuffer"');
 	tmc.w('TRACe:LOG:STATe ON , "TestBuffer"');
-	tmc.w(':TRIGger:LOAD "LoopUntilEvent", ATRigger, 10, ENTer, 0, "TestBuffer"');
+	tmc.w(':TRIGger:LOAD "LoopUntilEvent", ATRigger, 30, ENTer, 0, "TestBuffer"');
 	tmc.w(':INITiate');
 	tmc.w(':DISPlay:BUFFer:ACTive "TestBuffer"');
 	tmc.w(':DISPlay:SCReen GRAPh');
@@ -219,10 +225,82 @@ function KEI_Scope(SampleRate, Time) // SampleRate - частота дискре
 function KEI_Current()
 {
 	MultimeterMax = tmc.q(':TRACe:STAT:MAXimum? "TestBuffer"');
-	tmc.w(':TRACe:DELete "TestBuffer"');
+	tmc.w(':TRACe:CLEar "TestBuffer"');
 	tmc.w('TRIGger:CONTinuous AUTO');
 	tmc.w(':INITiate');
 	sleep(500);
 	Current = MultimeterMax / RShunt;
 	return Current;
+}
+
+function KEI_ReadArrayTrapeze()
+{
+	SourceArray = [];
+	StringArray = [];
+	FloatArray = [];
+
+	StepIndex = 5;
+	StartIndex = 1;
+	EndIndex = StepIndex;
+	i = 0;
+
+	var TrapezeBufferLength = 1.0*(tmc.q(':TRACe:ACTual? "TestBuffer"'));
+	//p("Длина буфера: " + TrapezeBufferLength);
+
+	while((EndIndex + i * StepIndex) <= TrapezeBufferLength)
+	{
+		SourceArray[i] = tmc.q('TRAC:DATA? ' + (StartIndex+i*StepIndex) +
+			', ' + (EndIndex+i*StepIndex) + ', "TestBuffer", READ');
+		i++;
+	}
+
+	SourceArray = String(SourceArray);
+	StringArray = SourceArray.split(",");
+	FloatArray = StringArray.map(Number);
+	sleep(100);
+
+	var StartMassive = tmc.q(':TRACe:ACTual:STARt? "TestBuffer"');
+	//p("Начальная точка: " +StartMassive);
+	TrapezeArray = new Array(TrapezeBufferLength);
+
+	TrapezeArray = FloatArray.concat(FloatArray.splice(0,StartMassive));
+
+	var StartNumber = 0;
+	var EndNumber = 0;
+	var TrapezeLevel = 0;
+
+	for (var i = 0; i<TrapezeArray.length; i++)
+	{
+		if (TrapezeArray[i]>0.015)
+		{
+			StartNumber = i+(Math.ceil(TrapezeArray.length*0.1));
+			break;
+		}
+	}
+	var Sum = 0;
+	for (var i = StartNumber; i<TrapezeArray.length; i++)
+	{
+		if (TrapezeArray[i]<0.015)
+		{
+			EndNumber = i-(Math.ceil(TrapezeArray.length*0.1));
+			break;
+		}
+	}
+
+	//p("Начало: " + EndNumber);
+	//p("Конец: " + EndNumber);
+	//pl(TrapezeArray);
+
+	for (var c = StartNumber; c<=EndNumber; c++)
+	{
+		TrapezeLevel = TrapezeLevel + TrapezeArray[c];
+	}
+	TrapezeLevel = (TrapezeLevel/(EndNumber-StartNumber+1))/0.00025;
+
+	//sleep(1500);
+	//p("Амплитуда: " + TrapezeLevel);
+	tmc.w(':TRACe:CLEar "TestBuffer"');
+	tmc.w('TRIGger:CONTinuous AUTO');
+	tmc.w(':INITiate');
+	return TrapezeLevel;
 }

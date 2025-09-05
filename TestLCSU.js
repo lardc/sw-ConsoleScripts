@@ -8,6 +8,23 @@ DS_Ready = 3,
 DS_ConfigReady = 4,
 DS_InProcess = 5
 
+function LCSU_Start6500(Type,Current)
+{
+	KEI_Wait();
+	sleep(500);
+	LCSU_Start(Type,Current)
+	var CurrentTemp = KEI_Current();
+	var IdUnit = dev.rf(200); // Ток измеренный LCSU CtrlBrd
+	print("IdSet, A: " + Current);
+	print("IdSc, A: " + CurrentTemp);
+	var IdErr = ((CurrentTemp - Current) / Current * 100); // погрешность задания
+	var IdErrMeas = ((IdUnit - CurrentTemp) / CurrentTemp * 100); // погрешность измерения
+	print("IdErrSet, %: " + IdErr);
+	print("IdMeasSet, %: " + IdErrMeas);
+	print("--------------------");
+	CurrentTemp = 0;
+}
+
 function LCSU_Start(Type,Current)
 {
 	dev.w(19,Type);
