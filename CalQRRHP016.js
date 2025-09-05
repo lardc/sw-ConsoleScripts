@@ -23,7 +23,7 @@ FallPort = 3;
 def_UseSaveImage = true; 
 print_plot = 0;
 // 
-SetCurrentTest = [320, 500, 1000, 1500, 2000]; // in A  320, 500, 1000, 1500, 2000, 2500, 3000, 3200
+SetCurrentTest = [320, 500, 1000, 1500, 2000, 2500, 3000, 3200]; // in A  320, 500, 1000, 1500, 2000, 2500, 3000, 3200
 CurrentRateN = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 CurrentRate = [1, 1.5, 2, 5, 10, 15, 20, 30, 50, 60, 100]; // in А/us  1, 1.5, 2, 5, 10, 15, 20, 30, 50, 60, 100
 IrrMeasured = [150, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50]; // in A
@@ -40,7 +40,7 @@ MinVHSSRate = 5;
 //
 QrrGOST = 1;
 //
-cal_Iterations = 3;
+cal_Iterations = 1;
 //		
 cal_Invert = 1;
 //
