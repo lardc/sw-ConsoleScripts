@@ -69,16 +69,17 @@ function LCSU_Start(Type,Current)
 	
 	sleep(20);
 	
-	//while(dev.r(192) != DS_Ready)
-	//{
-	//	sleep(50);
+
+	while(dev.r(192) != DS_Ready)
+	{
+		sleep(50);
 		
-	//	if(dev.r(192) == DS_Fault)
-	//	{
-	//		PrintStatus();
-	//		return false;
-	//	}
-	//}
+		if(dev.r(192) == DS_Fault)
+		{
+			PrintStatus();
+			return false;
+		}
+	}
 	print("IdUnit, A: " + dev.rf(200));
 	Id_DACArray = dev.raff(6)
 	p("DAC " + Math.max.apply(null, Id_DACArray))
@@ -128,5 +129,46 @@ function LCSU_Cycle(Current,Quantity)
 		LCSU_Start(0,Current);
 		sleep(7000);
 		if (anykey()) return 0;
+	}
+}
+
+function LCSU_ResourceTest(Current, HoursTest)
+{
+	var i = 1;
+	var count_plot = 0;
+	var MinutesInMs = 60 * 1000;
+	var end = new Date();
+	var start = new Date();
+	var hours = start.getHours() + HoursTest;
+	end.setHours(hours);
+
+	var RegulatorError = 0;
+
+	while((new Date()).getTime() < end.getTime())
+	{
+		LCSU_Start(2,Current);
+		//sleep(1000);
+
+		RegulatorError = dev.rf(196);
+		if (RegulatorError==1)
+		{
+			p("Following regulator error. Test stopped.")
+			break;
+		}
+
+		var left_time = new Date(end.getTime() - (new Date()).getTime());
+		print("#" + i + " Осталось " + (left_time.getHours() - 3) + " ч и " + left_time.getMinutes() + " мин");
+
+		var elapsed_time = new Date((new Date()).getTime() - start.getTime());
+		if (elapsed_time.getTime() > 10 * MinutesInMs * count_plot)
+		{
+			pl(dev.raff(1));
+			p("Вывод графика #" + (count_plot + 1) + " спустя " + (elapsed_time.getHours() - 3) + " ч и " + elapsed_time.getMinutes() + " мин");
+			count_plot++;
+		}
+
+		if (anykey()) break;
+
+		i++;
 	}
 }

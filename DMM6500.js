@@ -1,6 +1,7 @@
-CoefEmaFilter = 0.07
-KEI_SampleRate = 1000000;
-RShunt = 0.00025; // Сопротивление токоизмерительного шунта (Ом)
+var CoefEmaFilter = 0.07
+var KEI_SampleRate = 1000000;
+var RShunt = 0.00025; // Сопротивление токоизмерительного шунта (Ом)
+var fs = 1000; // частота дискретизации (Гц) для функций измерения
 
 function KEI_Reset()
 {
@@ -189,7 +190,7 @@ function KEI_Wait()
 	var Current = 0;
 	BufferLengthWait = 15;
 	tmc.w(':SENSe:DIGitize:FUNCtion "VOLTage"');
-	tmc.w(':SENSe:DIGitize:VOLTage:SRATe 1000');
+	tmc.w(':SENSe:DIGitize:VOLTage:SRATe 10000');
 	tmc.w(':DIGitize:VOLTage:ATRigger:MODE EDGE');
 	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:LEVel 0.01');
 	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:SLOPe RISing');
@@ -202,20 +203,54 @@ function KEI_Wait()
 	tmc.w(':DISPlay:SCReen GRAPh');
 }
 
+function KEI_Voltage(SetRange,fs) // Функция ИЗМЕРЕНИЯ (Measure) напряжения. Передается диапазон измерения и нужная частота дискретизации 
+{
+	tmc.w('*RST');
+	sleep(300);
+
+	tmc.w(':MEASure:VOLTage');
+	tmc.w(':VOLTage:APERture ' +(1/fs));
+	tmc.w(':VOLTage:AZERo OFF');
+
+	tmc.w(':SENSe:VOLTage:RANGe ' +SetRange);
+
+	tmc.w(':VOLTage:ATRigger:MODE EDGE');
+	tmc.w(':VOLTage:ATRigger:EDGE:LEVel 0.01');
+	tmc.w(':VOLTage:ATRigger:EDGE:SLOPe RISing');
+
+	tmc.w('TRACe:MAKE "TestBuffer",' + KEI_BufferLength(fs));
+	tmc.w('TRACe:FILL:MODE CONTinuous, "TestBuffer"');
+	tmc.w('TRACe:LOG:STATe ON , "TestBuffer"');
+
+	tmc.w(':TRIGger:LOAD "LoopUntilEvent", ATRigger, 30, ENTer, 0, "TestBuffer"');
+	tmc.w(':INITiate');
+	tmc.w(':DISPlay:BUFFer:ACTive "TestBuffer"');
+	tmc.w(':DISPlay:SCReen GRAPh');
+}
+
+function KEI_BufferLength(fs)
+{
+	var Length = Math.round(2*((1e-2)/(1/fs)));
+	return Length;
+}
+
 function KEI_Scope(SampleRate, Time) // SampleRate - частота дискретизации в кГц, Time - время записи в миллисекундах
 {
 	tmc.w('*RST');
 	sleep(300);
 	var Current = 0;
-	Buffer_Length = SampleRate * Time;
+	var Buffer_Length = SampleRate * Time;
+
 	tmc.w(':SENSe:DIGitize:FUNCtion "VOLTage"');
 	tmc.w(':SENSe:DIGitize:VOLTage:SRATe ' + SampleRate*1e3);
 	tmc.w(':DIGitize:VOLTage:ATRigger:MODE EDGE');
 	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:LEVel 0.005');
 	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:SLOPe RISing');
+
 	tmc.w(':TRACe:MAKE "TestBuffer",' +Buffer_Length);
 	tmc.w('TRACe:FILL:MODE CONTinuous, "TestBuffer"');
 	tmc.w('TRACe:LOG:STATe ON , "TestBuffer"');
+
 	tmc.w(':TRIGger:LOAD "LoopUntilEvent", ATRigger, 30, ENTer, 0, "TestBuffer"');
 	tmc.w(':INITiate');
 	tmc.w(':DISPlay:BUFFer:ACTive "TestBuffer"');
@@ -244,7 +279,7 @@ function KEI_ReadArrayTrapeze()
 	EndIndex = StepIndex;
 	i = 0;
 
-	var TrapezeBufferLength = 1.0*(tmc.q(':TRACe:ACTual? "TestBuffer"'));
+	var TrapezeBufferLength = KEI_BufferLength(fs);
 	//p("Длина буфера: " + TrapezeBufferLength);
 
 	while((EndIndex + i * StepIndex) <= TrapezeBufferLength)
@@ -260,8 +295,8 @@ function KEI_ReadArrayTrapeze()
 	sleep(100);
 
 	var StartMassive = tmc.q(':TRACe:ACTual:STARt? "TestBuffer"');
-	//p("Начальная точка: " +StartMassive);
-	TrapezeArray = new Array(TrapezeBufferLength);
+
+	TrapezeArray = [];
 
 	TrapezeArray = FloatArray.concat(FloatArray.splice(0,StartMassive));
 
@@ -287,20 +322,13 @@ function KEI_ReadArrayTrapeze()
 		}
 	}
 
-	//p("Начало: " + EndNumber);
-	//p("Конец: " + EndNumber);
-	//pl(TrapezeArray);
-
 	for (var c = StartNumber; c<=EndNumber; c++)
 	{
 		TrapezeLevel = TrapezeLevel + TrapezeArray[c];
 	}
-	TrapezeLevel = (TrapezeLevel/(EndNumber-StartNumber+1))/0.00025;
+	TrapezeLevel = (TrapezeLevel/(EndNumber-StartNumber+1))/RShunt;
 
-	//sleep(1500);
-	//p("Амплитуда: " + TrapezeLevel);
-	tmc.w(':TRACe:CLEar "TestBuffer"');
-	tmc.w('TRIGger:CONTinuous AUTO');
-	tmc.w(':INITiate');
+	sleep(1500);
+	KEI_Reset();
 	return TrapezeLevel;
 }
