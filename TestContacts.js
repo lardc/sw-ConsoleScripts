@@ -5,7 +5,7 @@ SCPC	= 1
 CUHV	= 2
 
 Contacts_Rshunt = 0.001;		// in Ohms
-Contacts_RIngun = 0.0008;		// in Ohms опытным путем
+Contacts_RIngun = 0.0016;		// in Ohms опытным путем
 Contacts_IngunCount = 2;		// Количество контактов
 
 PulsesInASeries = 1;			// Количество импульсов в серии
@@ -28,11 +28,11 @@ function Contacts_Connect(nameBlock)
 	switch(nameBlock)
 	{
 		case SCPC:
-			dev.co(5);
+			dev.co(20);
 			break;
 
 		case CUHV:
-			dev.co(11);
+			dev.co(19);
 			//dev.nid(1);
 			break;
 	}
@@ -82,7 +82,7 @@ function Contacts_Init_TMC(channelVoltage, channelCurrent)
 	TEK_tmc_FactoryReset();
 
 	// Init trigger
-	TEK_tmc_TriggerPulseExtInit(4.5, 1, 5e-3);
+	TEK_tmc_TriggerPulseExtInit(4.5, 1);
 	// Tektronix init
 	// Init channels
 	TEK_tmc_ChannelInit(ccontacts_chVoltage, 1, 1);
@@ -191,7 +191,7 @@ function Contacts_Pulse(Current)
 		{
 			while((new Date()).getTime() < TimeEndActionPulse.getTime())
 			{
-				pinline("\rОжидание между импульсами = " + ((TimeEndActionPulse.getTime() - (new Date()).getTime()) / 1000).toFixed(1) + " с		");
+				pinline("\rОжидание между импульсами = " + ((TimeEndActionPulse.getTime() - (new Date()).getTime()) / 1000).toFixed(2) + " с		");
 				sleep(100);
 
 				if(Contacts_AnykeyExit())
@@ -217,14 +217,17 @@ function Contacts_ResourceTest(Current, Counter)
 	Contacts_Connect(SCPC);
 	p("dev.r 4 SCPC = " + dev.r(4));
 	p("dev.r 5 SCPC = " + dev.r(5));
-	dev.w(0,175)
-	dev.w(1,3300)
-	dev.w(2,359)
-	dev.w(3,37)
-	dev.w(4,830)
-	dev.w(5,100)
+	dev.w(0, 175)
+	dev.w(1, 3300)
+	dev.w(2, 359)
+	dev.w(3, 37)
+	dev.w(4, 830)
+	dev.w(5, 100)
 	for(reg = 6; reg <= 64; reg++){dev.w(reg,0)}
 	p("Напряжение SCPC = " + dev.r(96) / 10);
+
+	Contacts_Connect(CUHV)
+	dev.w(60, 22100); // продолжительность импульса синхры
 	
 	if (Contacts_Oscilloscope)
 	{
@@ -247,7 +250,7 @@ function Contacts_ResourceTest(Current, Counter)
 		while (Date.now() < PrevStart_ms + (DelayBetweenSeriesSeconds + SeriesPauseSeconds) * 1000 * period_i)
 		{
 			pinline("\rПауза между серией = " + ((Date.now() - (PrevStart_ms +
-					(DelayBetweenSeriesSeconds + SeriesPauseSeconds) * 1000 * period_i)) / 1000).toFixed(1) + " с		");
+					(DelayBetweenSeriesSeconds + SeriesPauseSeconds) * 1000 * period_i)) / 1000).toFixed(2) + " с		");
 			sleep(50);
 
 			if(Contacts_AnykeyExit())

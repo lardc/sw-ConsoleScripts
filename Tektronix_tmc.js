@@ -62,14 +62,13 @@ function TEK_tmc_TriggerInit(Channel, Level)
 	tmc.w("trigger:a:level " + Level);
 }
 
-function TEK_tmc_TriggerPulseExtInit(Level, Probe, Width)
+function TEK_tmc_TriggerPulseExtInit(Level, Probe)
 {
 	tmc.w("trigger:a:edge:source aux");
 	tmc.w("trigger:a:mode normal");
 	tmc.w("trigger:a:type edge");
 	tmc.w("trigger:a:edge:coupling dc");
 	tmc.w("trigger:a:edge:slope rise");
-	tmc.w("trigger:a:runt:width " + Width);
 	tmc.w("trigger:external:probe " + Probe);
 	tmc.w("trigger:a:level " + Level);
 }
