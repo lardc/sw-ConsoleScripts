@@ -1,5 +1,5 @@
 // Пояснения
-CAL_Init(portDevice, portTek, channelMeasureId) // не CAL_, а CLSLPS_!!!!!!!!!!
+CAL_Init(portDevice, portTek, channelMeasureId) 
 LCSU_Start(Current)
 LSLPC_ResourceTest(Current, hours_resource_test)
 Nid = 150...
@@ -20,8 +20,70 @@ FWU_DumpLCSU()
 i("STM_FWUpdate.js")
 FWU_RestoreLCSU()
 
-// Грубая калибровка ЦАП
-tmc.co()
+// Верификация (диапазон 0)
 include("CalLCSU.js")
+dev.c(1)
+CLCSU_MeasureSet(0)
+CLCSU_CollectId6500()
 CLCSU_VerifyId6500()
+
+//Подключи блок командой dev.co(x)!
+
+// Калибровка ЦАП (диапазон 0)
+include("CalLCSU.js")
+dev.c(1)
+CLCSU_MeasureSet(0)
+CLCSU_CollectId6500()
+CLCSU_CalibrateDAC()
+
+// Калибровка АЦП (диапазон 0)
+include("CalLCSU.js")
+dev.c(1)
+CLCSU_MeasureSet(0)
+CLCSU_CollectId6500()
+CLCSU_CalibrateADC()
+
+// Верификация (диапазон 1)
+include("CalLCSU.js")
+dev.c(1)
+CLCSU_MeasureSet(1)
+CLCSU_CollectId6500()
+CLCSU_VerifyId6500()
+
+// Калибровка ЦАП (диапазон 1)
+include("CalLCSU.js")
+dev.c(1)
+CLCSU_MeasureSet(1)
+CLCSU_CollectId6500()
+CLCSU_CalibrateDAC()
+
+// Калибровка АЦП (диапазон 1)
+include("CalLCSU.js")
+dev.c(1)
+CLCSU_MeasureSet(1)
+CLCSU_CollectId6500()
+CLCSU_CalibrateADC()
+
+// Верификация (диапазон 2)
+include("CalLCSU.js")
+CLCSU_MeasureSet(2)
+CLCSU_CollectId6500()
+CLCSU_VerifyId6500()
+
+// Калибровка ЦАП (диапазон 2)
+include("CalLCSU.js")
+dev.c(1)
+CLCSU_MeasureSet(2)
+CLCSU_CollectId6500()
+CLCSU_CalibrateDAC()
+
+// Калибровка АЦП (диапазон 2)
+include("CalLCSU.js")
+dev.c(1)
+CLCSU_MeasureSet(2)
+CLCSU_CollectId6500()
+CLCSU_CalibrateADC()
+
+
+
 
