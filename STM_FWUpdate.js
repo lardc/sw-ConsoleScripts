@@ -593,7 +593,7 @@ function FWU_DumpSVTU(Num)
 	FWU_DumpCommon("SVTU", Num, 126);
 }
 
-function FWU_RestoreSVTU()
+function FWU_RestoreSVTU(Num)
 {
 	FWU_RestoreCommon("SVTU", Num);
 }
