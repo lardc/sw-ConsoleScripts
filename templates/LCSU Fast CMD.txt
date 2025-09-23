@@ -26,7 +26,6 @@ FWU_RestoreLCSU()
 include("CalLCSU.js")
 dev.c(1)
 CLCSU_MeasureSet(0)
-CLCSU_CollectId6500()
 CLCSU_VerifyId6500()
 
 // Калибровка ЦАП (диапазон 0)
@@ -45,7 +44,6 @@ CLCSU_CalibrateADC()
 include("CalLCSU.js")
 dev.c(1)
 CLCSU_MeasureSet(1)
-CLCSU_CollectId6500()
 CLCSU_VerifyId6500()
 
 // Калибровка ЦАП (диапазон 1)
@@ -62,8 +60,8 @@ CLCSU_CalibrateADC()
 
 // Верификация (диапазон 2)
 include("CalLCSU.js")
+dev.c(1)
 CLCSU_MeasureSet(2)
-CLCSU_CollectId6500()
 CLCSU_VerifyId6500()
 
 // Калибровка ЦАП (диапазон 2)
@@ -77,7 +75,3 @@ include("CalLCSU.js")
 dev.c(1)
 CLCSU_MeasureSet(2)
 CLCSU_CalibrateADC()
-
-
-
-

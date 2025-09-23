@@ -199,7 +199,7 @@ function CLCSU_CalibrateADC()
 	CLCSU_ResetIdCalADC();
 
 	CLCSU_CollectId6500();
-	CLCSU_VerifyId6500();
+	CLCSU_PlotGraphs();
 
 	var ADCCoefficients = CGEN_GetNumericCorrection2(clcsu_CurrentArray_repeat,clcsu_DMMValues);
 
@@ -217,7 +217,7 @@ function CLCSU_CalibrateDAC()
 
 	CLCSU_CollectId6500();
 
-	CLCSU_VerifyId6500();
+	CLCSU_PlotGraphs();
 
 	var DACCoefficients = CGEN_GetNumericCorrection(clcsu_DMMValues,clcsu_DACValues);
 
@@ -229,8 +229,14 @@ function CLCSU_CalibrateDAC()
 
 function CLCSU_VerifyId6500()
 {
+	CLCSU_CollectId6500();
+	CLCSU_PlotGraphs();
+}
+
+function CLCSU_PlotGraphs()
+{
 	scattern(clcsu_CurrentArray_repeat, clcsu_ErrSetCurrents, "IdSet, A", "IdErrSet, %", "Set error");
-	scattern(clcsu_CurrentArray_repeat, clcsu_ErrTotal, "IdSet, A", "clcsu_ErrTotal, %", "Total (summary) error");
+	scattern(clcsu_CurrentArray_repeat, clcsu_ErrTotal, "IdSet, A", "ErrTotal, %", "Total (summary) error");
 	scattern(clcsu_CurrentArray_repeat, clcsu_ErrMeasCurrents, "IdSet, A", "IdErrMeas, %", "Measure error");
 }
 
