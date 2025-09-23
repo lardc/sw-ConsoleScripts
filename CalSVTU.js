@@ -5,7 +5,7 @@ include("DMM6500.js")
 // include("Numeric.js")
 
 // Calibration setup parameters
-CAL_Rshunt = 750;					// in uOhms
+CAL_Rshunt = 0.00075;				// in Ohms
 CAL_Rload = 3527;		     		// in uOhms
 CAL_GateRshunt = 10000;				// in mOhms
 
@@ -91,6 +91,7 @@ function CAL_Init_Mes_Device(portDevice, portTek, channelMeasureI, channelMeasur
 
 		// Init Tektronix port
 		TEK_PortInit(portTek);
+		TEK_Send("RECAll:SETUp FACtory");
 	
 		// Tektronix init
 		for (var i = 1; i <= 4; i++)
@@ -255,16 +256,15 @@ function CAL_CalibrateUge()
 	}
 	
 	// Reload values
-	var CAL_UgeStp = Math.round((CAL_UgeMax - CAL_UgeMin) / (CAL_Points - 1));
-	var VoltageArray = CGEN_GetRange(CAL_UgeMin, CAL_UgeMax, CAL_UgeStp);
+	var VoltageArray = CGEN_GetRangeLogarithm(CAL_UgeMin, CAL_UgeMax, CAL_Points);
 	
 	if (CAL_CollectUge(VoltageArray, CAL_Iterations))
 	{
 		CAL_SaveUge("SVTU_Uge", "SVTU_UgeSet");
 
 		// Plot relative error distribution
-		scattern(CAL_UgeSc, CAL_UgeErr, "Voltage (in mV)", "Error (in %)", "Uge relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " mV");
-		scattern(CAL_UgeSc, CAL_UgeSetErr, "Voltage (in mV)", "Error (in %)", "Uge set relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " mV");
+		scattern(CAL_UgeSc, CAL_UgeErr, "Voltage (in V)", "Error (in %)", "Uge relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " V");
+		scattern(CAL_UgeSc, CAL_UgeSetErr, "Voltage (in V)", "Error (in %)", "Uge set relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " V");
 
 		// Calculate correction
 		CAL_UgeCorr = CGEN_GetCorrection2("SVTU_Uge");
@@ -295,16 +295,15 @@ function CAL_VerifyUge()
 	}
 
 	// Reload values
-	var CAL_UgeStp = Math.round((CAL_UgeMax - CAL_UgeMin) / (CAL_Points - 1));
-	var VoltageArray = CGEN_GetRange(CAL_UgeMin, CAL_UgeMax, CAL_UgeStp);
+	var VoltageArray = CGEN_GetRangeLogarithm(CAL_UgeMin, CAL_UgeMax, CAL_Points);
 
 	if (CAL_CollectUge(VoltageArray, CAL_Iterations))
 	{
 		CAL_SaveUge("SVTU_Uge_fixed", "SVTU_UgeSet_fixed");
 
 		// Plot relative error distribution
-		scattern(CAL_UgeSc, CAL_UgeErr, "Voltage (in mV)", "Error (in %)", "Uge relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " mV");
-		scattern(CAL_UgeSc, CAL_UgeSetErr, "Voltage (in mV)", "Error (in %)", "Uge set relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " mV");
+		scattern(CAL_UgeSc, CAL_UgeErr, "Voltage (in V)", "Error (in %)", "Uge relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " V");
+		scattern(CAL_UgeSc, CAL_UgeSetErr, "Voltage (in V)", "Error (in %)", "Uge set relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " V");
 	}
 }
 
@@ -337,7 +336,7 @@ function CAL_CollectUcesat(VoltageValues, IterationsCount)
 			print("-- result " + CAL_CntDone++ + " of " + CAL_CntTotal + " --");
 			
 			if(CAL_measuring_device == "TPS2000")
-				CAL_TekScale(CAL_chMeasureU, VoltageValues[j] / 1000);
+				TEK_ScaleVertical(CAL_chMeasureU, VoltageValues[j] / 1000, 80);
 			else if (CAL_measuring_device == "DMM6000")
 			{
 				KEI_SetVoltageRange(VoltageValues[j] / 1000);
@@ -355,6 +354,8 @@ function CAL_CollectUcesat(VoltageValues, IterationsCount)
 			
 			SVTU_Print = PrintTemp;
 			
+			TEK_Busy();
+
 			// Unit data
 			var UcesatRead = dev.r(200);
 			CAL_Ucesat.push(UcesatRead);
@@ -362,7 +363,7 @@ function CAL_CollectUcesat(VoltageValues, IterationsCount)
 
 			// Scope data
 			if(CAL_measuring_device == "TPS2000")
-				var UcesatSc = (CAL_Measure(CAL_chMeasureU) * 1000).toFixed(2);
+				var UcesatSc = (TEK_Measure(CAL_chMeasureU) * 1000).toFixed(2);
 			else if (CAL_measuring_device == "DMM6000")
 				var UcesatSc = (KEI_ReadAverage() * 1000).toFixed(3);
 
@@ -417,10 +418,10 @@ function CAL_CollectIce(CurrentValues, IterationsCount)
 			print("-- result " + CAL_CntDone++ + " of " + CAL_CntTotal + " --");
 			//
 			if(CAL_measuring_device == "TPS2000")
-				CAL_TekScale(CAL_chMeasureI, CurrentValues[j] * CAL_Rshunt / 1000000);
+				TEK_ScaleVertical(CAL_chMeasureI, CurrentValues[j] * CAL_Rshunt, 80);
 			else if (CAL_measuring_device == "DMM6000")
 			{
-				KEI_SetVoltageRange(CurrentValues[j] * CAL_Rshunt / 1000000);
+				KEI_SetVoltageRange(CurrentValues[j] * CAL_Rshunt);
 				KEI_ActivateTrigger();
 			}
 			
@@ -434,6 +435,9 @@ function CAL_CollectIce(CurrentValues, IterationsCount)
 			}
 			
 			SVTU_Print = PrintTemp;
+			
+			TEK_Busy();
+
 			// Unit data
 			var Iset = CurrentValues[j];
 			CAL_Iset.push(Iset);
@@ -441,9 +445,9 @@ function CAL_CollectIce(CurrentValues, IterationsCount)
 
 			// Scope data
 			if(CAL_measuring_device == "TPS2000")
-				var IsetSc = (CAL_Measure(CAL_chMeasureI) / CAL_Rshunt * 1000000).toFixed(2);
+				var IsetSc = (TEK_Measure(CAL_chMeasureI) / CAL_Rshunt).toFixed(2);
 			else if (CAL_measuring_device == "DMM6000")
-				var IsetSc = (KEI_ReadAverage() / CAL_Rshunt * 1000000).toFixed(4);
+				var IsetSc = (KEI_ReadAverage() / CAL_Rshunt).toFixed(4);
 
 			CAL_IsetSc.push(IsetSc);
 
@@ -511,52 +515,55 @@ function CAL_CollectUge(VoltageValues, IterationsCount)
 			print("-- result " + CAL_CntDone++ + " of " + CAL_CntTotal + " --");
 			//
 			if(CAL_measuring_device == "TPS2000")
-				CAL_TekScale(CAL_chMeasureU, VoltageValues[j] / 1000);
+			{
+				TEK_ScaleVertical(CAL_chMeasureU, VoltageValues[j], 90);
+				sleep(1000);
+			}
 			else if (CAL_measuring_device == "DMM6000")
 			{
 				KEI_SetVoltageRange(VoltageValues[j]+3);
 				KEI_ActivateTrigger();
 			}
 
-			GateVoltage = VoltageValues[j];
-			dev.wf(129, GateVoltage);
+			if(CAL_measuring_device == "TPS2000" && j == 0)
+				TEK_TriggerInit(CAL_chSync, 2.5);
 
-			if(CAL_measuring_device == "TPS2000")
-			{
-				TEK_Send("trigger:main:edge:slope rise");
-				TEK_Send("horizontal:position " + 0.0002);
-			}
+			TEK_Busy();
 
 			var PrintTemp = SVTU_Print;
 			SVTU_Print = 0;
 
 			for (var k = 0; k < AvgNum; k++)
 			{
-				if (!SVTU_StartMeasure(100))
-				sleep(500);
+				SVTU_StartMeasure(100, VoltageValues[j]);
+				sleep(2000);
+				if(anykey())
+				break;
 			}
 
 			SVTU_Print = PrintTemp;
 
+			TEK_Busy();
+
 			// Unit data
 			var UgeSet = VoltageValues[j];
 			CAL_UgeSet.push(UgeSet);
-			print("UgeSet, mV: " + UgeSet);
+			print("UgeSet, V: " + UgeSet);
 			//
 			var Uge = dev.rf(202);
 			CAL_Uge.push(Uge);
-			print("Uge, mV: " + Uge);
+			print("Uge, V: " + Uge.toFixed(2));
 
 			// Scope data
 			if(CAL_measuring_device == "TPS2000")
-				var UgeSc = (CAL_Measure(CAL_chMeasureU) * 1000).toFixed(2);
+				var UgeSc = TEK_Measure(2).toFixed(2);
 			else if (CAL_measuring_device == "DMM6000")
 				var UgeSc = (KEI_ReadAverage() * 1).toFixed(4);
 
 			CAL_UgeSc.push(UgeSc);
 
 			if(CAL_measuring_device == "TPS2000")
-				print("UgeTek,  mV: " + UgeSc);
+				print("UgeTek,  V: " + UgeSc);
 			else if (CAL_measuring_device == "DMM6000")
 				print("UgeDMM,  mV: " + UgeSc);
 
@@ -584,46 +591,18 @@ function CAL_TriggerInit(Channel)
 	sleep(1000);
 }
 
-function CAL_TekScale(Channel, Value)
-{
-	// 0.9 - use 90% of full range
-	// 8 - number of scope grids in full scale
-	var scale = (Value / (8 * 0.9));
-	TEK_Send("ch" + Channel + ":scale " + scale);
-}
-
 function CAL_TekInit(Channel)
 {
 	TEK_Horizontal("1e-3", "0");
 	TEK_ChannelInit(Channel, "1", "2");
-	CAL_TekMeasurement(Channel);
+	TEK_MeasMaxInit(Channel, Channel);
 }
 
 function CAL_GateTekInit(Channel)
 {
-	TEK_Horizontal("25e-6", "5e-6");
+	TEK_Horizontal("500e-6", "-500e-6");
 	TEK_ChannelInit(Channel, "1", "2");
-	CAL_TekMeasurement(Channel);
-}
-
-function CAL_TekCursor(Channel)
-{
-	TEK_Send("cursor:select:source ch" + Channel);
-	TEK_Send("cursor:function vbars");
-	TEK_Send("cursor:vbars:position1 0");
-	TEK_Send("cursor:vbars:position2 0");
-}
-
-function CAL_Measure(Channel)
-{
-	sleep(1000);
-	return TEK_Measure(Channel);
-}
-
-function CAL_TekMeasurement(Channel)
-{
-	TEK_Send("measurement:meas" + Channel + ":source ch" + Channel);
-	TEK_Send("measurement:meas" + Channel + ":type maximum");
+	TEK_MeasMaxInit(Channel, Channel);
 }
 
 // Reset Arrays
