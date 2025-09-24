@@ -1,7 +1,7 @@
 // Пояснения
 CAL_Init(portDevice, portTek, channelMeasureId) 
 LCSU_Start(Current)
-LSLPC_ResourceTest(Current, hours_resource_test)
+LCSU_ResourceTest(Current, hours_resource_test)
 Nid = 150...
 
 // Посмотреть версию прошивки
