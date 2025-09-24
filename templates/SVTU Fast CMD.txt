@@ -1,0 +1,42 @@
+// Пояснения
+SVTU_StartMeasure(Current, GateVoltage)
+
+// Посмотреть версию прошивки
+PrintFWInfo();
+
+// Обновление прошивки
+FWU_SVTU();
+
+// Скачать дамп регистров
+FWU_DumpSVTU(Num);
+
+// Загрузить дамп регистров
+FWU_RestoreSVTU(Num);
+
+// Формирование и измерение
+include("TestSVTU.js");
+SVTU_StartMeasure(300, 20);
+
+// Ресурсный тест
+
+////Калибровка с помощью Tektronix\\\\
+
+/// Задание и измерение Uge
+// Регистры задания
+/ (Offset: 24) (K: 23)
+/ [P0: 22] [P1: 21] [P2: 20]
+// Регистры измерения
+/ (Offset: 19) (K: 18)
+/ [P0: 17] [P1: 16] [P2: 15]
+include("CalSVTU.js");
+CAL_UgeMin = 10;
+CAL_UgeMax = 20;
+CAL_Points = 10;
+CAL_UseAvg = 0;
+CAL_Iterations = 1;
+CAL_measuring_device = "TPS2000";
+CAL_Init_Mes_Device(12, 7, 1, 2, 3);
+
+CAL_VerifyUge();
+
+CAL_CalibrateUge();

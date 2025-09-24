@@ -11,9 +11,10 @@ GateVoltage 	= 10;	// V
 //
 SVTU_Print = 1;
 
-function SVTU_StartMeasure(Current)
+function SVTU_StartMeasure(Current, GateVoltage)
 {
 	dev.w(128, Current);
+	dev.wf(129, GateVoltage);
 	
 	var start = new Date();
 	if(dev.r(192) != DS_Ready)
@@ -48,9 +49,10 @@ function SVTU_StartMeasure(Current)
 		{			
 			var Current = dev.rf(201);
 			
-			print("DutVoltage, mV : " + dev.rf(200));
-			print("DutCurrent, A  : " + Current);
-			print("GateVoltage, mV: " + dev.rf(202));
+			print("DutVoltage, mV : " + dev.rf(200).toFixed(2));
+			print("DutCurrent, A  : " + Current.toFixed(2));
+			print("GateVoltage, V: " + dev.rf(202).toFixed(2));
+			print("GateCurrent, mA: " + dev.rf(203).toFixed(2));
 			print("---------------------------");
 		}
 		
