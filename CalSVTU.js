@@ -260,7 +260,7 @@ function CAL_CalibrateUge()
 	
 	if (CAL_CollectUge(VoltageArray, CAL_Iterations))
 	{
-		CAL_SaveUge("SVTU_Uge", "SVTU_UgeSet");
+		CAL_SaveUge("SVTU_Uge");
 
 		// Plot relative error distribution
 		scattern(CAL_UgeSc, CAL_UgeErr, "Voltage (in V)", "Error (in %)", "Uge relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " V");
@@ -272,6 +272,33 @@ function CAL_CalibrateUge()
 		
 		// Print correction Uge
 		CAL_PrintCoefUge();
+	}
+}
+
+function CAL_CalibrateUgeSet()
+{
+	CAL_ResetA();
+	CAL_ResetUgeSetCal();
+	
+	// Tektronix init
+	if(CAL_measuring_device == "TPS2000")
+		CAL_GateTekInit(CAL_chMeasureU);
+	else if (CAL_measuring_device == "DMM6000")
+	{
+		KEI_ConfigVoltage(CAL_V_PulsePlate);
+		KEI_ConfigExtTrigger(CAL_V_TriggerDelay);
+	}
+	
+	// Reload values
+	var VoltageArray = CGEN_GetRangeLogarithm(CAL_UgeMin, CAL_UgeMax, CAL_Points);
+	
+	if (CAL_CollectUge(VoltageArray, CAL_Iterations))
+	{
+		CAL_SaveUgeSet("SVTU_UgeSet");
+
+		// Plot relative error distribution
+		scattern(CAL_UgeSc, CAL_UgeErr, "Voltage (in V)", "Error (in %)", "Uge relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " V");
+		scattern(CAL_UgeSc, CAL_UgeSetErr, "Voltage (in V)", "Error (in %)", "Uge set relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " V");
 		
 		// Calculate correction
 		CAL_UgeSetCorr = CGEN_GetCorrection2("SVTU_UgeSet");
@@ -299,7 +326,8 @@ function CAL_VerifyUge()
 
 	if (CAL_CollectUge(VoltageArray, CAL_Iterations))
 	{
-		CAL_SaveUge("SVTU_Uge_fixed", "SVTU_UgeSet_fixed");
+		CAL_SaveUge("SVTU_Uge_fixed");
+		CAL_SaveUgeSet("SVTU_UgeSet_fixed");
 
 		// Plot relative error distribution
 		scattern(CAL_UgeSc, CAL_UgeErr, "Voltage (in V)", "Error (in %)", "Uge relative error " + CAL_UgeMin + " ... " + CAL_UgeMax + " V");
@@ -659,9 +687,13 @@ function CAL_SaveIset(NameIset)
 	CGEN_SaveArrays(NameIset, CAL_IsetSc, CAL_Iset, CAL_IsetErr);
 }
 
-function CAL_SaveUge(NameUge, NameUgeSet)
+function CAL_SaveUge(NameUge)
 {
 	CGEN_SaveArrays(NameUge, CAL_Uge, CAL_UgeSc, CAL_UgeErr);
+}
+
+function CAL_SaveUgeSet(NameUgeSet)
+{
 	CGEN_SaveArrays(NameUgeSet, CAL_UgeSc, CAL_UgeSet, CAL_UgeErr);
 }
 
@@ -810,5 +842,9 @@ function CAL_ResetIsetCal()
 function CAL_ResetUgeCal()
 {
 	CAL_CalUge(0, 1, 0);
+}
+
+function CAL_ResetUgeSetCal()
+{
 	CAL_CalUgeSet(0, 1, 0);
 }
