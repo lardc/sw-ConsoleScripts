@@ -28,7 +28,7 @@ var clcsu_RegulatorIntegral2 = 0;
 
 var LCSU_Range = new Array(6); // массив номеров регистров, задержек и т.д., подробнее см. одноименную функцию ниже
 
-clcsu_IdMin = [70, 351, 1101]; //начальные и конечные значения диапазонов по току
+clcsu_IdMin = [160, 351, 1101]; //начальные и конечные значения диапазонов по току
 clcsu_IdMax = [350, 1100, 6500];
 
 var clcsu_DMMValues = []; // массив значений измеренных 6500 токов
@@ -88,8 +88,14 @@ function CLCSU_CollectId6500()
 		{
 			while(clcsu_CurrentCheckCorrect === false)
 			{
-
-				KEI_Voltage(CurrentArray[j]*clcsu_RShunt,clcsu_fs);
+				if(clcsu_PulseType == 0 || clcsu_PulseType == 1) 
+				{
+					KEI_Wait();
+				}	
+				else if(clcsu_PulseType == 2)
+				{
+					KEI_Voltage(CurrentArray[j]*clcsu_RShunt,clcsu_fs);
+				}
 				sleep(1000);
 				LCSU_Start(clcsu_PulseType, CurrentArray[j]);
 				sleep(LCSU_Range[2]);
