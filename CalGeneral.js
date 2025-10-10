@@ -166,6 +166,44 @@ function CGEN_Normalize(Data)
 	return ResArray;
 }
 
+// Функция по расчету сырых значений массива из коэффицентов тонкой подстройки
+function CGEN_ComputeRawArray(y, P2, P1, P0, P2del, P1del, P0del)
+{
+	if (typeof P2del === 'undefined')
+		P2del = 1;
+
+	if (typeof P1del === 'undefined')
+		P1del = 1;
+
+	if (typeof P0del === 'undefined')
+		P0del = 1;
+
+	var a = P2 / P2del; // P2del - множитель коэффицента, в старых в прошивках = 1 000 000
+	var b = P1 / P1del; // P1del - множитель коэффицента, в старых в прошивках = 1 000
+	var c = P0 / P0del; // P0del - множитель коэффицента, в старых в прошивках = 1, а иногда = 10 или 100
+	var rawArray = []
+
+	for (var i = 0; i < y.length; i++)
+	{
+	if (P2 === 0)
+		{
+			// Линейный случай
+			rawArray[i] = (y[i] - c) * (P1del / P1);
+		}
+		else
+		{
+			// Квадратичный случай
+			var D = b * b - 4 * a * (c - y[i]);
+			if (D < 0)
+			{
+				p("Отрицательный дискриминант для y = " + y[i]);
+			}
+			rawArray[i] = (-b + Math.sqrt(D)) / (2 * a);
+		}
+	}
+	return rawArray;
+}
+
 // Функция знака с учётом формул МА
 Math.sign_ma = function(x)
 {
