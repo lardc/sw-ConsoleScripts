@@ -8,24 +8,45 @@ DS_Ready = 3,
 DS_ConfigReady = 4,
 DS_InProcess = 5
 
-function LCSU_Start6500(Type,Current)
+SampleRate = 5000; 	// частота дискретизации
+Rshunt = 0.00025;	// сопротивление шунта
+
+// Коэффициенты регулятора
+clcsu_RegulatorProp0 = 0;
+clcsu_RegulatorIntegral0 = 0;
+clcsu_RegulatorProp1 = 0;
+clcsu_RegulatorIntegral1 = 0;
+clcsu_RegulatorProp2 = 0;
+clcsu_RegulatorIntegral2 = 0;
+
+function LCSU_Start_KEI(Type, Current)
 {
-	KEI_Wait();
+	var IdSc = 0;
+	KEI_ConfigVoltageDC(SampleRate);
+	KEI_ConfigAnalogEdgeTrigger();
+	KEI_SetVoltageDCRange(Current * Rshunt);
+	KEI_ActivateTrigger();
+
 	sleep(500);
 	LCSU_Start(Type,Current)
-	var CurrentTemp = KEI_Current();
-	var IdUnit = dev.rf(200); // Ток измеренный LCSU CtrlBrd
+
+	if(Type == 0 || Type == 1)
+		IdSc = (KEI_ReadMaximum() / clcsu_RShunt);
+
+	if(Type == 2)
+		IdSc = KEI_ReadArrayTrapeze(SampleRate);
+
+	var IdUnit = dev.rf(200);
 	print("IdSet, A: " + Current);
-	print("IdSc, A: " + CurrentTemp);
-	var IdErr = ((CurrentTemp - Current) / Current * 100); // погрешность задания
-	var IdErrMeas = ((IdUnit - CurrentTemp) / CurrentTemp * 100); // погрешность измерения
-	print("IdErrSet, %: " + IdErr);
-	print("IdMeasSet, %: " + IdErrMeas);
+	print("IdSc, A: " + IdSc);
+	var IdSetErr = ((IdSc - Current) / Current * 100);
+	var IdMeasErr = ((IdUnit - IdSc) / IdSc * 100);
+	print("IdSetErr, %: " + IdSetErr);
+	print("IdMeasErr, %: " + IdMeasErr);
 	print("--------------------");
-	CurrentTemp = 0;
 }
 
-function LCSU_Start(Type,Current)
+function LCSU_Start(Type, Current)
 {
 	dev.w(19,Type);
 	// Enable power
@@ -80,9 +101,16 @@ function LCSU_Start(Type,Current)
 			return false;
 		}
 	}
+
 	print("IdUnit, A: " + dev.rf(200));
 	Id_DACArray = dev.raff(6)
 	p("DAC " + Math.max.apply(null, Id_DACArray))
+
+	if (dev.rf(196) == 1)
+	{
+		print("Following regulator error.");
+		return false;
+	}
 
 	return true;
 }
@@ -118,18 +146,6 @@ function LCSU_SyncTest(Current,sync_time)
 	}
 
 	return true;
-}
-
-function LCSU_Cycle(Current,Quantity)
-{
-	for (var i = 0; i < Quantity; i++)
-	{
-		KEI_Scope(100,15);
-		sleep(100);
-		LCSU_Start(0,Current);
-		sleep(7000);
-		if (anykey()) return 0;
-	}
 }
 
 function LCSU_ResourceTest(Current, HoursTest)
@@ -170,5 +186,96 @@ function LCSU_ResourceTest(Current, HoursTest)
 		if (anykey()) break;
 
 		i++;
+	}
+}
+
+function CLCSU_Regulator(Range, OnOff) // диапазон 0,1,2; вкл (1), выкл (0)
+{
+	switch(OnOff)
+	{
+		case 0:
+		{
+			CLCSU_RegulatorSave(Range);
+			dev.wf(53,1);
+			print("Regulator off. Range: " +Range);
+			break;
+		}
+		case 1:
+		{
+			CLCSU_RegulatorCall(Range);
+			dev.wf(53,0);
+			print("Regulator on. Range: " +Range);
+			break;
+		}
+		default:
+		{
+			print("Incorrect value");
+			break;
+		}
+	}
+}
+
+function CLCSU_RegulatorSave(Range)
+{
+	switch(Range)
+	{
+		case 0:
+			{
+				clcsu_RegulatorProp0 = dev.rf(44);
+				clcsu_RegulatorIntegral0 = dev.rf(45);
+				dev.wf(44,0);
+				dev.wf(45,0);
+				break;
+			}
+		case 1:
+			{
+				clcsu_RegulatorProp1 = dev.rf(46);
+				clcsu_RegulatorIntegral1 = dev.rf(47);
+				dev.wf(46,0);
+				dev.wf(47,0);
+				break;
+			}
+		case 2:
+			{
+				clcsu_RegulatorProp2 = dev.rf(70);
+				clcsu_RegulatorIntegral2 = dev.rf(71);
+				dev.wf(70,0);
+				dev.wf(71,0);
+				break;
+			}
+			default:
+			{
+				print("Incorrect value");
+				break;
+			}
+	}
+}
+function CLCSU_RegulatorCall(Range)
+{
+	switch(Range)
+	{
+		case 0:
+			{
+				dev.wf(44,clcsu_RegulatorProp0);
+				dev.wf(45,clcsu_RegulatorIntegral0);
+				break;
+			}
+		case 1:
+			{
+				dev.wf(46,clcsu_RegulatorProp1);
+				dev.wf(47,clcsu_RegulatorIntegral1);
+				break;
+			}
+		case 2:
+			{
+				dev.wf(70,clcsu_RegulatorProp2);
+				dev.wf(71,clcsu_RegulatorIntegral2);
+				break;
+			}
+			default:
+			{
+				print("Incorrect value");
+				break;
+			}
 	}
 }

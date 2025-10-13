@@ -1,6 +1,7 @@
 // Пояснения
 CAL_Init(portDevice, portTek, channelMeasureId) 
-LCSU_Start(Current)
+LCSU_Start(Type,Current)
+CLCSU_Regulator(Range, OnOff) // диапазон 0,1,2; вкл (1), выкл (0)
 LCSU_ResourceTest(Current, hours_resource_test)
 Nid = 150...
 
@@ -20,58 +21,90 @@ FWU_DumpLCSU()
 i("STM_FWUpdate.js")
 FWU_RestoreLCSU()
 
-//-----Подключи блок командой dev.co(x)!-----
+// Запуск измерения
+include("TestLCSU.js");
+LCSU_Start(0, 100);
 
-// Верификация (диапазон 0)
-include("CalLCSU.js")
-dev.c(1)
-CLCSU_MeasureSet(0)
-CLCSU_VerifyId6500()
+// Запуск измерения на DMM6500
+include("TestLCSU.js");
+LCSU_Start_KEI(0, 200);
 
-// Калибровка ЦАП (диапазон 0)
-include("CalLCSU.js")
-dev.c(1)
-CLCSU_MeasureSet(0)
-CLCSU_CalibrateDAC()
+// Отключение регулятора
+include("TestLCSU.js");
+CLCSU_Regulator(0, 0);
 
-// Калибровка АЦП (диапазон 0)
+// Калибровка ЦАП без регулятора коэффициентами K и B
+// Диапазон 0 [75/160 - 350] А
+/ (Offset: 24) (K: 23)
+// Диапазон 1 [351 - 1100] А
+/ (Offset: 29) (K: 28)
+// Диапазон 2 [1101 - 6500] А
+/ (Offset: 68) (K: 67)
 include("CalLCSU.js")
-dev.c(1)
-CLCSU_MeasureSet(0)
-CLCSU_CalibrateADC()
+clcsu_IdMin = [75, 351, 1101];
+clcsu_IdMax = [350, 1100, 6500];
+clcsu_Points = 10;
+clcsu_Iterations = 1;
+clcsu_CurrentRange = 1; // 0, 1 или 2
+clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
+CLCSU_Init(12);
 
-// Верификация (диапазон 1)
-include("CalLCSU.js")
-dev.c(1)
-CLCSU_MeasureSet(1)
-CLCSU_VerifyId6500()
+CLCSU_CalibrateDAC();
 
-// Калибровка ЦАП (диапазон 1)
-include("CalLCSU.js")
-dev.c(1)
-CLCSU_MeasureSet(1)
-CLCSU_CalibrateDAC()
+CLCSU_VerifyId();
 
-// Калибровка АЦП (диапазон 1)
+// Калибровка ЦАП без регулятора коэффициентами P2, P1, P0
+// Диапазон 0 [75/160 - 350] А
+/ [P0: 22] [P1: 21] [P2: 20]
+// Диапазон 1 [351 - 1100] А
+/ [P0: 27] [P1: 26] [P2: 25]
+// Диапазон 2 [1101 - 6500] А
+/ [P0: 66] [P1: 65] [P2: 64]
 include("CalLCSU.js")
-dev.c(1)
-CLCSU_MeasureSet(1)
-CLCSU_CalibrateADC()
+clcsu_IdMin = [75, 351, 1101];
+clcsu_IdMax = [350, 1100, 6500];
+clcsu_Points = 10;
+clcsu_Iterations = 1;
+clcsu_CurrentRange = 0; // 0, 1 или 2
+clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
+CLCSU_Init(12);
 
-// Верификация (диапазон 2)
-include("CalLCSU.js")
-dev.c(1)
-CLCSU_MeasureSet(2)
-CLCSU_VerifyId6500()
+CLCSU_CalibrateDAC_Fine();
 
-// Калибровка ЦАП (диапазон 2)
-include("CalLCSU.js")
-dev.c(1)
-CLCSU_MeasureSet(2)
-CLCSU_CalibrateDAC()
+CLCSU_VerifyId();
 
-// Калибровка АЦП (диапазон 2)
+// Калибровка АЦП без регулятора коэффициентами K и B
+// Диапазон 0 [75/160 - 350] А
+/ (Offset: 38) (K: 37)
+// Диапазон 1 и 2 [351 - 6500] А
+/ (Offset: 43) (K: 42)
 include("CalLCSU.js")
-dev.c(1)
-CLCSU_MeasureSet(2)
-CLCSU_CalibrateADC()
+clcsu_IdMin = [75, 351, 1101];
+clcsu_IdMax = [350, 1100, 6500];
+clcsu_Points = 10;
+clcsu_Iterations = 1;
+clcsu_CurrentRange = 0; // 0 и 1(2)
+clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
+CLCSU_Init(12);
+
+CLCSU_CalibrateADC();
+
+CLCSU_VerifyId();
+
+// Калибровка задания тока Id с включеным регулятором
+// Диапазон 0 [75/160 - 350] А
+/ [P0: 36] [P1: 35] [P2: 34]
+// Диапазон 1 и 2 [351 - 6500] А
+/ [P0: 41] [P1: 40] [P2: 39]
+include("CalLCSU.js")
+clcsu_IdMin = [75, 351, 1101];
+clcsu_IdMax = [350, 1100, 6500];
+clcsu_Points = 10;
+clcsu_Iterations = 1;
+clcsu_CurrentRange = 0; // 0, 1 или 2
+clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
+CLCSU_Init(12);
+
+CLCSU_CalibrateId();
+
+CLCSU_VerifyId();

@@ -3,163 +3,302 @@ include("DMM6500.js")
 include("TestLCSU.js")
 include("Tektronix.js")
 
-var clcsu_RShunt = 0.00025; // сопротивление шунта, Ом
-var clcsu_fs = 1000; // частота дискретизации для DMM6500, Гц
+clcsu_RShunt = 0.00025; // сопротивление шунта, Ом
+clcsu_Sample_Rate = 5000; // частота дискретизации для DMM6500, Гц
 
-var clcsu_ErrShunt = 0.5; // погрешность шунта в %
-var clcsu_ErrDMM6500 = 0.0065; // наихудшая погрешность мультиметра в %
-var clcsu_NoiseDMM6500 = 0.083; // наихудшая погрешность, вносимая шумами мультиметра, в %
+clcsu_ErrShunt = 0.5; // погрешность шунта в %
+clcsu_ErrDMM6500 = 0.0065; // наихудшая погрешность мультиметра в %
+clcsu_NoiseDMM6500 = 0.083; // наихудшая погрешность, вносимая шумами мультиметра, в %
 
-var E0 = 1.1*Math.sqrt((clcsu_ErrShunt*clcsu_ErrShunt) + (clcsu_ErrDMM6500*clcsu_ErrDMM6500) + (clcsu_NoiseDMM6500*clcsu_NoiseDMM6500));
+SINE_SHAPE 		= 0 // синус
+MOD_SINE_SHAPE 	= 1 // модифицированный синус
+TRAPEZE_SHAPE	= 2 // трапеция
+clcsu_PulseType = SINE_SHAPE;
 
-var clcsu_PulseType = 2; // 0 - синус, 1 - модифицированный синус, 2 - трапеция
-var clcsu_Iterations = 3; // количество иераций накопления статистики
-var clcsu_Points = 10; // кол-во точек калибровки (токов) внутри диапазона калибровки
-var clcsu_CurrentRange = 0; // 0 = диапазон [ 70...350 A]; 1 = диапазон [ 350...1100 A]; 2 = диапазон [ 1100...6500 A]
+clcsu_Iterations = 3;
+clcsu_Points = 10;
+clcsu_CurrentRange = 0; // 0 = диапазон [ 70...350 A]; 1 = диапазон [ 350...1100 A]; 2 = диапазон [ 1100...6500 A]
 
-
-var clcsu_RegulatorProp0 = 0; // переменные записи коэффициентов регуляторов на разные диапазоны
-var clcsu_RegulatorIntegral0 = 0;
-var clcsu_RegulatorProp1 = 0;
-var clcsu_RegulatorIntegral1 = 0;
-var clcsu_RegulatorProp2 = 0;
-var clcsu_RegulatorIntegral2 = 0;
-
-
-var LCSU_Range = new Array(6); // массив номеров регистров, задержек и т.д., подробнее см. одноименную функцию ниже
-
-clcsu_IdMin = [160, 351, 1101]; //начальные и конечные значения диапазонов по току
+clcsu_IdMin = [160, 351, 1101]; // начальные и конечные значения диапазонов по току
 clcsu_IdMax = [350, 1100, 6500];
 
-var clcsu_DMMValues = []; // массив значений измеренных 6500 токов
-var clcsu_UnitValues = []; // массив значений измеренных LCSU CtrlBrd токов
-var clcsu_DACValues = []; // массив значений ЦАП
-var clcsu_ErrSetCurrents = []; // массив отклонений измеренных 6500 значений относительно заданных
-var clcsu_ErrTotal = []; // массив значений суммарной ошибки (погрешность задания + погрешность измерения Е0)
-var clcsu_ErrMeasCurrents = []; // массив отклонений измеренных блоком значений относительно 6500
-var clcsu_CurrentArray_repeat = []; // массив задаваемых токов, повторяемый clcsu_Iterations раз, используется для вывода графика погрешности
-var clcsu_SetValuesArray = []; // массив задаваемых токов, распределенных по логарифмическому закону
+clcsu_Reg_DAC_Coarse = [];
+clcsu_Reg_ADC_Coarse = [];
+clcsu_Reg_DAC_Fine = [];
+clcsu_Reg_ADC_Fine = [];
 
-var clcsu_CurrentCheckCorrect = false; // переменная для цикла проверки корректности полученного от 6500 значения тока
-var clcsu_CurrentTemp = 0; // переменная записи тока каждого измерения в цикле
+// Counters
+clcsu_CntTotal = 0;
+clcsu_CntDone = 0;
 
-var clcsu_RegulatorError = 0; // переменная проверки ошибки регулятора
+// Results storage
+clcsu_IdSet = [];
+clcsu_IdDAC = [];
+clcsu_Id = [];
 
-function CLCSU_Reset() // обнуление массивов
+// Tektronix/DMM6500 data
+clcsu_IdSc = [];
+
+// Relative error
+clcsu_IdSetErr = [];
+clcsu_IdErr = [];
+
+// Summary error
+clcsu_IdSetErrSumm = [];
+
+function CLCSU_Init(portDevice)
 {
-	clcsu_DMMValues=[];
-	clcsu_UnitValues=[];
-	clcsu_DACValues=[];
-	clcsu_ErrSetCurrents=[];
-	clcsu_ErrMeasCurrents=[];
-	clcsu_ErrTotal=[];
-	clcsu_CurrentArray_repeat=[];
-	clcsu_CurrentCheckCorrect = false;
-	clcsu_CurrentTemp = 0;
+	// Init device port
+	dev.Disconnect();
+	dev.co(portDevice);
+
+	// DMM6500 init
+	KEI_Reset();
 }
 
-function CLCSU_CurrentArray(clcsu_CurrentRange,clcsu_Points) // заполнение массива измеряемых значений по логарифмическому закону
-{
-	clcsu_SetValuesArray = CGEN_GetRangeLogarithm(clcsu_IdMin[clcsu_CurrentRange], clcsu_IdMax[clcsu_CurrentRange], clcsu_Points);
-	return clcsu_SetValuesArray;
-}
-
-function CLCSU_MeasureSet(Range) // настройка токового диапазона блока
-{
-	clcsu_CurrentRange = Range;
-	CLCSU_Range(clcsu_CurrentRange); // запись номеров регистров, исходя из выбранного диапазона
-	return 0;
-}
-
-function CLCSU_CollectId6500()
+function CLCSU_CalibrateDAC() // калибровка ЦАП с выключеным регулятором (без сброса К и В)
 {
 	CLCSU_Reset();
-	tmc.co();
 
-	var CurrentArray = CLCSU_CurrentArray(clcsu_CurrentRange,clcsu_Points);
+	// DMM6500 Init
+	CLCSU_KEI_Init();
+	CLCSU_RegDAC();
+	CAL_PrintCoefDAC();
+	CLCSU_ResetIdSetCal();
 
-	var clcsu_CntTotal = clcsu_Iterations * CurrentArray.length;
-
-	print("Total measurements: " + clcsu_CntTotal);
+	if(CLCSU_CheckRegulatorStatus())
+	{
+		print("Регулятор включен. Калибровка ЦАП недоступна");
+		return;
+	}
+	else
+		print("Регулятор отключен");
 	print("--------------------");
+
+	if(CLCSU_KEI_CollectId())
+	{
+		// Plot relative error distribution
+		scattern(clcsu_IdSet, clcsu_IdSetErr, "IdSet, A", "Err, %", "Id Set relative error");
+
+		// Plot summary error distribution
+		scattern(clcsu_IdSet, clcsu_IdSetErrSumm, "IdSet, A", "Err, %", "Id set summary error");
+	
+		var DACCoefficients = CGEN_GetNumericCorrection(clcsu_IdSc, clcsu_IdDAC);
+		
+		if(clcsu_CurrentRange == 1 || clcsu_CurrentRange == 2)
+			DACCoefficients[1] = DACCoefficients[1] * 6; // в формировании тока участвуют 6 силовых плат
+
+		CLCSU_CalDAC(DACCoefficients[1], DACCoefficients[0]);
+		CAL_PrintCoefDAC();
+	}
+}
+
+function CLCSU_CalibrateDAC_Fine() // калибровка ЦАП с выключенным регулятором коэффициентами P2, P1, P0
+{
+	CLCSU_Reset();
+	CLCSU_RegDAC();
+	CAL_PrintCoefIdSet();
+	CLCSU_ResetIdSetCal();
+
+	if(CLCSU_CheckRegulatorStatus())
+	{
+		print("Регулятор включен. Калибровка ЦАП недоступна");
+		return;
+	}
+	else
+		print("Регулятор отключен");
+	print("--------------------");
+
+	// DMM6500 Init
+	CLCSU_KEI_Init();
+
+	if (CLCSU_KEI_CollectId())
+	{
+		// Plot relative error distribution
+		scattern(clcsu_IdSet, clcsu_IdSetErr, "IdSet, A", "Err, %", "Id Set relative error");
+
+		// Plot summary error distribution
+		scattern(clcsu_IdSet, clcsu_IdSetErrSumm, "IdSet, A", "Err, %", "Id set summary error");
+
+		// Calculate correction
+		var DAC_FineCoefficients = CGEN_GetNumericCorrection2(clcsu_IdSc, clcsu_IdSet);
+		CLCSU_CalIdSet(DAC_FineCoefficients[0], DAC_FineCoefficients[1], DAC_FineCoefficients[2]);
+		CAL_PrintCoefIdSet();
+	}
+}
+
+function CLCSU_CalibrateADC() // калибровка АЦП с выключеным регулятором (без сброса К и В)
+{
+	CLCSU_Reset();
+	CLCSU_RegADC();
+	CAL_PrintCoefADC();
+	CLCSU_ResetIdCal();
+
+	// DMM6500 Init
+	CLCSU_KEI_Init();
+
+	if(CLCSU_CheckRegulatorStatus())
+	{
+		print("Регулятор включен. Калибровка АЦП недоступна");
+		return;
+	}
+	else
+		print("Регулятор отключен");
+	print("--------------------");
+
+	if (CLCSU_KEI_CollectId())
+	{	
+		// Plot relative error distribution
+		scattern(clcsu_IdSc, clcsu_IdErr, "IdSc, A", "Err, %", "Id relative error");
+
+		var clcsu_RawUnitValues = CLCSU_RawUnitValues();
+		var ADCCoefficients = CGEN_GetNumericCorrection(clcsu_RawUnitValues, clcsu_IdSc);
+		CLCSU_CalADC(ADCCoefficients[1], ADCCoefficients[0]);
+		CAL_PrintCoefADC();
+	}
+}
+
+function CLCSU_CalibrateId() // калибровка задания тока с включеным регулятором
+{
+	CLCSU_Reset();
+	CLCSU_RegADC();
+	CLCSU_ResetIdCal();
+
+	if(CLCSU_CheckRegulatorStatus())
+		print("Регулятор включен");
+	else
+	{
+		print("Регулятор отключен. Включите регулятор");
+		return;
+	}
+	print("--------------------");
+
+	// DMM6500 Init
+	CLCSU_KEI_Init();
+
+	if (CLCSU_KEI_CollectId())
+	{
+		CLCSU_PlotGraphs();
+
+		// Calculate correction
+		var ADCCoefficients = CGEN_GetNumericCorrection2(clcsu_IdSet, clcsu_IdSc);
+		CLCSU_CalId(ADCCoefficients[0], ADCCoefficients[1], ADCCoefficients[2]);
+		CAL_PrintCoefId();
+	}
+}
+
+function CLCSU_VerifyId()
+{
+	CLCSU_Reset();
+
+	// DMM6500 Init
+	CLCSU_KEI_Init();
+
+	if(CLCSU_CheckRegulatorStatus())
+		print("Регулятор включен");
+	else
+		print("Регулятор отключен");
+	print("--------------------");
+	
+	if (CLCSU_KEI_CollectId())
+	{
+		// Plot relative error distribution
+		scattern(clcsu_IdSet, clcsu_IdSetErr, "IdSet, A", "Err, %", "Id Set relative error");
+		scattern(clcsu_IdSc, clcsu_IdErr, "IdSc, A", "Err, %", "Id relative error");
+
+		// Plot summary error distribution
+		scattern(clcsu_IdSet, clcsu_IdSetErrSumm, "IdSet, A", "Err, %", "Id set summary error");
+	}
+}
+
+function CLCSU_KEI_CollectId()
+{
+	var CurrentArray = CGEN_GetRangeLogarithm(clcsu_IdMin[clcsu_CurrentRange], clcsu_IdMax[clcsu_CurrentRange], clcsu_Points);
+
+	clcsu_CntTotal = clcsu_Iterations * CurrentArray.length;
+	clcsu_CntDone = 1;
+
 	for (var i = 0; i < clcsu_Iterations; i++)
 	{
-		for (var j = 0; j < clcsu_Points; j++) // CurrentArray.length?
+		for (var j = 0; j < CurrentArray.length; j++)
 		{
-			while(clcsu_CurrentCheckCorrect === false)
-			{
-				if(clcsu_PulseType == 0 || clcsu_PulseType == 1) 
-				{
-					KEI_Wait();
-				}	
-				else if(clcsu_PulseType == 2)
-				{
-					KEI_Voltage(CurrentArray[j]*clcsu_RShunt,clcsu_fs);
-				}
-				sleep(1000);
-				LCSU_Start(clcsu_PulseType, CurrentArray[j]);
-				sleep(LCSU_Range[2]);
+			print("-- result " + clcsu_CntDone++ + " of " + clcsu_CntTotal + " --");
 
-				if(clcsu_PulseType==0 || clcsu_PulseType==1) // функция для получения максимального значения на синусе или мод.синусе
-				{
-					clcsu_CurrentTemp = KEI_Current();
-				}
-				if(clcsu_PulseType==2) // аналогично для трапеции
-				{
-					clcsu_CurrentTemp = KEI_ReadArrayTrapeze();
-				}
+			KEI_ClearBuffer();
+			KEI_SetVoltageDCRange(CurrentArray[j] * clcsu_RShunt);
+			KEI_ActivateTrigger();
 
-				if (clcsu_CurrentTemp > 5)
-				{
-					clcsu_CurrentCheckCorrect = true;
-				}
-				else
-				{
-					print("IdSc, A: " + clcsu_CurrentTemp);
-					print("Incorrect measurement. Repeat...");
-					print("--------------------");
-					if (anykey()) return 0;
-				}
-				if (anykey()) return 0;
-			}
-
-			clcsu_RegulatorError = dev.rf(196);
-			if (clcsu_RegulatorError==1)
-			{
-				print("Following regulator error.");
-				dev.c(2);
-				sleep(100);
-				dev.c(1);
+			sleep(1000);
+			if(!LCSU_Start(clcsu_PulseType, CurrentArray[j]))
 				return 0;
-			}
 
-			clcsu_CurrentCheckCorrect = false;
+			sleep(2000);
+
+			switch (clcsu_PulseType)
+			{
+				case SINE_SHAPE:
+				case MOD_SINE_SHAPE:
+					var IdSc = KEI_ReadMaximum() / clcsu_RShunt;
+					break;
+				case TRAPEZE_SHAPE:
+					var IdSc = KEI_ReadArrayTrapeze(clcsu_Sample_Rate) / clcsu_RShunt;
+					break;
+				default:
+					print("Incorrect pulse type.");
+					break;
+			}
 
 			var Id_DACArray = dev.raff(6);
-			var IdDAC = Math.max.apply(null, Id_DACArray); //максимальное значение ЦАП
-			var IdUnit = dev.rf(200); // Ток измеренный LCSU CtrlBrd
-			var IdSc = clcsu_CurrentTemp; // Ток измеренный DMM6500
-			var IdSet = dev.rf(128); // Задаваемый ток
-			var IdErrSet = ((IdSc - IdSet) / IdSet * 100); // погрешность измеренного 6500 тока относительно заданного
-			var IdErrMeas = ((IdUnit - IdSc) / IdSc * 100); // погрешность измеренного блоком тока относительно измеренного 6500 
+			var IdDAC = Math.max.apply(null, Id_DACArray);
+			var IdMeas = dev.rf(200);
+			var IdSet = CurrentArray[j];
+			var IdErrSet = ((IdSc - IdSet) / IdSet * 100);
+			var IdErrMeas = ((IdMeas - IdSc) / IdSc * 100);
+			var E0 = 1.1 * Math.sqrt((clcsu_ErrShunt * clcsu_ErrShunt) + (clcsu_ErrDMM6500 * clcsu_ErrDMM6500) + (clcsu_NoiseDMM6500 * clcsu_NoiseDMM6500));
 
-			clcsu_DMMValues.push(IdSc);
-			clcsu_UnitValues.push(IdUnit);
-			clcsu_DACValues.push(IdDAC);
-			clcsu_ErrSetCurrents.push(+IdErrSet);
-			clcsu_ErrTotal.push(Math.sign_ma(IdErrSet)*(Math.abs(IdErrSet)+E0));
+			clcsu_IdSc.push(IdSc);
+			clcsu_Id.push(IdMeas);
+			clcsu_IdDAC.push(IdDAC);
+			clcsu_IdSetErr.push(+IdErrSet);
+			clcsu_IdSetErrSumm.push(Math.sign_ma(IdErrSet) * (Math.abs(IdErrSet) + E0));
 
-			clcsu_ErrMeasCurrents.push(+IdErrMeas);
-			clcsu_CurrentArray_repeat.push(+CurrentArray[j].toFixed(2));
+			clcsu_IdErr.push(+IdErrMeas);
+			clcsu_IdSet.push(+CurrentArray[j].toFixed(2));
 
 			print("IdSet, A: " + IdSet);
+			print("IdMeas, A: " + IdMeas);
 			print("IdSc, A: " + IdSc);
-			print("IdErrSet, %: " + IdErrSet);
-			print("IdMeasSet, %: " + IdErrMeas);
+			print("IdSetErr, %: " + IdErrSet);
+			print("IdMeasErr, %: " + IdErrMeas);
 			print("--------------------");
+
+			if (anykey()) return 0;
 		}
 	}
-	return 0; // return clcsu_CurrentArray_repeat, clcsu_UnitValues, clcsu_DMMValues;
+	
+	return 1;
+}
+
+function CLCSU_KEI_Init()
+{
+	KEI_ConfigVoltageDC(clcsu_Sample_Rate);
+	KEI_MakeTestBuffer(clcsu_Sample_Rate);
+	KEI_ConfigAnalogEdgeTrigger();
+}
+
+function CLCSU_Reset()
+{
+	clcsu_IdSc = [];
+	clcsu_Id = [];
+	clcsu_IdDAC = [];
+	clcsu_IdSetErr = [];
+	clcsu_IdErr = [];
+	clcsu_IdSetErrSumm = [];
+	clcsu_IdSet = [];
+	clcsu_Reg_DAC_Coarse = [];
+	clcsu_Reg_ADC_Coarse = [];
+	clcsu_Reg_DAC_Fine = [];
+	clcsu_Reg_ADC_Fine = [];
 }
 
 function CLCSU_CheckRegulatorStatus()
@@ -170,218 +309,138 @@ function CLCSU_CheckRegulatorStatus()
 		return false;
 }
 
-function CLCSU_SetADCCoefId(clcsu_adc1, clcsu_adc2, clcsu_adc3)
-{
-	dev.wf(LCSU_Range[6],clcsu_adc1);
-	dev.wf(LCSU_Range[5],clcsu_adc2);
-	dev.wf(LCSU_Range[4],clcsu_adc3);
-
-	print("y = Ax^2 + Bx + C");
-	print("Coefficient A: " + clcsu_adc3);
-	print("Coefficient B: " + clcsu_adc2);
-	print("Coefficient C: " + clcsu_adc1);
-}
-
-function CLCSU_SetDACCoefId(clcsu_dac1, clcsu_dac2)
-{
-	dev.wf(LCSU_Range[0], clcsu_dac1);
-	dev.wf(LCSU_Range[1], clcsu_dac2);	
-
-	print("y = Ax + B");
-	print("Coefficient A: " + clcsu_dac1);
-	print("Coefficient B: " + clcsu_dac2);
-}
-
-
-function CLCSU_ResetIdCalADC()
-{
-	dev.wf(LCSU_Range[6],0);
-	dev.wf(LCSU_Range[5],1);
-	dev.wf(LCSU_Range[4],0);
-}
-
-function CLCSU_CalibrateADC()
-{
-	CLCSU_ResetIdCalADC();
-
-	CLCSU_CollectId6500();
-	CLCSU_PlotGraphs();
-
-	var ADCCoefficients = CGEN_GetNumericCorrection2(clcsu_CurrentArray_repeat,clcsu_DMMValues);
-
-	CLCSU_SetADCCoefId(ADCCoefficients[0], ADCCoefficients[1], ADCCoefficients[2]);
-}
-
-function CLCSU_CalibrateDAC()
-{
-
-	if(CLCSU_CheckRegulatorStatus())
-	{
-		p("Regulator is active. DAC calibration unavailable");
-		return;
-	}
-
-	CLCSU_CollectId6500();
-
-	CLCSU_PlotGraphs();
-
-	var DACCoefficients = CGEN_GetNumericCorrection(clcsu_DMMValues,clcsu_DACValues);
-
-	DACCoefficients[0]=DACCoefficients[0]*LCSU_Range[3]; // меняется в зависимости от кол-ва плат
-
-	CLCSU_SetDACCoefId(DACCoefficients[0], DACCoefficients[1]);
-
-}
-
-function CLCSU_VerifyId6500()
-{
-	CLCSU_CollectId6500();
-	CLCSU_PlotGraphs();
-}
-
-function CLCSU_PlotGraphs()
-{
-	scattern(clcsu_CurrentArray_repeat, clcsu_ErrSetCurrents, "IdSet, A", "IdErrSet, %", "Set error");
-	scattern(clcsu_CurrentArray_repeat, clcsu_ErrTotal, "IdSet, A", "ErrTotal, %", "Total (summary) error");
-	scattern(clcsu_CurrentArray_repeat, clcsu_ErrMeasCurrents, "IdSet, A", "IdErrMeas, %", "Measure error");
-}
-
-function CLCSU_Range(clcsu_CurrentRange) // Служебная функция для определения номера регистров записи коэффициентов и прочего
+function CLCSU_RegDAC() 
 {
 	switch(clcsu_CurrentRange)
 	{
 		case 0:
-			{
-				//у диапазонов 1 и 2 смысл переменных аналогичен
-				LCSU_Range[0] = 23; // 0 и 1 номера регистров грубой настройки ЦАП
-				LCSU_Range[1] = 24;
-				LCSU_Range[2] = 500; // задержка между импульсами (мс)
-				LCSU_Range[3] = 1; // кол-во задействованных плат
-				// y = Ax^2+Bx+C
-				LCSU_Range[4] = 34; // тонкая подстройка АЦП, номер регистра квадратичного к-нта A
-				LCSU_Range[5] = 35; // тонкая подстройка АЦП, номер регистра линейного к-нта B
-				LCSU_Range[6] = 36; // тонкая подстройка АЦП, номер регистра масштабного к-нта C
+			clcsu_Reg_DAC_Coarse[0] = 23; // коэф. К
+			clcsu_Reg_DAC_Coarse[1] = 24; // коэф. B
+			clcsu_Reg_DAC_Fine[0]	= 22; // P0
+			clcsu_Reg_DAC_Fine[1]	= 21; // P1
+			clcsu_Reg_DAC_Fine[2]	= 20; // P2
 				break;
-			}
 		case 1:
-			{
-				LCSU_Range[0] = 28;
-				LCSU_Range[1] = 29;
-				LCSU_Range[2] = 2000; 
-				LCSU_Range[3] = 6; 
-				LCSU_Range[4] = 39;
-				LCSU_Range[5] = 40;
-				LCSU_Range[6] = 41;
+			clcsu_Reg_DAC_Coarse[0] = 28;
+			clcsu_Reg_DAC_Coarse[1] = 29;
+			clcsu_Reg_DAC_Fine[0]	= 27;
+			clcsu_Reg_DAC_Fine[1]	= 26;
+			clcsu_Reg_DAC_Fine[2]	= 25;
 				break;
-			}
 		case 2:
-			{
-				LCSU_Range[0] = 67;
-				LCSU_Range[1] = 68;
-				LCSU_Range[2] = 15000; 
-				LCSU_Range[3] = 6; 
-				LCSU_Range[4] = 39;
-				LCSU_Range[5] = 40;
-				LCSU_Range[6] = 41;
+			clcsu_Reg_DAC_Coarse[0] = 67;
+			clcsu_Reg_DAC_Coarse[1] = 68;
+			clcsu_Reg_DAC_Fine[0]	= 66;
+			clcsu_Reg_DAC_Fine[1]	= 65;
+			clcsu_Reg_DAC_Fine[2]	= 64;
 				break;
-			}
 		default:
-		{
-				print("Incorrect value. 0 = 70...350 A, 1 = 350...1100 A, 2 = 1100...6500 A");
-				break;
-		}
+			print("Incorrect current range");
+			break;
 	}
 }
 
-function CLCSU_Regulator(Range, OnOff) // диапазон 0,1,2; вкл (1), выкл (0)
+function CLCSU_RegADC() 
 {
-	switch(OnOff)
+	switch(clcsu_CurrentRange)
 	{
 		case 0:
-		{
-			CLCSU_RegulatorSave(Range);
-			dev.wf(53,1);
-			print("Regulator off. Range: " +Range);
-			break;
-		}
+			clcsu_Reg_ADC_Coarse[0] = 37; // коэф. К
+			clcsu_Reg_ADC_Coarse[1] = 38; // коэф. B
+			clcsu_Reg_ADC_Fine[0]	= 36; // P0
+			clcsu_Reg_ADC_Fine[1]	= 35; // P1
+			clcsu_Reg_ADC_Fine[2]	= 34; // P2
+				break;
 		case 1:
-		{
-			CLCSU_RegulatorCall(Range);
-			dev.wf(53,0);
-			print("Regulator on. Range: " +Range);
-			break;
-		}
+		case 2:
+			clcsu_Reg_ADC_Coarse[0] = 42;
+			clcsu_Reg_ADC_Coarse[1] = 43;
+			clcsu_Reg_ADC_Fine[0]	= 41;
+			clcsu_Reg_ADC_Fine[1]	= 40;
+			clcsu_Reg_ADC_Fine[2]	= 39;
+				break;
 		default:
-		{
-			print("Incorrect value");
+			print("Incorrect current range");
 			break;
-		}
 	}
 }
 
-function CLCSU_RegulatorSave(Range)
+function CLCSU_CalIdSet(P0, P1, P2)
 {
-	switch(Range)
-	{
-		case 0:
-			{
-				clcsu_RegulatorProp0 = dev.rf(44);
-				clcsu_RegulatorIntegral0 = dev.rf(45);
-				dev.wf(44,0);
-				dev.wf(45,0);
-				break;
-			}
-		case 1:
-			{
-				clcsu_RegulatorProp1 = dev.rf(46);
-				clcsu_RegulatorIntegral1 = dev.rf(47);
-				dev.wf(46,0);
-				dev.wf(47,0);
-				break;
-			}
-		case 2:
-			{
-				clcsu_RegulatorProp2 = dev.rf(70);
-				clcsu_RegulatorIntegral2 = dev.rf(71);
-				dev.wf(70,0);
-				dev.wf(71,0);
-				break;
-			}
-			default:
-			{
-				print("Incorrect value");
-				break;
-			}
-	}
+	dev.wf(clcsu_Reg_DAC_Fine[0], P0);
+	dev.wf(clcsu_Reg_DAC_Fine[1], P1);
+	dev.wf(clcsu_Reg_DAC_Fine[2], P2);
 }
-function CLCSU_RegulatorCall(Range)
+
+function CLCSU_CalId(P0, P1, P2)
 {
-	switch(Range)
-	{
-		case 0:
-			{
-				dev.wf(44,clcsu_RegulatorProp0);
-				dev.wf(45,clcsu_RegulatorIntegral0);
-				break;
-			}
-		case 1:
-			{
-				dev.wf(46,clcsu_RegulatorProp1);
-				dev.wf(47,clcsu_RegulatorIntegral1);
-				break;
-			}
-		case 2:
-			{
-				dev.wf(70,clcsu_RegulatorProp2);
-				dev.wf(71,clcsu_RegulatorIntegral2);
-				break;
-			}
-			default:
-			{
-				print("Incorrect value");
-				break;
-			}
-	}
+	dev.wf(clcsu_Reg_ADC_Fine[0], P0);
+	dev.wf(clcsu_Reg_ADC_Fine[1], P1);
+	dev.wf(clcsu_Reg_ADC_Fine[2], P2);
+}
+
+function CLCSU_CalDAC(K, B)
+{
+	dev.wf(clcsu_Reg_DAC_Coarse[0], K);
+	dev.wf(clcsu_Reg_DAC_Coarse[1], B);	
+}
+
+function CLCSU_CalADC(K, B)
+{
+	dev.wf(clcsu_Reg_ADC_Coarse[0], K);
+	dev.wf(clcsu_Reg_ADC_Coarse[1], B);	
+}
+
+function CLCSU_RawUnitValues()
+{
+	K = dev.rf(clcsu_Reg_ADC_Coarse[0]);
+	B = dev.rf(clcsu_Reg_ADC_Coarse[1]);
+
+	return CGEN_ComputeRawArray(clcsu_Id, 0, K, B);
+}
+
+function CAL_PrintCoefIdSet()
+{
+	print("P2 (reg " + clcsu_Reg_DAC_Fine[2] + "): " + dev.rf(clcsu_Reg_DAC_Fine[2]));
+	print("P1 (reg " + clcsu_Reg_DAC_Fine[1] + "): " + dev.rf(clcsu_Reg_DAC_Fine[1]));
+	print("P0 (reg " + clcsu_Reg_DAC_Fine[0] + "): " + dev.rf(clcsu_Reg_DAC_Fine[0]));
+	print("--------------------");
+}
+
+function CAL_PrintCoefId()
+{
+	print("P2 (reg " + clcsu_Reg_ADC_Fine[2] + "): " + dev.rf(clcsu_Reg_ADC_Fine[2]));
+	print("P1 (reg " + clcsu_Reg_ADC_Fine[1] + "): " + dev.rf(clcsu_Reg_ADC_Fine[1]));
+	print("P0 (reg " + clcsu_Reg_ADC_Fine[0] + "): " + dev.rf(clcsu_Reg_ADC_Fine[0]));
+	print("--------------------");
+}
+
+function CAL_PrintCoefDAC()
+{
+	print("K (reg " + clcsu_Reg_DAC_Coarse[0] + "): " + dev.rf(clcsu_Reg_DAC_Coarse[0]));
+	print("B (reg " + clcsu_Reg_DAC_Coarse[1] + "): " + dev.rf(clcsu_Reg_DAC_Coarse[1]));
+	print("--------------------");
+}
+
+function CAL_PrintCoefADC()
+{
+	print("K (reg " + clcsu_Reg_ADC_Coarse[0] + "): " + dev.rf(clcsu_Reg_ADC_Coarse[0]));
+	print("B (reg " + clcsu_Reg_ADC_Coarse[1] + "): " + dev.rf(clcsu_Reg_ADC_Coarse[1]));
+	print("--------------------");
+}
+
+function CLCSU_ResetIdCal()
+{
+	print("Были сброшены регистры измерения тока P2, P1, P0");
+	print("--------------------");
+	CLCSU_CalId(0, 1, 0);
+}
+
+function CLCSU_ResetIdSetCal()
+{
+	print("Были сброшены регистры задания тока P2, P1, P0");
+	print("--------------------");
+	CLCSU_CalIdSet(0, 1, 0);
 }
 
 ///--- Функции для осциллографа Tektronix и иных прочих ---///
@@ -486,9 +545,9 @@ function CAL_TekInit()
 }
 //--------------------
 
-function CAL_CollectId(clcsu_DMMValues, IterationsCount)
+function CAL_CollectId(CurrentValues, IterationsCount)
 {
-	cal_CntTotal = IterationsCount * clcsu_DMMValues.length;
+	cal_CntTotal = IterationsCount * CurrentValues.length;
 	cal_CntDone = 1;
 
 	var AvgNum;
@@ -505,15 +564,15 @@ function CAL_CollectId(clcsu_DMMValues, IterationsCount)
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
-		for (var j = 0; j < clcsu_DMMValues.length; j++)
+		for (var j = 0; j < CurrentValues.length; j++)
 		{
 			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
 			//
-			LCSU_TekScale(cal_chMeasureId, clcsu_DMMValues[j] * cal_clcsu_RShunt / 1000000);
+			LCSU_TekScale(cal_chMeasureId, CurrentValues[j] * cal_clcsu_RShunt / 1000000);
 			
 			for (var k = 0; k < AvgNum; k++)
 			{
-				if(!LCSU_Start(clcsu_DMMValues[j]))
+				if(!LCSU_Start(CurrentValues[j]))
 					return false;
 			}
 			
@@ -563,9 +622,9 @@ function CAL_SaveId(NameId)
 }
 //--------------------
 
-function CAL_CollectMesure(clcsu_DMMValues, IterationsCount)
+function CAL_CollectMesure(CurrentValues, IterationsCount)
 {
-	cal_CntTotal = IterationsCount * clcsu_DMMValues.length;
+	cal_CntTotal = IterationsCount * CurrentValues.length;
 	cal_CntDone = 1;
 
 	var AvgNum;
@@ -582,15 +641,15 @@ function CAL_CollectMesure(clcsu_DMMValues, IterationsCount)
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
-		for (var j = 0; j < clcsu_DMMValues.length; j++)
+		for (var j = 0; j < CurrentValues.length; j++)
 		{
 			print("-- result " + cal_CntDone++ + " of " + cal_CntTotal + " --");
 			//
-			LCSU_TekScale(cal_chMeasureId, clcsu_DMMValues[j] * cal_clcsu_RShunt / 1000000);
+			LCSU_TekScale(cal_chMeasureId, CurrentValues[j] * cal_clcsu_RShunt / 1000000);
 			
 			for (var k = 0; k < AvgNum; k++)
 			{
-				if(!LCSU_Start(clcsu_DMMValues[j]))
+				if(!LCSU_Start(CurrentValues[j]))
 					return false;
 			}
 			
