@@ -63,7 +63,8 @@ function CLCSU_CalibrateDAC() // калибровка ЦАП с выключен
 	// DMM6500 Init
 	CLCSU_KEI_Init();
 	CLCSU_RegDAC();
-	CAL_PrintCoefDAC();
+	print("Значение регистров до калибровки:");
+	CLCSU_PrintCoefDAC();
 	CLCSU_ResetIdSetCal();
 
 	if(CLCSU_CheckRegulatorStatus())
@@ -77,11 +78,7 @@ function CLCSU_CalibrateDAC() // калибровка ЦАП с выключен
 
 	if(CLCSU_KEI_CollectId())
 	{
-		// Plot relative error distribution
-		scattern(clcsu_IdSet, clcsu_IdSetErr, "IdSet, A", "Err, %", "Id Set relative error");
-
-		// Plot summary error distribution
-		scattern(clcsu_IdSet, clcsu_IdSetErrSumm, "IdSet, A", "Err, %", "Id set summary error");
+		CLCSU_Plot(1, 0);
 	
 		var DACCoefficients = CGEN_GetNumericCorrection(clcsu_IdSc, clcsu_IdDAC);
 		
@@ -89,7 +86,7 @@ function CLCSU_CalibrateDAC() // калибровка ЦАП с выключен
 			DACCoefficients[1] = DACCoefficients[1] * 6; // в формировании тока участвуют 6 силовых плат
 
 		CLCSU_CalDAC(DACCoefficients[1], DACCoefficients[0]);
-		CAL_PrintCoefDAC();
+		CLCSU_PrintCoefDAC();
 	}
 }
 
@@ -97,7 +94,8 @@ function CLCSU_CalibrateDAC_Fine() // калибровка ЦАП с выклю�
 {
 	CLCSU_Reset();
 	CLCSU_RegDAC();
-	CAL_PrintCoefIdSet();
+	print("Значение регистров до калибровки:");
+	CLCSU_PrintCoefIdSet();
 	CLCSU_ResetIdSetCal();
 
 	if(CLCSU_CheckRegulatorStatus())
@@ -114,16 +112,12 @@ function CLCSU_CalibrateDAC_Fine() // калибровка ЦАП с выклю�
 
 	if (CLCSU_KEI_CollectId())
 	{
-		// Plot relative error distribution
-		scattern(clcsu_IdSet, clcsu_IdSetErr, "IdSet, A", "Err, %", "Id Set relative error");
-
-		// Plot summary error distribution
-		scattern(clcsu_IdSet, clcsu_IdSetErrSumm, "IdSet, A", "Err, %", "Id set summary error");
+		CLCSU_Plot(1, 0);
 
 		// Calculate correction
 		var DAC_FineCoefficients = CGEN_GetNumericCorrection2(clcsu_IdSc, clcsu_IdSet);
 		CLCSU_CalIdSet(DAC_FineCoefficients[0], DAC_FineCoefficients[1], DAC_FineCoefficients[2]);
-		CAL_PrintCoefIdSet();
+		CLCSU_PrintCoefIdSet();
 	}
 }
 
@@ -131,6 +125,7 @@ function CLCSU_CalibrateADC() // калибровка АЦП с выключен
 {
 	CLCSU_Reset();
 	CLCSU_RegADC();
+	print("Значение регистров до калибровки:");
 	CAL_PrintCoefADC();
 	CLCSU_ResetIdCal();
 
@@ -148,11 +143,11 @@ function CLCSU_CalibrateADC() // калибровка АЦП с выключен
 
 	if (CLCSU_KEI_CollectId())
 	{	
-		// Plot relative error distribution
-		scattern(clcsu_IdSc, clcsu_IdErr, "IdSc, A", "Err, %", "Id relative error");
+		CLCSU_Plot(0, 1);
 
 		var clcsu_RawUnitValues = CLCSU_RawUnitValues();
-		var ADCCoefficients = CGEN_GetNumericCorrection(clcsu_RawUnitValues, clcsu_IdSc);
+		var clcsu_RawScValues = CLCSU_RawScValuesForADC();
+		var ADCCoefficients = CGEN_GetNumericCorrection(clcsu_RawUnitValues, clcsu_RawScValues);
 		CLCSU_CalADC(ADCCoefficients[1], ADCCoefficients[0]);
 		CAL_PrintCoefADC();
 	}
@@ -162,6 +157,8 @@ function CLCSU_CalibrateId() // калибровка задания тока с 
 {
 	CLCSU_Reset();
 	CLCSU_RegADC();
+	print("Значение регистров до калибровки:");
+	CLCSU_PrintCoefId();
 	CLCSU_ResetIdCal();
 
 	if(CLCSU_CheckRegulatorStatus())
@@ -178,12 +175,12 @@ function CLCSU_CalibrateId() // калибровка задания тока с 
 
 	if (CLCSU_KEI_CollectId())
 	{
-		CLCSU_PlotGraphs();
+		CLCSU_Plot(0, 1);
 
 		// Calculate correction
 		var ADCCoefficients = CGEN_GetNumericCorrection2(clcsu_IdSet, clcsu_IdSc);
 		CLCSU_CalId(ADCCoefficients[0], ADCCoefficients[1], ADCCoefficients[2]);
-		CAL_PrintCoefId();
+		CLCSU_PrintCoefId();
 	}
 }
 
@@ -202,12 +199,7 @@ function CLCSU_VerifyId()
 	
 	if (CLCSU_KEI_CollectId())
 	{
-		// Plot relative error distribution
-		scattern(clcsu_IdSet, clcsu_IdSetErr, "IdSet, A", "Err, %", "Id Set relative error");
-		scattern(clcsu_IdSc, clcsu_IdErr, "IdSc, A", "Err, %", "Id relative error");
-
-		// Plot summary error distribution
-		scattern(clcsu_IdSet, clcsu_IdSetErrSumm, "IdSet, A", "Err, %", "Id set summary error");
+		CLCSU_Plot(1, 1);
 	}
 }
 
@@ -229,9 +221,13 @@ function CLCSU_KEI_CollectId()
 			KEI_ActivateTrigger();
 
 			sleep(1000);
+			
+			var lcsu_printt_copy = lcsu_print;
+			lcsu_print = 0;
 			if(!LCSU_Start(clcsu_PulseType, CurrentArray[j]))
 				return 0;
 
+			lcsu_print = lcsu_printt_copy;
 			sleep(2000);
 
 			switch (clcsu_PulseType)
@@ -265,10 +261,11 @@ function CLCSU_KEI_CollectId()
 			clcsu_IdErr.push(+IdErrMeas);
 			clcsu_IdSet.push(+CurrentArray[j].toFixed(2));
 
-			print("IdSet, A: " + IdSet);
+			print("DAC        " + IdDAC);
+			print("IdSet, A:  " + IdSet);
 			print("IdMeas, A: " + IdMeas);
-			print("IdSc, A: " + IdSc);
-			print("IdSetErr, %: " + IdErrSet);
+			print("IdSc, A:   " + IdSc);
+			print("IdSetErr, %:  " + IdErrSet);
 			print("IdMeasErr, %: " + IdErrMeas);
 			print("--------------------");
 
@@ -284,6 +281,21 @@ function CLCSU_KEI_Init()
 	KEI_ConfigVoltageDC(clcsu_Sample_Rate);
 	KEI_MakeTestBuffer(clcsu_Sample_Rate);
 	KEI_ConfigAnalogEdgeTrigger();
+}
+
+function CLCSU_Plot(PrintIdset, PrintId)
+{
+	if(PrintIdset)
+	{
+		scattern(clcsu_IdSet, clcsu_IdSetErr, "IdSet, A", "Err, %", "Id Set relative error, Pulse type = " 
+			+ clcsu_PulseType + ", " + clcsu_IdMin[clcsu_CurrentRange] + "-" + clcsu_IdMax[clcsu_CurrentRange] + " А");
+		scattern(clcsu_IdSet, clcsu_IdSetErrSumm, "IdSet, A", "Err, %", "Id set summary error, Pulse type = " 
+			+ clcsu_PulseType + ", " + clcsu_IdMin[clcsu_CurrentRange] + "-" + clcsu_IdMax[clcsu_CurrentRange] + " А");
+	}
+	
+	if(PrintId)
+		scattern(clcsu_IdSc, clcsu_IdErr, "IdSc, A", "Err, %", "Id relative error, Pulse type = " 
+			+ clcsu_PulseType + ", " + clcsu_IdMin[clcsu_CurrentRange] + "-" + clcsu_IdMax[clcsu_CurrentRange] + " А");
 }
 
 function CLCSU_Reset()
@@ -393,13 +405,32 @@ function CLCSU_CalADC(K, B)
 
 function CLCSU_RawUnitValues()
 {
+	var RawVoltage = [];
+	var REG_SHUNT_RESISTANCE = dev.rf(5)
+
 	K = dev.rf(clcsu_Reg_ADC_Coarse[0]);
 	B = dev.rf(clcsu_Reg_ADC_Coarse[1]);
 
-	return CGEN_ComputeRawArray(clcsu_Id, 0, K, B);
+	for (var l = 0; l < clcsu_Id.length; l++)
+		RawVoltage[l] = clcsu_Id[l] * REG_SHUNT_RESISTANCE / 1000;
+
+	RawCurrent = CGEN_ComputeRawArray(RawVoltage, 0, K, B);
+
+	return RawCurrent;
 }
 
-function CAL_PrintCoefIdSet()
+function CLCSU_RawScValuesForADC()
+{
+	var RawScVoltage = [];
+	var REG_SHUNT_RESISTANCE = dev.rf(5)
+
+	for (var l = 0; l < clcsu_IdSc.length; l++)
+		RawScVoltage[l] = clcsu_IdSc[l] * REG_SHUNT_RESISTANCE / 1000;
+
+	return RawScVoltage;
+}
+
+function CLCSU_PrintCoefIdSet()
 {
 	print("P2 (reg " + clcsu_Reg_DAC_Fine[2] + "): " + dev.rf(clcsu_Reg_DAC_Fine[2]));
 	print("P1 (reg " + clcsu_Reg_DAC_Fine[1] + "): " + dev.rf(clcsu_Reg_DAC_Fine[1]));
@@ -407,7 +438,7 @@ function CAL_PrintCoefIdSet()
 	print("--------------------");
 }
 
-function CAL_PrintCoefId()
+function CLCSU_PrintCoefId()
 {
 	print("P2 (reg " + clcsu_Reg_ADC_Fine[2] + "): " + dev.rf(clcsu_Reg_ADC_Fine[2]));
 	print("P1 (reg " + clcsu_Reg_ADC_Fine[1] + "): " + dev.rf(clcsu_Reg_ADC_Fine[1]));
@@ -415,14 +446,14 @@ function CAL_PrintCoefId()
 	print("--------------------");
 }
 
-function CAL_PrintCoefDAC()
+function CLCSU_PrintCoefDAC()
 {
 	print("K (reg " + clcsu_Reg_DAC_Coarse[0] + "): " + dev.rf(clcsu_Reg_DAC_Coarse[0]));
 	print("B (reg " + clcsu_Reg_DAC_Coarse[1] + "): " + dev.rf(clcsu_Reg_DAC_Coarse[1]));
 	print("--------------------");
 }
 
-function CAL_PrintCoefADC()
+function CLCSU_PrintCoefADC()
 {
 	print("K (reg " + clcsu_Reg_ADC_Coarse[0] + "): " + dev.rf(clcsu_Reg_ADC_Coarse[0]));
 	print("B (reg " + clcsu_Reg_ADC_Coarse[1] + "): " + dev.rf(clcsu_Reg_ADC_Coarse[1]));

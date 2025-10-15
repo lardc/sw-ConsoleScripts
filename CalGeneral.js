@@ -188,7 +188,7 @@ function CGEN_ComputeRawArray(y, P2, P1, P0, P2del, P1del, P0del)
 	if (P2 === 0)
 		{
 			// Линейный случай
-			rawArray[i] = (y[i] - c) * (P1del / P1);
+			rawArray[i] = (y[i] - c) / b;
 		}
 		else
 		{

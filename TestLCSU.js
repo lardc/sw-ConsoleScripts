@@ -19,10 +19,13 @@ clcsu_RegulatorIntegral1 = 0;
 clcsu_RegulatorProp2 = 0;
 clcsu_RegulatorIntegral2 = 0;
 
+lcsu_print = 1;
+
 function LCSU_Start_KEI(Type, Current)
 {
 	var IdSc = 0;
 	KEI_ConfigVoltageDC(SampleRate);
+	KEI_MakeTestBuffer(SampleRate);
 	KEI_ConfigAnalogEdgeTrigger();
 	KEI_SetVoltageDCRange(Current * Rshunt);
 	KEI_ActivateTrigger();
@@ -102,9 +105,11 @@ function LCSU_Start(Type, Current)
 		}
 	}
 
-	print("IdUnit, A: " + dev.rf(200));
-	Id_DACArray = dev.raff(6)
-	p("DAC " + Math.max.apply(null, Id_DACArray))
+	if(lcsu_print)
+	{
+		print("IdMeas, A: " + dev.rf(200));
+		print("DAC " + Math.max.apply(null, dev.raff(6)))
+	}
 
 	if (dev.rf(196) == 1)
 	{
