@@ -1,7 +1,8 @@
 // Пояснения
 CAL_Init(portDevice, portTek, channelMeasureId) 
-LCSU_Start(Type,Current)
-CLCSU_Regulator(Range, OnOff) // диапазон 0,1,2; вкл (1), выкл (0)
+LCSU_Start(Type, Current, Pulse) // Type 0 - синус, 1 - мод. синус, 2 - трапеция; Current в А, Pulse в мс
+LCSU_Start_KEI(0, 200, 10) // Type 0 - синус, 1 - мод. синус, 2 - трапеция; Current в А, Pulse в мс
+CLCSU_Regulator(Range, OnOff) // диапазон 0, 1, 2; вкл (1), выкл (0)
 LCSU_ResourceTest(Current, hours_resource_test)
 Nid = 150...
 
@@ -23,11 +24,11 @@ FWU_RestoreLCSU()
 
 // Запуск измерения
 include("TestLCSU.js");
-LCSU_Start(0, 100);
+LCSU_Start(0, 100, 10);
 
-// Запуск измерения на DMM6500
+// Запуск измерения на DMM6500 (режим Digitize)
 include("TestLCSU.js");
-LCSU_Start_KEI(0, 200);
+LCSU_Start_KEI(0, 200, 10);
 
 // Отключение регулятора
 include("TestLCSU.js");
@@ -41,11 +42,11 @@ CLCSU_Regulator(0, 0);
 // Диапазон 2 [1101 - 6500] А
 / (Offset: 68) (K: 67)
 include("CalLCSU.js")
-clcsu_IdMin = [75, 351, 1101];
+clcsu_IdMin = [160, 351, 1101];
 clcsu_IdMax = [350, 1100, 6500];
 clcsu_Points = 10;
-clcsu_Iterations = 1;
-clcsu_CurrentRange = 1; // 0, 1 или 2
+clcsu_Iterations = 3;
+clcsu_CurrentRange = 0; // 0, 1 или 2
 clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
 CLCSU_Init(12);
 
@@ -66,7 +67,7 @@ clcsu_IdMax = [350, 1100, 6500];
 clcsu_Points = 10;
 clcsu_Iterations = 1;
 clcsu_CurrentRange = 0; // 0, 1 или 2
-clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
+clcsu_PulseType = 0; // 0 - синус, 1 - мод. синус, 2 - трапеция
 CLCSU_Init(12);
 
 CLCSU_CalibrateDAC_Fine();
@@ -76,14 +77,14 @@ CLCSU_VerifyId();
 // Калибровка АЦП без регулятора коэффициентами K и B
 // Диапазон 0 [75/160 - 350] А
 / (Offset: 38) (K: 37)
-// Диапазон 1 и 2 [351 - 6500] А
+// Диапазон 1 [351 - 6500] А
 / (Offset: 43) (K: 42)
 include("CalLCSU.js")
-clcsu_IdMin = [75, 351, 1101];
-clcsu_IdMax = [350, 1100, 6500];
+clcsu_IdMin = [75, 351];
+clcsu_IdMax = [350, 6500];
 clcsu_Points = 10;
 clcsu_Iterations = 1;
-clcsu_CurrentRange = 0; // 0 и 1(2)
+clcsu_CurrentRange = 1; // 0 или 1
 clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
 CLCSU_Init(12);
 
@@ -97,12 +98,12 @@ CLCSU_VerifyId();
 // Диапазон 1 и 2 [351 - 6500] А
 / [P0: 41] [P1: 40] [P2: 39]
 include("CalLCSU.js")
-clcsu_IdMin = [75, 351, 1101];
-clcsu_IdMax = [350, 1100, 6500];
+clcsu_IdMin = [160, 351];
+clcsu_IdMax = [350, 6500];
 clcsu_Points = 10;
 clcsu_Iterations = 1;
-clcsu_CurrentRange = 0; // 0, 1 или 2
-clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
+clcsu_CurrentRange = 0; // 0 или 1
+clcsu_PulseType = 0; // 0 - синус, 1 - мод. синус, 2 - трапеция
 CLCSU_Init(12);
 
 CLCSU_CalibrateId();

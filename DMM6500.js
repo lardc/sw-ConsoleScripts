@@ -174,39 +174,38 @@ function KEI_ReadArray()
 
 	for (var i = 0; i<FloatArray.length; i++)
 	{
-		p(FloatArray[i]);
+		//p(FloatArray[i]);
 	}
 
 	return FloatArray;
-
 }
 
-function KEI_ConfigVoltageDC(SampleRate)
+function KEI_ConfigVoltageDC(NPLC)
 {
 	KEI_Reset();
 
 	tmc.w('SENSe:FUNCtion "VOLTage"');
-	tmc.w(':VOLTage:APERture ' +(1 / SampleRate));
-	tmc.w(':DISPlay:VOLTage:DIGits ' +KEI_DisplayDigits(SampleRate));
+	tmc.w(':VOLTage:NPLC ' + NPLC);
+	tmc.w(':DISPlay:VOLTage:DIGits ' +KEI_DisplayDigits(NPLC));
 	tmc.w(':VOLTage:AZERo OFF');
 	tmc.w(':SENSe:VOLTage:RANGe 1');
 }
 
-function KEI_DisplayDigits(SampleRate)
+function KEI_DisplayDigits(NPLC)
 {
 	var Digits = 4;
 	
-	if(SampleRate <= 5000)
+	if(NPLC >= 0.01)
 	{
 		Digits = 5;
-		if(SampleRate <= 500)
+		if(NPLC > 0.1)
 			Digits = 6;
 	}
 
 	return Digits;
 }
 
-function KEI_ConfigAnalogEdgeTrigger()
+function KEI_ConfigVoltageDCEdgeTrigger()
 {
 	tmc.w(':VOLTage:ATRigger:MODE EDGE');
 	tmc.w(':VOLTage:ATRigger:EDGE:LEVel 0.01');
@@ -217,11 +216,23 @@ function KEI_ConfigAnalogEdgeTrigger()
 	tmc.w(':DISPlay:SCReen GRAPh');
 }
 
-function KEI_MakeTestBuffer(SampleRate) 
+function KEI_VoltageDCTriggerLevel(Level)
 {
-	tmc.w('TRACe:MAKE "TestBuffer",' + KEI_BufferLength(SampleRate));
+	tmc.w(':VOLTage:ATRigger:EDGE:LEVel ' + Level);
+}
+
+function KEI_MakeTestBuffer(SampleRate, Pulse) 
+{
+	KEI_BufferLength(SampleRate, Pulse);
+	tmc.w('TRACe:MAKE "TestBuffer",' + BufferLength);
 	tmc.w('TRACe:FILL:MODE CONTinuous, "TestBuffer"');
 	tmc.w('TRACe:LOG:STATe ON , "TestBuffer"');
+}
+
+function KEI_MakeTestBufferVoltageDC(NPLC, Pulse) 
+{
+	var SampleRate = (1 / (20660 * NPLC + 29)) * 1e6;
+	KEI_MakeTestBuffer(SampleRate, Pulse);
 }
 
 function KEI_OPC()
@@ -240,13 +251,12 @@ function KEI_ClearBuffer()
 	tmc.w(':TRACe:CLEar "TestBuffer"');
 }
 
-function KEI_BufferLength(SampleRate)
+function KEI_BufferLength(SampleRate, Pulse)
 {
-	var Length = Math.round(2 * 1e-2 / (1 / SampleRate));
-	return Length;
+	BufferLength = Math.round(1.5 * (SampleRate * Pulse));
 }
 
-function KEI_ReadArrayTrapeze(SampleRate)
+function KEI_ReadArrayTrapeze()
 {
 	SourceArray = [];
 	StringArray = [];
@@ -257,10 +267,7 @@ function KEI_ReadArrayTrapeze(SampleRate)
 	EndIndex = StepIndex;
 	i = 0;
 
-	var TrapezeBufferLength = KEI_BufferLength(SampleRate);
-	//p("Длина буфера: " + TrapezeBufferLength);
-
-	while((EndIndex + i * StepIndex) <= TrapezeBufferLength)
+	while((EndIndex + i * StepIndex) <= BufferLength)
 	{
 		SourceArray[i] = tmc.q('TRAC:DATA? ' + (StartIndex + i * StepIndex) +
 			', ' + (EndIndex + i * StepIndex) + ', "TestBuffer", READ');
@@ -308,4 +315,34 @@ function KEI_ReadArrayTrapeze(SampleRate)
 
 	sleep(1500);
 	return TrapezeLevel;
+}
+
+function KEI_ConfigVoltageDigit(SampleRate)
+{
+	KEI_Reset();
+	sleep(1000);
+
+	tmc.w(':SENSe:DIGitize:FUNCtion "VOLTage"');
+	tmc.w(':SENSe:DIGitize:VOLTage:SRATe ' + SampleRate);
+}
+
+function KEI_ConfigVoltageDigitEdgeTrigger()
+{
+	tmc.w(':DIGitize:VOLTage:ATRigger:MODE EDGE');
+	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:LEVel 0.01');
+	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:SLOPe RISing');
+
+	tmc.w(':TRIGger:LOAD "LoopUntilEvent", ATRigger, 30, ENTer, 0, "TestBuffer"');
+	tmc.w(':DISPlay:BUFFer:ACTive "TestBuffer"');
+	tmc.w(':DISPlay:SCReen GRAPh');
+}
+
+function KEI_SetVoltageDigitRange(Range)
+{
+	tmc.w(':SENSe:DIGitize:VOLTage:RANGe ' +Range);
+}
+
+function KEI_VoltageDigitTriggerLevel(Level)
+{
+	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:LEVel ' + Level);
 }

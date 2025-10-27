@@ -8,8 +8,8 @@ DS_Ready = 3,
 DS_ConfigReady = 4,
 DS_InProcess = 5
 
-SampleRate = 5000; 	// частота дискретизации
-Rshunt = 0.00025;	// сопротивление шунта
+SampleRate = 100000; 	// частота дискретизации
+Rshunt = 0.00025;		// сопротивление шунта
 
 // Коэффициенты регулятора
 clcsu_RegulatorProp0 = 0;
@@ -21,23 +21,25 @@ clcsu_RegulatorIntegral2 = 0;
 
 lcsu_print = 1;
 
-function LCSU_Start_KEI(Type, Current)
+function LCSU_Start_KEI(Type, Current, Pulse)
 {
 	var IdSc = 0;
-	KEI_ConfigVoltageDC(SampleRate);
-	KEI_MakeTestBuffer(SampleRate);
-	KEI_ConfigAnalogEdgeTrigger();
-	KEI_SetVoltageDCRange(Current * Rshunt);
+	
+	KEI_ConfigVoltageDigit(SampleRate);
+	KEI_MakeTestBuffer(SampleRate, Pulse / 1000);
+	KEI_ConfigVoltageDigitEdgeTrigger();
+	KEI_SetVoltageDigitRange(Current * Rshunt);
+	KEI_VoltageDigitTriggerLevel(Current * Rshunt / 2);
 	KEI_ActivateTrigger();
 
 	sleep(500);
-	LCSU_Start(Type,Current)
+	LCSU_Start(Type, Current, Pulse)
 
 	if(Type == 0 || Type == 1)
-		IdSc = (KEI_ReadMaximum() / clcsu_RShunt);
+		IdSc = KEI_ReadArrayMaximum() / Rshunt;
 
 	if(Type == 2)
-		IdSc = KEI_ReadArrayTrapeze(SampleRate);
+		IdSc = KEI_ReadArrayTrapeze() / Rshunt;
 
 	var IdUnit = dev.rf(200);
 	print("IdSet, A: " + Current);
@@ -49,7 +51,7 @@ function LCSU_Start_KEI(Type, Current)
 	print("--------------------");
 }
 
-function LCSU_Start(Type, Current)
+function LCSU_Start(Type, Current, Pulse)
 {
 	dev.w(19,Type);
 	// Enable power
@@ -76,6 +78,7 @@ function LCSU_Start(Type, Current)
 	}
 
 	dev.w(128, Current);
+	dev.w(129, Pulse);
 	dev.c(100);
 	
 	while(dev.r(192) != DS_ConfigReady)

@@ -4,7 +4,7 @@ include("TestLCSU.js")
 include("Tektronix.js")
 
 clcsu_RShunt = 0.00025; // сопротивление шунта, Ом
-clcsu_Sample_Rate = 5000; // частота дискретизации для DMM6500, Гц
+clcsu_NPLC = 0.0005;
 
 clcsu_ErrShunt = 0.5; // погрешность шунта в %
 clcsu_ErrDMM6500 = 0.0065; // наихудшая погрешность мультиметра в %
@@ -21,6 +21,7 @@ clcsu_CurrentRange = 0; // 0 = диапазон [ 70...350 A]; 1 = диапаз�
 
 clcsu_IdMin = [160, 351, 1101]; // начальные и конечные значения диапазонов по току
 clcsu_IdMax = [350, 1100, 6500];
+clcsu_Pulse = 10 // длительность импульса в мс
 
 clcsu_Reg_DAC_Coarse = [];
 clcsu_Reg_ADC_Coarse = [];
@@ -212,19 +213,22 @@ function CLCSU_KEI_CollectId()
 
 	for (var i = 0; i < clcsu_Iterations; i++)
 	{
+		KEI_VoltageDCTriggerLevel(0.01);
+		
 		for (var j = 0; j < CurrentArray.length; j++)
 		{
 			print("-- result " + clcsu_CntDone++ + " of " + clcsu_CntTotal + " --");
 
 			KEI_ClearBuffer();
 			KEI_SetVoltageDCRange(CurrentArray[j] * clcsu_RShunt);
+			KEI_VoltageDCTriggerLevel(CurrentArray[j] * clcsu_RShunt / 2);
 			KEI_ActivateTrigger();
 
 			sleep(1000);
 			
 			var lcsu_printt_copy = lcsu_print;
 			lcsu_print = 0;
-			if(!LCSU_Start(clcsu_PulseType, CurrentArray[j]))
+			if(!LCSU_Start(clcsu_PulseType, CurrentArray[j], clcsu_Pulse))
 				return 0;
 
 			lcsu_print = lcsu_printt_copy;
@@ -234,10 +238,10 @@ function CLCSU_KEI_CollectId()
 			{
 				case SINE_SHAPE:
 				case MOD_SINE_SHAPE:
-					var IdSc = KEI_ReadMaximum() / clcsu_RShunt;
+					var IdSc = KEI_ReadArrayMaximum() / clcsu_RShunt;
 					break;
 				case TRAPEZE_SHAPE:
-					var IdSc = KEI_ReadArrayTrapeze(clcsu_Sample_Rate) / clcsu_RShunt;
+					var IdSc = KEI_ReadArrayTrapeze() / clcsu_RShunt;
 					break;
 				default:
 					print("Incorrect pulse type.");
@@ -278,9 +282,9 @@ function CLCSU_KEI_CollectId()
 
 function CLCSU_KEI_Init()
 {
-	KEI_ConfigVoltageDC(clcsu_Sample_Rate);
-	KEI_MakeTestBuffer(clcsu_Sample_Rate);
-	KEI_ConfigAnalogEdgeTrigger();
+	KEI_ConfigVoltageDC(clcsu_NPLC);
+	KEI_MakeTestBufferVoltageDC(clcsu_NPLC, clcsu_Pulse / 1000);
+	KEI_ConfigVoltageDCEdgeTrigger();
 }
 
 function CLCSU_Plot(PrintIdset, PrintId)
