@@ -4,7 +4,7 @@ LCSU_Start(Type, Current, Pulse) // Type 0 - синус, 1 - мод. синус,
 LCSU_Start_KEI(0, 200, 10) // Type 0 - синус, 1 - мод. синус, 2 - трапеция; Current в А, Pulse в мс
 CLCSU_Regulator(Range, OnOff) // диапазон 0, 1, 2; вкл (1), выкл (0)
 LCSU_ResourceTest(Current, hours_resource_test)
-Nid = 150...
+Nid = 110...
 
 // Посмотреть версию прошивки
 i("PrintStatus.js")
@@ -98,12 +98,12 @@ CLCSU_VerifyId();
 // Диапазон 1 и 2 [351 - 6500] А
 / [P0: 41] [P1: 40] [P2: 39]
 include("CalLCSU.js")
-clcsu_IdMin = [160, 351];
+clcsu_IdMin = [75, 351];
 clcsu_IdMax = [350, 6500];
 clcsu_Points = 10;
-clcsu_Iterations = 1;
-clcsu_CurrentRange = 0; // 0 или 1
-clcsu_PulseType = 0; // 0 - синус, 1 - мод. синус, 2 - трапеция
+clcsu_Iterations = 3;
+clcsu_CurrentRange = 1; // 0 или 1
+clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
 CLCSU_Init(12);
 
 CLCSU_CalibrateId();

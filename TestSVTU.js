@@ -1,4 +1,5 @@
 include("PrintStatus.js")
+include("DMM6500.js")
 
 DS_None				= 0
 DS_Fault			= 1
@@ -10,6 +11,9 @@ DS_InProcess		= 5
 GateVoltage 	= 10;	// V
 //
 SVTU_Print = 1;
+SampleRate = 100000; 	// частота дискретизации
+Rshunt = 0.00025;		// сопротивление шунта
+Pulse = 1.5;				// длительность импульса
 
 function SVTU_StartMeasure(Current, GateVoltage)
 {
@@ -34,6 +38,7 @@ function SVTU_StartMeasure(Current, GateVoltage)
 			var end = new Date();
 			pinline('\rВремя заряда, с: ' + (end - start) / 1000);
 			sleep(100);
+			if(anykey()) return 0;
 		}
 		p("");
 	}
@@ -44,7 +49,10 @@ function SVTU_StartMeasure(Current, GateVoltage)
 	{
 		dev.c(100);
 		while(dev.r(192) != DS_Ready){sleep(500);}
-		
+	}
+
+	if(dev.r(197) == 1)
+	{
 		if(SVTU_Print)
 		{			
 			var Current = dev.rf(201);
@@ -55,16 +63,29 @@ function SVTU_StartMeasure(Current, GateVoltage)
 			print("GateCurrent, mA: " + dev.rf(203).toFixed(2));
 			print("---------------------------");
 		}
-		
+
 		return 1;
 	}
+
 	else
 		PrintStatus();
 	
 	return 0;
 }
 //--------------------------
+function SVTU_StartMeasure_KEI(Current, GateVoltage)
+{
+	KEI_ConfigVoltageDigit(SampleRate);
+	KEI_MakeTestBuffer(SampleRate, Pulse / 1000);
+	KEI_ConfigVoltageDigitEdgeTrigger();
+	KEI_SetVoltageDigitRange(Current * Rshunt);
+	KEI_VoltageDigitTriggerLevel(Current * Rshunt / 3);
+	KEI_ActivateTrigger();
 
+	sleep(1000);
+	SVTU_StartMeasure(Current, GateVoltage);
+}
+//--------------------------
 function SVTU_ResourceTest(Current_R0, Current_R1, HoursTest)
 {
 	csv_array = [];

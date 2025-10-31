@@ -17,6 +17,10 @@ FWU_RestoreSVTU(Num);
 include("TestSVTU.js");
 SVTU_StartMeasure(300, 20);
 
+// Запуск измерения на DMM6500 (режим Digitize)
+include("TestSVTU.js");
+SVTU_StartMeasure_KEI(200, 5);
+
 // Ресурсный тест
 
 ////Калибровка с помощью Tektronix\\\\

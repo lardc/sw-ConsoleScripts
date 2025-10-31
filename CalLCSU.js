@@ -176,7 +176,7 @@ function CLCSU_CalibrateId() // калибровка задания тока с 
 
 	if (CLCSU_KEI_CollectId())
 	{
-		CLCSU_Plot(0, 1);
+		CLCSU_Plot(1, 1);
 
 		// Calculate correction
 		var ADCCoefficients = CGEN_GetNumericCorrection2(clcsu_IdSet, clcsu_IdSc);
@@ -293,8 +293,8 @@ function CLCSU_Plot(PrintIdset, PrintId)
 	{
 		scattern(clcsu_IdSet, clcsu_IdSetErr, "IdSet, A", "Err, %", "Id Set relative error, Pulse type = " 
 			+ clcsu_PulseType + ", " + clcsu_IdMin[clcsu_CurrentRange] + "-" + clcsu_IdMax[clcsu_CurrentRange] + " А");
-		scattern(clcsu_IdSet, clcsu_IdSetErrSumm, "IdSet, A", "Err, %", "Id set summary error, Pulse type = " 
-			+ clcsu_PulseType + ", " + clcsu_IdMin[clcsu_CurrentRange] + "-" + clcsu_IdMax[clcsu_CurrentRange] + " А");
+		//scattern(clcsu_IdSet, clcsu_IdSetErrSumm, "IdSet, A", "Err, %", "Id set summary error, Pulse type = " 
+			//+ clcsu_PulseType + ", " + clcsu_IdMin[clcsu_CurrentRange] + "-" + clcsu_IdMax[clcsu_CurrentRange] + " А");
 	}
 	
 	if(PrintId)
