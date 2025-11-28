@@ -1,12 +1,12 @@
 include("PrintStatus.js")
 include("DMM6500.js")
 
-DS_None = 0,
-DS_Fault = 1,
-DS_Disabled = 2,
-DS_Ready = 3,
-DS_ConfigReady = 4,
-DS_InProcess = 5
+DS_None_LCSU 		= 0
+DS_Fault_LCSU		= 1
+DS_Disabled_LCSU	= 2
+DS_Ready_LCSU 		= 3
+DS_ConfigReady_LCSU = 4
+DS_InProcess_LCSU 	= 5
 
 SampleRate = 100000; 	// частота дискретизации
 Rshunt = 0.00025;		// сопротивление шунта
@@ -55,21 +55,21 @@ function LCSU_Start(Type, Current, Pulse)
 {
 	dev.w(19,Type);
 	// Enable power
-	if(dev.r(192) == DS_None)
+	if(dev.r(192) == DS_None_LCSU)
 	{
 		dev.c(1);
-		while (dev.r(192) != DS_Ready)
+		while (dev.r(192) != DS_Ready_LCSU)
 		{
 			p("Напряжение на ячейках = " + dev.r(201) + " В");
 			sleep(1000);			
 		}
 		p("Напряжение на ячейках = " + dev.r(201) + " В");
 	}	
-	else if (dev.r(192) == DS_Fault)	
+	else if (dev.r(192) == DS_Fault_LCSU)	
 	{
 		dev.c(3);
 		dev.c(1);
-		while (dev.r(192) != DS_Ready)
+		while (dev.r(192) != DS_Ready_LCSU)
 		{
 			p("Напряжение на ячейках = " + dev.r(201) + " В");
 			sleep(1000);			
@@ -81,11 +81,11 @@ function LCSU_Start(Type, Current, Pulse)
 	dev.w(129, Pulse);
 	dev.c(100);
 	
-	while(dev.r(192) != DS_ConfigReady)
+	while(dev.r(192) != DS_ConfigReady_LCSU)
 	{
 		sleep(50);
 		
-		if(dev.r(192) == DS_Fault)
+		if(dev.r(192) == DS_Fault_LCSU)
 		{
 			PrintStatus();
 			return false;
@@ -97,11 +97,11 @@ function LCSU_Start(Type, Current, Pulse)
 	sleep(20);
 	
 
-	while(dev.r(192) != DS_Ready)
+	while(dev.r(192) != DS_Ready_LCSU)
 	{
 		sleep(50);
 		
-		if(dev.r(192) == DS_Fault)
+		if(dev.r(192) == DS_Fault_LCSU)
 		{
 			PrintStatus();
 			return false;
@@ -128,14 +128,14 @@ function LCSU_SyncTest(Current,sync_time)
 	dev.nid(110);
 	sleep(20);
 
-	if (dev.r(192)==DS_Ready)
+	if (dev.r(192)==DS_Ready_LCSU)
 	{	
 		
 		dev.w(128, Current);
 		dev.c(100);
 		sleep(20);
 
-		if (dev.r(192)==DS_ConfigReady)
+		if (dev.r(192)==DS_ConfigReady_LCSU)
 		{
 			dev.nid(9);
 			dev.w(160, sync_time);

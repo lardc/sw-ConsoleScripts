@@ -1,12 +1,12 @@
 include("PrintStatus.js")
 include("DMM6500.js")
 
-DS_None				= 0
-DS_Fault			= 1
-DS_Disabled			= 2
-DS_BatteryCharge	= 3
-DS_Ready			= 4
-DS_InProcess		= 5
+DS_None_SVTU			= 0
+DS_Fault_SVTU			= 1
+DS_Disabled_SVTU		= 2
+DS_BatteryCharge_SVTU	= 3
+DS_Ready_SVTU			= 4
+DS_InProcess_SVTU		= 5
 
 GateVoltage 	= 10;	// V
 //
@@ -21,19 +21,19 @@ function SVTU_StartMeasure(Current, GateVoltage)
 	dev.wf(129, GateVoltage);
 	
 	var start = new Date();
-	if(dev.r(192) != DS_Ready)
+	if(dev.r(192) != DS_Ready_SVTU)
 	{
-		if (dev.r(192) == DS_Fault)
+		if (dev.r(192) == DS_Fault_SVTU)
 		{
 			PrintStatus();
 			dev.c(3);
 			p("Сброшен Fault");
 		}
 
-		if (dev.r(192) == DS_None || dev.r(192) == DS_Disabled)
+		if (dev.r(192) == DS_None_SVTU || dev.r(192) == DS_Disabled_SVTU)
 			dev.c(1);
 
-		while (dev.r(192) != DS_Ready)
+		while (dev.r(192) != DS_Ready_SVTU)
 		{
 			var end = new Date();
 			pinline('\rВремя заряда, с: ' + (end - start) / 1000);
@@ -45,10 +45,10 @@ function SVTU_StartMeasure(Current, GateVoltage)
 
 	if(anykey()) return 0;
 
-	if(dev.r(192) == DS_Ready)
+	if(dev.r(192) == DS_Ready_SVTU)
 	{
 		dev.c(100);
-		while(dev.r(192) != DS_Ready){sleep(500);}
+		while(dev.r(192) != DS_Ready_SVTU){sleep(500);}
 	}
 
 	if(dev.r(197) == 1)
