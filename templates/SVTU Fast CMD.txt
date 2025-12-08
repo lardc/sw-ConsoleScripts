@@ -23,6 +23,94 @@ SVTU_StartMeasure_KEI(200, 5);
 
 // Ресурсный тест
 
+
+////Калибровка с помощью DMM6500\\\\
+
+/// Задание тока Iset
+// Регистры задания 0 диапазон
+/ [P0: 32] [P1: 31] [P2: 30]
+// Регистры задания 1 диапазон
+/ [P0: 52] [P1: 51] [P2: 50]
+include("CalSVTU.js");
+CAL_IceMin = [75, 1000];
+CAL_IceMax = [1001, 6500];
+CAL_Rshunt = 0.00025;
+CAL_CurrentRange = 1; // 0 или 1
+CAL_Points = 10;
+CAL_UseAvg = 0;
+CAL_Iterations = 3;
+CAL_measuring_device = "DMM6000";
+CAL_Init_Mes_Device(12, 7, 1, 2, 3);
+
+CAL_VerifyIce();
+
+CAL_CalibrateIset();
+
+/// Измерение тока Ice
+// Регистры измерения 0 диапазон
+/ (Offset: 4) (K: 3)
+/ [P0: 2] [P1: 1] [P2: 0]
+// Регистры измерения 1 диапазон
+/ (Offset: 9) (K: 8)
+/ [P0: 7] [P1: 6] [P2: 5]
+include("CalSVTU.js");
+CAL_IceMin = [75, 1001];
+CAL_IceMax = [1000, 6500];
+CAL_Rshunt = 0.00025;
+CAL_CurrentRange = 0; // 0 или 1
+CAL_Points = 10;
+CAL_UseAvg = 0;
+CAL_Iterations = 3;
+CAL_measuring_device = "DMM6000";
+CAL_Init_Mes_Device(12, 7, 1, 2, 3);
+
+CAL_VerifyIce();
+
+CAL_CalibrateIce();
+
+/// Измерение напряжения Uce
+// Регистры измерения 0 диапазон
+/ (Offset: 14) (K: 13)
+/ [P0: 12] [P1: 11] [P2: 10]
+// Регистры измерения 1 диапазон
+/ (Offset: 59) (K: 58)
+/ [P0: 57] [P1: 56] [P2: 55]
+include("CalSVTU.js");
+CAL_UcesatMin = [600, 5500];
+CAL_UcesatMax = [5500, 15000];
+CAL_Rload = 0.003527;
+CAL_VoltageRange = 0;
+CAL_Points = 10;
+CAL_UseAvg = 0;
+CAL_Iterations = 3;
+CAL_measuring_device = "DMM6000";
+CAL_Init_Mes_Device(12, 7, 1, 2, 3);
+
+CAL_VerifyUcesat();
+
+CAL_CalibrateUcesat();
+
+/// Задание и измерение напряжения Uge
+// Регистры задания
+/ (Offset: 24) (K: 23)
+/ [P0: 22] [P1: 21] [P2: 20]
+// Регистры измерения
+/ (Offset: 19) (K: 18)
+/ [P0: 17] [P1: 16] [P2: 15]
+include("CalSVTU.js");
+CAL_UgeMin = 10;
+CAL_UgeMax = 20;
+CAL_UseAvg = 0;
+CAL_Iterations = 3;
+CAL_measuring_device = "DMM6000";
+CAL_Init_Mes_Device(12, 7, 1, 2, 3);
+
+CAL_VerifyUge();
+
+CAL_CalibrateUgeSet();
+
+CAL_CalibrateUge();
+
 ////Калибровка с помощью Tektronix\\\\
 
 /// Задание и измерение Uge

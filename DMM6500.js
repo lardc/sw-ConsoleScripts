@@ -67,7 +67,10 @@ function KEI_ConfigExtTrigger(Delay)
 	tmc.w('TRIG:BLOC:BUFF:CLEAR 1, "TestBuffer"');
 	tmc.w('TRIG:BLOC:WAIT 2, EXT, ENT, OR');
 	tmc.w('TRIG:BLOC:DEL:CONS 3, ' + Delay);
-	tmc.w('TRIG:BLOC:MDIG 4, "TestBuffer", AUTO');
+	tmc.w('TRIG:BLOC:MDIG 4, "TestBuffer",' + BufferLength);
+
+	tmc.w(':DISPlay:BUFFer:ACTive "TestBuffer"');
+	tmc.w(':DISPlay:SCReen GRAPh');
 }
 //--------------------
 
@@ -152,14 +155,14 @@ function KEI_EMA_Filter(FloatArray)
 
 function KEI_ReadArray()
 {
-	SourceArray = [];
-	StringArray = [];
-	FloatArray = [];
+	var SourceArray = [];
+	var StringArray = [];
+	var FloatArray = [];
 
-	StepIndex = 50;
-	StartIndex = 1;
-	EndIndex = StepIndex;
-	i = 0;
+	var StepIndex = 1;
+	var StartIndex = 1;
+	var EndIndex = StepIndex;
+	var i = 0;
 
 	while((EndIndex + i * StepIndex) <= BufferLength)
 	{
@@ -221,18 +224,18 @@ function KEI_VoltageDCTriggerLevel(Level)
 	tmc.w(':VOLTage:ATRigger:EDGE:LEVel ' + Level);
 }
 
-function KEI_MakeTestBuffer(SampleRate, Pulse) 
+function KEI_MakeTestBuffer(SampleRate, Pulse_uS) 
 {
-	KEI_BufferLength(SampleRate, Pulse);
+	KEI_BufferLength(SampleRate, Pulse_uS);
 	tmc.w('TRACe:MAKE "TestBuffer",' + BufferLength);
 	tmc.w('TRACe:FILL:MODE CONTinuous, "TestBuffer"');
 	tmc.w('TRACe:LOG:STATe ON , "TestBuffer"');
 }
 
-function KEI_MakeTestBufferVoltageDC(NPLC, Pulse) 
+function KEI_MakeTestBufferVoltageDC(NPLC, Pulse_uS) 
 {
 	var SampleRate = (1 / (20660 * NPLC + 29)) * 1e6;
-	KEI_MakeTestBuffer(SampleRate, Pulse);
+	KEI_MakeTestBuffer(SampleRate, Pulse_uS);
 }
 
 function KEI_OPC()
@@ -251,39 +254,19 @@ function KEI_ClearBuffer()
 	tmc.w(':TRACe:CLEar "TestBuffer"');
 }
 
-function KEI_BufferLength(SampleRate, Pulse)
+function KEI_BufferLength(SampleRate, Pulse_uS)
 {
-	BufferLength = Math.round(1.5 * (SampleRate * Pulse));
+	BufferLength = Math.round(1.5 * SampleRate * Pulse_uS / 1e6);
 }
 
 function KEI_ReadArrayTrapeze()
 {
-	SourceArray = [];
-	StringArray = [];
-	FloatArray = [];
-
-	StepIndex = 5;
-	StartIndex = 1;
-	EndIndex = StepIndex;
-	i = 0;
-
-	while((EndIndex + i * StepIndex) <= BufferLength)
-	{
-		SourceArray[i] = tmc.q('TRAC:DATA? ' + (StartIndex + i * StepIndex) +
-			', ' + (EndIndex + i * StepIndex) + ', "TestBuffer", READ');
-		i++;
-	}
-
-	SourceArray = String(SourceArray);
-	StringArray = SourceArray.split(",");
-	FloatArray = StringArray.map(Number);
-	sleep(100);
+	var FloatArray = KEI_ReadArray();
+	var Threshold = Math.max.apply(null, FloatArray) / 2;
 
 	var StartMassive = tmc.q(':TRACe:ACTual:STARt? "TestBuffer"');
 
-	TrapezeArray = [];
-
-	TrapezeArray = FloatArray.concat(FloatArray.splice(0, StartMassive));
+	var TrapezeArray = FloatArray.concat(FloatArray.splice(0, StartMassive - 1));
 
 	var StartNumber = 0;
 	var EndNumber = 0;
@@ -291,7 +274,7 @@ function KEI_ReadArrayTrapeze()
 
 	for (var i = 0; i < TrapezeArray.length; i++)
 	{
-		if (TrapezeArray[i] > 0.015)
+		if (TrapezeArray[i] > Threshold)
 		{
 			StartNumber = i + (Math.ceil(TrapezeArray.length * 0.1));
 			break;
@@ -300,7 +283,7 @@ function KEI_ReadArrayTrapeze()
 	var Sum = 0;
 	for (var i = StartNumber; i < TrapezeArray.length; i++)
 	{
-		if (TrapezeArray[i] < 0.015)
+		if (TrapezeArray[i] < Threshold)
 		{
 			EndNumber = i - (Math.ceil(TrapezeArray.length * 0.1));
 			break;
@@ -313,7 +296,6 @@ function KEI_ReadArrayTrapeze()
 	}
 	TrapezeLevel = (TrapezeLevel / (EndNumber - StartNumber + 1));
 
-	sleep(1500);
 	return TrapezeLevel;
 }
 
