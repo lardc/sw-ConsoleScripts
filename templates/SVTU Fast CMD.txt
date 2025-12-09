@@ -24,7 +24,7 @@ SVTU_StartMeasure_KEI(200, 5);
 // Ресурсный тест
 
 
-////Калибровка с помощью DMM6500\\\\
+////Калибровка с помощью DMM6500 или Tektronix\\\\
 
 /// Задание тока Iset
 // Регистры задания 0 диапазон
@@ -39,7 +39,7 @@ CAL_CurrentRange = 1; // 0 или 1
 CAL_Points = 10;
 CAL_UseAvg = 0;
 CAL_Iterations = 3;
-CAL_measuring_device = "DMM6000";
+CAL_measuring_device = "DMM6000"; // "DMM6000" or "TPS2000"
 CAL_Init_Mes_Device(12, 7, 1, 2, 3);
 
 CAL_VerifyIce();
@@ -61,7 +61,7 @@ CAL_CurrentRange = 0; // 0 или 1
 CAL_Points = 10;
 CAL_UseAvg = 0;
 CAL_Iterations = 3;
-CAL_measuring_device = "DMM6000";
+CAL_measuring_device = "DMM6000"; // "DMM6000" or "TPS2000"
 CAL_Init_Mes_Device(12, 7, 1, 2, 3);
 
 CAL_VerifyIce();
@@ -82,8 +82,8 @@ CAL_Rload = 0.003527;
 CAL_VoltageRange = 0;
 CAL_Points = 10;
 CAL_UseAvg = 0;
-CAL_Iterations = 3;
-CAL_measuring_device = "DMM6000";
+CAL_Iterations = 10;
+CAL_measuring_device = "TPS2000"; // "DMM6000" or "TPS2000"
 CAL_Init_Mes_Device(12, 7, 1, 2, 3);
 
 CAL_VerifyUcesat();
@@ -101,8 +101,8 @@ include("CalSVTU.js");
 CAL_UgeMin = 10;
 CAL_UgeMax = 20;
 CAL_UseAvg = 0;
-CAL_Iterations = 3;
-CAL_measuring_device = "DMM6000";
+CAL_Iterations = 10;
+CAL_measuring_device = "TPS2000"; // "DMM6000" or "TPS2000"
 CAL_Init_Mes_Device(12, 7, 1, 2, 3);
 
 CAL_VerifyUge();
@@ -110,27 +110,3 @@ CAL_VerifyUge();
 CAL_CalibrateUgeSet();
 
 CAL_CalibrateUge();
-
-////Калибровка с помощью Tektronix\\\\
-
-/// Задание и измерение Uge
-// Регистры задания
-/ (Offset: 24) (K: 23)
-/ [P0: 22] [P1: 21] [P2: 20]
-// Регистры измерения
-/ (Offset: 19) (K: 18)
-/ [P0: 17] [P1: 16] [P2: 15]
-include("CalSVTU.js");
-CAL_UgeMin = 10;
-CAL_UgeMax = 20;
-CAL_Points = 10;
-CAL_UseAvg = 0;
-CAL_Iterations = 3;
-CAL_measuring_device = "TPS2000";
-CAL_Init_Mes_Device(12, 7, 1, 2, 3);
-
-CAL_VerifyUge();
-
-CAL_CalibrateUge();
-
-CAL_CalibrateUgeSet();

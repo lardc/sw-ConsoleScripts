@@ -327,14 +327,16 @@ function CAL_CollectUcesat()
 			print("-- result " + CAL_CntDone++ + " of " + CAL_CntTotal + " --");
 			
 			if(CAL_measuring_device == "TPS2000")
-				TEK_ScaleVertical(CAL_chMeasureU, VoltageValues[j] / 1000, 80);
+				TEK_ScaleVertical(CAL_chMeasureU, VoltageValues[j] / 1000, 70);
+
 			else if (CAL_measuring_device == "DMM6000")
 			{
 				KEI_ClearBuffer();
 				KEI_SetVoltageDCRange(VoltageValues[j] / 1000);
 				KEI_ActivateTrigger();
-				sleep(1000);
 			}
+
+			sleep(2000);
 
 			var PrintTemp = SVTU_Print;
 			SVTU_Print = 0;
@@ -523,10 +525,8 @@ function CAL_CollectUge()
 			print("-- result " + CAL_CntDone++ + " of " + CAL_CntTotal + " --");
 			//
 			if(CAL_measuring_device == "TPS2000")
-			{
 				TEK_ScaleVertical(CAL_chMeasureU, VoltageValues[j], 90);
-				sleep(1000);
-			}
+
 			else if (CAL_measuring_device == "DMM6000")
 			{
 				KEI_ClearBuffer();
@@ -535,7 +535,10 @@ function CAL_CollectUge()
 			}
 
 			if(CAL_measuring_device == "TPS2000" && j == 0)
+			{
 				TEK_TriggerInit(CAL_chSync, 2.5);
+				TEK_Busy();
+			}
 
 			sleep (2000);
 
@@ -643,15 +646,16 @@ function CAL_KEI_Init()
 function CAL_TriggerInit(Channel)
 {
 	TEK_TriggerInit(CAL_chSync, 2.5);
-	TEK_Send("trigger:main:edge:slope fall");
-	sleep(1000);
+	//TEK_Send("trigger:main:edge:slope fall");
+	TEK_Busy();
 }
 
 function CAL_TekInit(Channel)
 {
-	TEK_Horizontal("1e-3", "0");
+	TEK_Horizontal("250e-6", "750e-6");
 	TEK_ChannelInit(Channel, "1", "2");
 	TEK_MeasMaxInit(Channel, Channel);
+	TEK_Busy();
 }
 
 function CAL_GateTekInit(Channel)
@@ -659,6 +663,7 @@ function CAL_GateTekInit(Channel)
 	TEK_Horizontal("500e-6", "-500e-6");
 	TEK_ChannelInit(Channel, "1", "2");
 	TEK_MeasMaxInit(Channel, Channel);
+	TEK_Busy();
 }
 
 // Reset Arrays
