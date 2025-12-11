@@ -212,16 +212,14 @@ function CLCSU_KEI_CollectId()
 	clcsu_CntDone = 1;
 
 	for (var i = 0; i < clcsu_Iterations; i++)
-	{
-		KEI_VoltageDCTriggerLevel(0.01);
-		
+	{	
 		for (var j = 0; j < CurrentArray.length; j++)
 		{
 			print("-- result " + clcsu_CntDone++ + " of " + clcsu_CntTotal + " --");
 
 			KEI_ClearBuffer();
-			KEI_SetVoltageDCRange(CurrentArray[j] * clcsu_RShunt);
 			KEI_VoltageDCTriggerLevel(CurrentArray[j] * clcsu_RShunt / 2);
+			KEI_SetVoltageDCRange(CurrentArray[j] * clcsu_RShunt);
 			KEI_ActivateTrigger();
 
 			sleep(1000);
@@ -283,7 +281,7 @@ function CLCSU_KEI_CollectId()
 function CLCSU_KEI_Init()
 {
 	KEI_ConfigVoltageDC(clcsu_NPLC);
-	KEI_MakeTestBufferVoltageDC(clcsu_NPLC, clcsu_Pulse / 1000);
+	KEI_MakeTestBufferVoltageDC(clcsu_NPLC, clcsu_Pulse * 1000);
 	KEI_ConfigVoltageDCEdgeTrigger();
 }
 
@@ -293,8 +291,8 @@ function CLCSU_Plot(PrintIdset, PrintId)
 	{
 		scattern(clcsu_IdSet, clcsu_IdSetErr, "IdSet, A", "Err, %", "Id Set relative error, Pulse type = " 
 			+ clcsu_PulseType + ", " + clcsu_IdMin[clcsu_CurrentRange] + "-" + clcsu_IdMax[clcsu_CurrentRange] + " А");
-		//scattern(clcsu_IdSet, clcsu_IdSetErrSumm, "IdSet, A", "Err, %", "Id set summary error, Pulse type = " 
-			//+ clcsu_PulseType + ", " + clcsu_IdMin[clcsu_CurrentRange] + "-" + clcsu_IdMax[clcsu_CurrentRange] + " А");
+		scattern(clcsu_IdSet, clcsu_IdSetErrSumm, "IdSet, A", "Err, %", "Id set summary error, Pulse type = " 
+			+ clcsu_PulseType + ", " + clcsu_IdMin[clcsu_CurrentRange] + "-" + clcsu_IdMax[clcsu_CurrentRange] + " А");
 	}
 	
 	if(PrintId)
