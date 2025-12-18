@@ -12,6 +12,10 @@ function Firmware_Get(NodeID)
 			Str = Str.concat(String.fromCharCode(Word >> 8))
 			Str = Str.concat(String.fromCharCode(Word & 0xFF))
 		}
+		
+		// Удаление пробельных символов в конце строки
+		Str = Str.replace(/\s+$/g, '')
+		
 		var str_arr = Str.split(",")
 		
 		// branch, commit, commitTimestamp, project
