@@ -280,7 +280,7 @@ function KEI_ReadArrayTrapeze()
 			break;
 		}
 	}
-	var Sum = 0;
+
 	for (var i = StartNumber; i < TrapezeArray.length; i++)
 	{
 		if (TrapezeArray[i] < Threshold)

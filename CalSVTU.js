@@ -327,7 +327,7 @@ function CAL_CollectUcesat()
 			print("-- result " + CAL_CntDone++ + " of " + CAL_CntTotal + " --");
 			
 			if(CAL_measuring_device == "TPS2000")
-				TEK_ScaleVertical(CAL_chMeasureU, VoltageValues[j] / 1000, 70);
+				TEK_ScaleVertical(CAL_chMeasureU, VoltageValues[j] / 1000, 60);
 
 			else if (CAL_measuring_device == "DMM6000")
 			{
@@ -337,6 +337,12 @@ function CAL_CollectUcesat()
 			}
 
 			sleep(2000);
+
+			if(CAL_measuring_device == "TPS2000" && j == 0)
+			{
+				TEK_TriggerInit(CAL_chSync, 2.5);
+				TEK_Busy();
+			}
 
 			var PrintTemp = SVTU_Print;
 			SVTU_Print = 0;
@@ -424,14 +430,15 @@ function CAL_CollectIce()
 			print("-- result " + CAL_CntDone++ + " of " + CAL_CntTotal + " --");
 			//
 			if(CAL_measuring_device == "TPS2000")
-				TEK_ScaleVertical(CAL_chMeasureI, CurrentValues[j] * CAL_Rshunt, 80);
+				TEK_ScaleVertical(CAL_chMeasureI, CurrentValues[j] * CAL_Rshunt, 60);
 			else if (CAL_measuring_device == "DMM6000")
 			{
 				KEI_ClearBuffer();
 				KEI_SetVoltageDCRange(CurrentValues[j] * CAL_Rshunt);
 				KEI_ActivateTrigger();
-				sleep(1000);
 			}
+
+			sleep(2000);
 			
 			var PrintTemp = SVTU_Print;
 			SVTU_Print = 0;
@@ -652,7 +659,7 @@ function CAL_TriggerInit(Channel)
 
 function CAL_TekInit(Channel)
 {
-	TEK_Horizontal("250e-6", "750e-6");
+	TEK_Horizontal("250e-6", "-750e-6");
 	TEK_ChannelInit(Channel, "1", "2");
 	TEK_MeasMaxInit(Channel, Channel);
 	TEK_Busy();
