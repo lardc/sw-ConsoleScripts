@@ -1,19 +1,18 @@
 include("PrintStatus.js")
 include("DMM6500.js")
 
-DS_None_SVTU			= 0
-DS_Fault_SVTU			= 1
-DS_Disabled_SVTU		= 2
-DS_BatteryCharge_SVTU	= 3
-DS_Ready_SVTU			= 4
-DS_InProcess_SVTU		= 5
+SVTU_DS_None			= 0
+SVTU_DS_Fault			= 1
+SVTU_DS_Disabled		= 2
+SVTU_DS_BatteryCharge	= 3
+SVTU_DS_Ready			= 4
+SVTU_DS_InProcess		= 5
 
-GateVoltage 	= 10;	// V
 //
 SVTU_Print = 1;
-SampleRate = 100000; 	// частота дискретизации
-Rshunt = 0.00025;		// сопротивление шунта
-Pulse = 1.5;				// длительность импульса
+SVTU_SampleRate = 100000; 	// частота дискретизации, Гц
+SVTU_Rshunt = 0.00025;		// сопротивление шунта, Ом
+SVTU_Pulse_us = 1000;		// длительность импульса, мкс
 
 function SVTU_StartMeasure(Current, GateVoltage)
 {
@@ -21,19 +20,22 @@ function SVTU_StartMeasure(Current, GateVoltage)
 	dev.wf(129, GateVoltage);
 	
 	var start = new Date();
-	if(dev.r(192) != DS_Ready_SVTU)
+	if(dev.r(192) != SVTU_DS_Ready)
 	{
-		if (dev.r(192) == DS_Fault_SVTU)
+		if (dev.r(192) == SVTU_DS_Fault)
 		{
 			PrintStatus();
 			dev.c(3);
 			p("Сброшен Fault");
+			dev.c(1);
+			if(dev.r(192) == SVTU_DS_Fault)
+				return 0;
 		}
 
-		if (dev.r(192) == DS_None_SVTU || dev.r(192) == DS_Disabled_SVTU)
+		if (dev.r(192) == SVTU_DS_None || dev.r(192) == SVTU_DS_Disabled)
 			dev.c(1);
 
-		while (dev.r(192) != DS_Ready_SVTU)
+		while (dev.r(192) != SVTU_DS_Ready)
 		{
 			var end = new Date();
 			pinline('\rВремя заряда, с: ' + (end - start) / 1000);
@@ -45,10 +47,10 @@ function SVTU_StartMeasure(Current, GateVoltage)
 
 	if(anykey()) return 0;
 
-	if(dev.r(192) == DS_Ready_SVTU)
+	if(dev.r(192) == SVTU_DS_Ready)
 	{
 		dev.c(100);
-		while(dev.r(192) != DS_Ready_SVTU){sleep(500);}
+		while(dev.r(192) != SVTU_DS_Ready){sleep(500);}
 	}
 
 	if(dev.r(197) == 1)
@@ -75,15 +77,19 @@ function SVTU_StartMeasure(Current, GateVoltage)
 //--------------------------
 function SVTU_StartMeasure_KEI(Current, GateVoltage)
 {
-	KEI_ConfigVoltageDigit(SampleRate);
-	KEI_MakeTestBuffer(SampleRate, Pulse / 1000);
+	KEI_ConfigVoltageDigit(SVTU_SampleRate);
+	KEI_MakeTestBuffer(SVTU_SampleRate, SVTU_Pulse_us);
 	KEI_ConfigVoltageDigitEdgeTrigger();
-	KEI_SetVoltageDigitRange(Current * Rshunt);
-	KEI_VoltageDigitTriggerLevel(Current * Rshunt / 3);
+	KEI_SetVoltageDigitRange(Current * SVTU_Rshunt);
+	KEI_VoltageDigitTriggerLevel(Current * SVTU_Rshunt / 2);
 	KEI_ActivateTrigger();
 
 	sleep(1000);
 	SVTU_StartMeasure(Current, GateVoltage);
+
+	var IdSc = (KEI_ReadArrayTrapeze() / SVTU_Rshunt).toFixed(2);
+	print("IdDMM, A: " + IdSc);
+	print("---------------------------");
 }
 //--------------------------
 function SVTU_ResourceTest(Current_R0, Current_R1, HoursTest)

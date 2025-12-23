@@ -1,15 +1,15 @@
 include("PrintStatus.js")
 include("DMM6500.js")
 
-DS_None_LCSU 		= 0
-DS_Fault_LCSU		= 1
-DS_Disabled_LCSU	= 2
-DS_Ready_LCSU 		= 3
-DS_ConfigReady_LCSU = 4
-DS_InProcess_LCSU 	= 5
+LCSU_DS_None 		= 0
+LCSU_DS_Fault		= 1
+LCSU_DS_Disabled	= 2
+LCSU_DS_Ready 		= 3
+LCSU_DS_ConfigReady = 4
+LCSU_DS_InProcess 	= 5
 
-SampleRate = 100000; 	// частота дискретизации
-Rshunt = 0.00025;		// сопротивление шунта
+LCSU_SampleRate = 100000; 	// частота дискретизации, Гц
+LCSU_Rshunt = 0.00025;		// сопротивление шунта, Ом
 
 // Коэффициенты регулятора
 clcsu_RegulatorProp0 = 0;
@@ -21,55 +21,25 @@ clcsu_RegulatorIntegral2 = 0;
 
 lcsu_print = 1;
 
-function LCSU_Start_KEI(Type, Current, Pulse)
-{
-	var IdSc = 0;
-	
-	KEI_ConfigVoltageDigit(SampleRate);
-	KEI_MakeTestBuffer(SampleRate, Pulse / 1000);
-	KEI_ConfigVoltageDigitEdgeTrigger();
-	KEI_SetVoltageDigitRange(Current * Rshunt);
-	KEI_VoltageDigitTriggerLevel(Current * Rshunt / 2);
-	KEI_ActivateTrigger();
-
-	sleep(500);
-	LCSU_Start(Type, Current, Pulse)
-
-	if(Type == 0 || Type == 1)
-		IdSc = KEI_ReadArrayMaximum() / Rshunt;
-
-	if(Type == 2)
-		IdSc = KEI_ReadArrayTrapeze() / Rshunt;
-
-	var IdUnit = dev.rf(200);
-	print("IdSet, A: " + Current);
-	print("IdSc, A: " + IdSc);
-	var IdSetErr = ((IdSc - Current) / Current * 100);
-	var IdMeasErr = ((IdUnit - IdSc) / IdSc * 100);
-	print("IdSetErr, %: " + IdSetErr);
-	print("IdMeasErr, %: " + IdMeasErr);
-	print("--------------------");
-}
-
-function LCSU_Start(Type, Current, Pulse)
+function LCSU_Start(Type, Current, Pulse_ms)
 {
 	dev.w(19,Type);
 	// Enable power
-	if(dev.r(192) == DS_None_LCSU)
+	if(dev.r(192) == LCSU_DS_None)
 	{
 		dev.c(1);
-		while (dev.r(192) != DS_Ready_LCSU)
+		while (dev.r(192) != LCSU_DS_Ready)
 		{
 			p("Напряжение на ячейках = " + dev.r(201) + " В");
 			sleep(1000);			
 		}
 		p("Напряжение на ячейках = " + dev.r(201) + " В");
 	}	
-	else if (dev.r(192) == DS_Fault_LCSU)	
+	else if (dev.r(192) == LCSU_DS_Fault)	
 	{
 		dev.c(3);
 		dev.c(1);
-		while (dev.r(192) != DS_Ready_LCSU)
+		while (dev.r(192) != LCSU_DS_Ready)
 		{
 			p("Напряжение на ячейках = " + dev.r(201) + " В");
 			sleep(1000);			
@@ -77,15 +47,15 @@ function LCSU_Start(Type, Current, Pulse)
 		p("Напряжение на ячейках = " + dev.r(201) + " В");
 	}
 
-	dev.w(128, Current);
-	dev.w(129, Pulse);
+	dev.wf(128, Current);
+	dev.w(129, Pulse_ms);
 	dev.c(100);
 	
-	while(dev.r(192) != DS_ConfigReady_LCSU)
+	while(dev.r(192) != LCSU_DS_ConfigReady)
 	{
 		sleep(50);
 		
-		if(dev.r(192) == DS_Fault_LCSU)
+		if(dev.r(192) == LCSU_DS_Fault)
 		{
 			PrintStatus();
 			return false;
@@ -97,11 +67,11 @@ function LCSU_Start(Type, Current, Pulse)
 	sleep(20);
 	
 
-	while(dev.r(192) != DS_Ready_LCSU)
+	while(dev.r(192) != LCSU_DS_Ready)
 	{
 		sleep(50);
 		
-		if(dev.r(192) == DS_Fault_LCSU)
+		if(dev.r(192) == LCSU_DS_Fault)
 		{
 			PrintStatus();
 			return false;
@@ -123,19 +93,49 @@ function LCSU_Start(Type, Current, Pulse)
 	return true;
 }
 
+function LCSU_Start_KEI(Type, Current, Pulse_ms)
+{
+	var IdSc = 0;
+	
+	KEI_ConfigVoltageDigit(LCSU_SampleRate);
+	KEI_MakeTestBuffer(LCSU_SampleRate, Pulse_ms * 1000);
+	KEI_ConfigVoltageDigitEdgeTrigger();
+	KEI_SetVoltageDigitRange(Current * LCSU_Rshunt);
+	KEI_VoltageDigitTriggerLevel(Current * LCSU_Rshunt / 2);
+	KEI_ActivateTrigger();
+
+	sleep(500);
+	LCSU_Start(Type, Current, Pulse_ms)
+
+	if(Type == 0 || Type == 1)
+		IdSc = (KEI_ReadArrayMaximum() / LCSU_Rshunt).toFixed(2);
+
+	if(Type == 2)
+		IdSc = (KEI_ReadArrayTrapeze() / LCSU_Rshunt).toFixed(2);
+
+	var IdUnit = dev.rf(200);
+	print("IdSet, A: " + Current);
+	print("IdDMM, A: " + IdSc);
+	var IdSetErr = ((IdSc - Current) / Current * 100).toFixed(2);
+	var IdMeasErr = ((IdUnit - IdSc) / IdSc * 100).toFixed(2);
+	print("IdSetErr, %: " + IdSetErr);
+	print("IdMeasErr, %: " + IdMeasErr);
+	print("--------------------");
+}
+
 function LCSU_SyncTest(Current,sync_time)
 {	
 	dev.nid(110);
 	sleep(20);
 
-	if (dev.r(192)==DS_Ready_LCSU)
+	if (dev.r(192)==LCSU_DS_Ready)
 	{	
 		
 		dev.w(128, Current);
 		dev.c(100);
 		sleep(20);
 
-		if (dev.r(192)==DS_ConfigReady_LCSU)
+		if (dev.r(192)==LCSU_DS_ConfigReady)
 		{
 			dev.nid(9);
 			dev.w(160, sync_time);
