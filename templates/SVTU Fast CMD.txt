@@ -15,11 +15,11 @@ FWU_RestoreSVTU(Num);
 
 // Формирование и измерение
 include("TestSVTU.js");
-SVTU_StartMeasure(300, 20);
+SVTU_StartMeasure(150, 15);
 
 // Запуск измерения на DMM6500 (режим Digitize)
 include("TestSVTU.js");
-SVTU_StartMeasure_KEI(200, 5);
+SVTU_StartMeasure_KEI(200, 15);
 
 // Ресурсный тест
 
@@ -38,8 +38,8 @@ CAL_Rshunt = 0.00025;
 CAL_CurrentRange = 1; // 0 или 1
 CAL_Points = 10;
 CAL_UseAvg = 0;
-CAL_Iterations = 3;
-CAL_measuring_device = "DMM6000"; // "DMM6000" or "TPS2000"
+CAL_Iterations = 10;
+CAL_measuring_device = "TPS2000"; // "DMM6000" or "TPS2000"
 CAL_Init_Mes_Device(12, 7, 1, 2, 3);
 
 CAL_VerifyIce();
@@ -80,10 +80,11 @@ CAL_UcesatMin = [600, 5500];
 CAL_UcesatMax = [5500, 15000];
 CAL_Rload = 0.003527;
 CAL_VoltageRange = 0;
+CAL_E3632A_flag = 1; 
 CAL_Points = 10;
 CAL_UseAvg = 0;
-CAL_Iterations = 10;
-CAL_measuring_device = "TPS2000"; // "DMM6000" or "TPS2000"
+CAL_Iterations = 1;
+CAL_measuring_device = "TPS2000"; // "DMM6000", "TPS2000" or "E3632A"
 CAL_Init_Mes_Device(12, 7, 1, 2, 3);
 
 CAL_VerifyUcesat();

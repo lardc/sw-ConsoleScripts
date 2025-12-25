@@ -1,3 +1,5 @@
+
+
 function E3632A_PortInit(PortNumber)
 {
 	if (typeof devTek !== 'undefined')
@@ -19,21 +21,22 @@ function E3632A_Send(Request)
 
 function E3632A_OutputON()
 {
-	devTek.ss("OUTput ON");
+	E3632A_Send("OUTput ON");
 }
 
 function E3632A_OutputOFF()
 {
-	devTek.ss("OUTput OFF");
+	E3632A_SetVoltage(0);
+	E3632A_Send("OUTput OFF");
 }
 
 function E3632A_SetVoltage(Voltage)
 {
-	devTek.ss("VOLT " + Voltage);
+	E3632A_Send("VOLT " + Voltage);
 }
 
 function E3632A_ProtectionCurrent(Current)
 {
-	devTek.ss("CURRent:PROTection " + Current);
+	E3632A_Send("CURRent:PROTection " + Current);
 }
 
