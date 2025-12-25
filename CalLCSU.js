@@ -127,7 +127,7 @@ function CLCSU_CalibrateADC() // калибровка АЦП с выключен
 	CLCSU_Reset();
 	CLCSU_RegADC();
 	print("Значение регистров до калибровки:");
-	CAL_PrintCoefADC();
+	CLCSU_PrintCoefADC();
 	CLCSU_ResetIdCal();
 
 	// DMM6500 Init
@@ -150,7 +150,7 @@ function CLCSU_CalibrateADC() // калибровка АЦП с выключен
 		var clcsu_RawScValues = CLCSU_RawScValuesForADC();
 		var ADCCoefficients = CGEN_GetNumericCorrection(clcsu_RawUnitValues, clcsu_RawScValues);
 		CLCSU_CalADC(ADCCoefficients[1], ADCCoefficients[0]);
-		CAL_PrintCoefADC();
+		CLCSU_PrintCoefADC();
 	}
 }
 
