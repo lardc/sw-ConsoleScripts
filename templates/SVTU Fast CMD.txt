@@ -80,11 +80,11 @@ CAL_UcesatMin = [600, 5500];
 CAL_UcesatMax = [5500, 15000];
 CAL_Rload = 0.003527;
 CAL_VoltageRange = 0;
-CAL_E3632A_flag = 1; 
+CAL_E3632A_manual_input = 0; // 0 - калибровка по заданию, 1 - по измерению
 CAL_Points = 10;
 CAL_UseAvg = 0;
-CAL_Iterations = 1;
-CAL_measuring_device = "TPS2000"; // "DMM6000", "TPS2000" or "E3632A"
+CAL_Iterations = 3;
+CAL_measuring_device = "E3632A"; // "DMM6000", "TPS2000" or "E3632A"
 CAL_Init_Mes_Device(12, 7, 1, 2, 3);
 
 CAL_VerifyUcesat();
