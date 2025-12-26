@@ -1,4 +1,4 @@
-
+// В консоли не реализовано чтение данных с источника E3632A с помощью команды devTek.sswr()
 
 function E3632A_PortInit(PortNumber)
 {
