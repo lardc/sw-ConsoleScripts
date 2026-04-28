@@ -306,7 +306,7 @@ function FWU_CROVU()
 
 function FWU_DumpCROVU(Num)
 {
-	AlterRegDump("CROVU", Num, 0, 126, 320, 511)
+	AlterRegDump("CROVU", Num, 0, 126, 320, 529)
 }
 
 function FWU_RestoreCROVU(Num)
