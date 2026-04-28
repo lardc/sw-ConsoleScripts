@@ -222,24 +222,36 @@ function FWU_DumpCommon(Name, Num, FinishReg)
 	{
 		var NumStr = "00" + Num
 		
-		if (NumStr[NumStr.length - 2] == ".")
-			NumStr = NumStr.substr(NumStr.length - 5) 
-		else
-			NumStr = NumStr.substr(NumStr.length - 3)
-		
-		dev.Dump("../../sw-ConsoleScripts/regdump/" + Name + "_" + NumStr + ".regdump", 0, FinishReg)
+		NumStr = NumStr.substr(NumStr.length - 3)
+
+		try
+		{
+			var NidStr = ""
+			NidStr = "_NID" + dev.Read16Silent(256)
+		}
+		catch(e) 
+		{
+			dev.Dump("../../sw-ConsoleScripts/regdump/" + Name + "_" + NumStr + ".regdump", 0, FinishReg)
+		}
+
+		dev.Dump("../../sw-ConsoleScripts/regdump/" + Name + "_" + NumStr + NidStr + ".regdump", 0, FinishReg)
 	}
 }
 
-function FWU_RestoreCommon(Name, Num)
+function FWU_RestoreCommon(Name, Num, Nid)
 {
 	if (typeof Num === 'undefined')
 		print("Необходимо указать номер блока в аргументе функции")
 	else
 	{
 		var NumStr = "00" + Num
+
 		NumStr = NumStr.substr(NumStr.length - 3)
-		dev.Restore("../../sw-ConsoleScripts/regdump/" + Name + "_" + NumStr + ".regdump")
+
+		if (typeof Nid === 'undefined')
+			dev.Restore("../../sw-ConsoleScripts/regdump/" + Name + "_" + NumStr + ".regdump")
+		else
+			dev.Restore("../../sw-ConsoleScripts/regdump/" + Name + "_" + NumStr + "_NID" + Nid + ".regdump")
 	}
 }
 
@@ -254,9 +266,9 @@ function FWU_DumpATUHP(Num)
 	FWU_DumpCommon("ATUHP", Num, 126);
 }
 
-function FWU_RestoreATUHP(Num)
+function FWU_RestoreATUHP(Num, Nid)
 {
-	FWU_RestoreCommon("ATUHP", Num);
+	FWU_RestoreCommon("ATUHP", Num, Nid);
 }
 
 // TOMU
@@ -270,9 +282,9 @@ function FWU_DumpTOMU(Num)
 	FWU_DumpCommon("TOMU", Num, 126);
 }
 
-function FWU_RestoreTOMU(Num)
+function FWU_RestoreTOMU(Num, Nid)
 {
-	FWU_RestoreCommon("TOMU", Num);
+	FWU_RestoreCommon("TOMU", Num, Nid);
 }
 //------------------------
 
@@ -287,9 +299,9 @@ function FWU_DumpTOMUHP(Num)
 	FWU_DumpCommon("TOMUHP", Num, 126);
 }
 
-function FWU_RestoreTOMUHP(Num)
+function FWU_RestoreTOMUHP(Num, Nid)
 {
-	FWU_RestoreCommon("TOMUHP", Num);
+	FWU_RestoreCommon("TOMUHP", Num, Nid);
 }
 //------------------------
 
@@ -304,9 +316,9 @@ function FWU_DumpTOCUHP(Num)
 	FWU_DumpCommon("TOCUHP", Num, 126);
 }
 
-function FWU_RestoreTOCUHP(Num)
+function FWU_RestoreTOCUHP(Num, Nid)
 {
-	FWU_RestoreCommon("TOCUHP", Num);
+	FWU_RestoreCommon("TOCUHP", Num, Nid);
 }
 //------------------------
 
@@ -321,9 +333,9 @@ function FWU_DumpLSLH(Num)
 	FWU_DumpCommon("LSLH", Num, 126);
 }
 
-function FWU_RestoreLSLH(Num)
+function FWU_RestoreLSLH(Num, Nid)
 {
-	FWU_RestoreCommon("LSLH", Num);
+	FWU_RestoreCommon("LSLH", Num, Nid);
 }
 //------------------------
 
@@ -338,9 +350,9 @@ function FWU_DumpLSLPC(Num)
 	FWU_DumpCommon("LSLPC", Num, 126);
 }
 
-function FWU_RestoreLSLPC(Num)
+function FWU_RestoreLSLPC(Num, Nid)
 {
-	FWU_RestoreCommon("LSLPC", Num);
+	FWU_RestoreCommon("LSLPC", Num, Nid);
 }
 //------------------------
 
@@ -355,9 +367,9 @@ function FWU_DumpDRCU(Num)
 	FWU_DumpCommon("DRCU", Num, 126);
 }
 
-function FWU_RestoreDRCU(Num)
+function FWU_RestoreDRCU(Num, Nid)
 {
-	FWU_RestoreCommon("DRCU", Num);
+	FWU_RestoreCommon("DRCU", Num, Nid);
 }
 //------------------------
 
@@ -559,9 +571,9 @@ function FWU_DumpLCSU(Num)
 	FWU_DumpCommon("LCSU", Num, 126);
 }
 
-function FWU_RestoreLCSU(Num)
+function FWU_RestoreLCSU(Num, Nid)
 {
-	FWU_RestoreCommon("LCSU", Num);
+	FWU_RestoreCommon("LCSU", Num, Nid);
 }
 //------------------------
 
@@ -593,9 +605,9 @@ function FWU_DumpSVTU(Num)
 	FWU_DumpCommon("SVTU", Num, 126);
 }
 
-function FWU_RestoreSVTU(Num)
+function FWU_RestoreSVTU(Num, Nid)
 {
-	FWU_RestoreCommon("SVTU", Num);
+	FWU_RestoreCommon("SVTU", Num, Nid);
 }
 //------------------------
 
@@ -610,9 +622,9 @@ function FWU_DumpSAU(Num)
 	FWU_DumpCommon("SAU", Num, 126);
 }
 
-function FWU_RestoreSAU(Num)
+function FWU_RestoreSAU(Num, Nid)
 {
-	FWU_RestoreCommon("SAU", Num);
+	FWU_RestoreCommon("SAU", Num, Nid);
 }
 //------------------------
 // ITU
@@ -626,9 +638,9 @@ function FWU_DumpITU(Num)
 	FWU_DumpCommon("ITU", Num, 126);
 }
 
-function FWU_RestoreITU(Num)
+function FWU_RestoreITU(Num, Nid)
 {
-	FWU_RestoreCommon("ITU", Num);
+	FWU_RestoreCommon("ITU", Num, Nid);
 }
 //------------------------
 // CSI
@@ -642,8 +654,8 @@ function FWU_DumpCSI(Num)
 	FWU_DumpCommon("CSI", Num, 126);
 }
 
-function FWU_RestoreCSI(Num)
+function FWU_RestoreCSI(Num, Nid)
 {
-	FWU_RestoreCommon("CSI", Num);
+	FWU_RestoreCommon("CSI", Num, Nid);
 }
 //------------------------

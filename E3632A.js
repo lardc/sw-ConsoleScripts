@@ -1,5 +1,3 @@
-
-
 function E3632A_PortInit(PortNumber)
 {
 	if (typeof devTek !== 'undefined')
@@ -10,13 +8,19 @@ function E3632A_PortInit(PortNumber)
 	if (typeof BaudeRate === 'undefined')
 		BaudeRate = 9600;
 	
-	devTek.Connect(PortNumber, BaudeRate);
+	devTek.Connect(PortNumber, BaudeRate, true);
 }
 
 function E3632A_Send(Request)
 {
 	devTek.ss(Request);
 	sleep(300);
+}
+
+function E3632A_Exec(Request)
+{
+	var r = devTek.sswr(Request);
+	return r.join("").replace(/(\n)/, "");
 }
 
 function E3632A_OutputON()

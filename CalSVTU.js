@@ -14,12 +14,13 @@ CAL_ErrShunt = 0.5; // погрешность шунта в %
 CAL_ErrDMM6500 = 0.0065; // наихудшая погрешность мультиметра в %
 CAL_NoiseDMM6500 = 0.083; // наихудшая погрешность, вносимая шумами мультиметра, в %
 CAL_ErrTek = 3;
+CAL_ErrE3632A = 0.01 // 0,01 для калибровки по заданию, 0,005 - по измерению
 
 // Setup parameters for "DMM6000"
 CAL_V_PulsePlate 	= 1000 			// in us
 CAL_V_TriggerDelay	= 0				// in s
 CAL_measuring_device = "DMM6000";	// "DMM6000", "TPS2000" or "E3632A"
-CAL_E3632A_flag = 1; 				// 1 - ручной ввод значений с E3632A, 0 - используется заданное значение напряжения
+CAL_E3632A_manual_input = 1; 				// 1 - ручной ввод значений с E3632A, 0 - используется заданное значение напряжения
 CAL_NPLC = 0.0005;
 
 // Current range number
@@ -402,13 +403,17 @@ function CAL_CollectUcesat()
 					print("UcesatDMM,  mV: " + UcesatSc);
 					break;
 				case "E3632A":
-					if(CAL_E3632A_flag == 1)
+					if(CAL_E3632A_manual_input == 1)
 					{
+						CAL_ErrE3632A = 0.005;
 						print("Введите напряжение с экрана E3632A в мВ:")
 						var UcesatSc = parseFloat(readline());
 					}
 					else
+					{
+						CAL_ErrE3632A = 0.01;
 						var UcesatSc = (VoltageValues[j]).toFixed(2);
+					}
 					print("UcesatE3632A,  mV: " + UcesatSc);
 					break;
 			}
@@ -435,7 +440,7 @@ function CAL_CollectUcesat()
 					var UcesatErrSum = Math.sign_ma(UcesatErr) * (Math.abs(UcesatErr) + E0);
 					break;
 				case "E3632A":
-					var E0 = (0.0005 * VoltageValues[j] / 1000 + 0.005) / (VoltageValues[j] / 1000) * 100;
+					var E0 = (0.0005 * VoltageValues[j] / 1000 + CAL_ErrE3632A) / (VoltageValues[j] / 1000) * 100;
 					var UcesatErrSum = Math.sign_ma(UcesatErr) * (Math.abs(UcesatErr) + E0);
 					break;
 			}
