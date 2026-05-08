@@ -549,14 +549,14 @@ function FWU_IGTU()
 	FWUpdateSTM("../../hw-IGTUControlBoard/Firmware/Release/IGTUControlBoard.binary");
 }
 
-function FWU_DumpIGTU()
+function FWU_DumpIGTU(Num)
 {
-	dev.Dump("../../hw-IGTUControlBoard/Firmware/Release/IGTUControlBoard.regdump", 0, 126);
+	FWU_DumpCommon("IGTU", Num, 126);
 }
 
-function FWU_RestoreIGTU()
+function FWU_RestoreIGTU(Num, Nid)
 {
-	dev.Restore("../../hw-IGTUControlBoard/Firmware/Release/IGTUControlBoard.regdump");
+	FWU_RestoreCommon("IGTU", Num, Nid);
 }
 //------------------------
 
