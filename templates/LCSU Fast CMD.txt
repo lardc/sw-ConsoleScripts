@@ -4,6 +4,7 @@ LCSU_Start(Type, Current, Pulse) // Type 0 - синус, 1 - мод. синус,
 LCSU_Start_KEI(0, 200, 10) // Type 0 - синус, 1 - мод. синус, 2 - трапеция; Current в А, Pulse в мс
 CLCSU_Regulator(Range, OnOff) // диапазон 0, 1, 2; вкл (1), выкл (0)
 LCSU_ResourceTest(Current, hours_resource_test)
+CLCSU_SaveCSV_EP(NumberEP) // NumberEP - Endpoints 1 - 6  
 Nid = 110...
 
 // Посмотреть версию прошивки
@@ -16,7 +17,7 @@ FWU_LCSU()
 
 // Скачать дамп регистров
 i("STM_FWUpdate.js")
-FWU_DumpLCSU()
+FWU_DumpLCSU(Num, Nid)
 
 // Загрузить дамп регистров
 i("STM_FWUpdate.js")
@@ -24,7 +25,7 @@ FWU_RestoreLCSU()
 
 // Запуск измерения
 include("TestLCSU.js");
-LCSU_Start(0, 100, 10);
+LCSU_Start(2, 170, 1);
 
 // Запуск измерения на DMM6500 (режим Digitize)
 include("TestLCSU.js");
@@ -33,6 +34,10 @@ LCSU_Start_KEI(0, 200, 10);
 // Отключение регулятора
 include("TestLCSU.js");
 CLCSU_Regulator(0, 0);
+
+// Сохранение EP в формате csv.
+include("TestLCSU.js");
+CLCSU_SaveCSV_EP(1);
 
 // Калибровка ЦАП без регулятора коэффициентами K и B
 // Диапазон 0 [75/160 - 350] А
@@ -107,7 +112,7 @@ include("CalLCSU.js")
 clcsu_IdMin = [75, 351];
 clcsu_IdMax = [350, 6500];
 clcsu_RShunt = 0.00025;
-clcsu_Pulse = 10;
+clcsu_Pulse = 1;
 clcsu_Points = 10;
 clcsu_Iterations = 3;
 clcsu_CurrentRange = 1; // 0 или 1
