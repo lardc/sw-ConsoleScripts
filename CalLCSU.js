@@ -21,7 +21,7 @@ clcsu_CurrentRange = 0; // 0 = диапазон [ 70...350 A]; 1 = диапаз�
 
 clcsu_IdMin = [160, 351, 1101]; // начальные и конечные значения диапазонов по току
 clcsu_IdMax = [350, 1100, 6500];
-clcsu_Pulse = 10 // длительность импульса в мс
+clcsu_Pulse = 1 // длительность импульса в мс
 
 clcsu_Reg_DAC_Coarse = [];
 clcsu_Reg_ADC_Coarse = [];
@@ -60,13 +60,13 @@ function CLCSU_Init(portDevice)
 function CLCSU_CalibrateDAC() // калибровка ЦАП с выключеным регулятором (без сброса К и В)
 {
 	CLCSU_Reset();
-
-	// DMM6500 Init
-	CLCSU_KEI_Init();
 	CLCSU_RegDAC();
 	print("Значение регистров до калибровки:");
 	CLCSU_PrintCoefDAC();
 	CLCSU_ResetIdSetCal();
+
+	// DMM6500 Init
+	CLCSU_KEI_Init();
 
 	if(CLCSU_CheckRegulatorStatus())
 	{
@@ -162,6 +162,9 @@ function CLCSU_CalibrateId() // калибровка задания тока с 
 	CLCSU_PrintCoefId();
 	CLCSU_ResetIdCal();
 
+	// DMM6500 Init
+	CLCSU_KEI_Init();
+
 	if(CLCSU_CheckRegulatorStatus())
 		print("Регулятор включен");
 	else
@@ -218,7 +221,12 @@ function CLCSU_KEI_CollectId()
 			print("-- result " + clcsu_CntDone++ + " of " + clcsu_CntTotal + " --");
 
 			KEI_ClearBuffer();
-			KEI_VoltageDCTriggerLevel(CurrentArray[j] * clcsu_RShunt / 2);
+			
+			if(CurrentArray[j] * clcsu_RShunt / 2 > 1)
+				KEI_VoltageDCTriggerLevel(1);
+			else
+				KEI_VoltageDCTriggerLevel(CurrentArray[j] * clcsu_RShunt / 2);
+
 			KEI_SetVoltageDCRange(CurrentArray[j] * clcsu_RShunt);
 			KEI_ActivateTrigger();
 
@@ -226,11 +234,12 @@ function CLCSU_KEI_CollectId()
 			
 			var lcsu_printt_copy = lcsu_print;
 			lcsu_print = 0;
+			p("Current, A" +CurrentArray[j]);
 			if(!LCSU_Start(clcsu_PulseType, CurrentArray[j], clcsu_Pulse))
 				return 0;
 
 			lcsu_print = lcsu_printt_copy;
-			sleep(2000);
+			sleep(3000);
 
 			switch (clcsu_PulseType)
 			{
@@ -239,7 +248,7 @@ function CLCSU_KEI_CollectId()
 					var IdSc = KEI_ReadArrayMaximum() / clcsu_RShunt;
 					break;
 				case TRAPEZE_SHAPE:
-					var IdSc = KEI_ReadArrayTrapeze() / clcsu_RShunt;
+					var IdSc = CLSCU_ReadArrayTrapeze(CurrentArray[j]) / clcsu_RShunt;
 					break;
 				default:
 					print("Incorrect pulse type.");
@@ -278,10 +287,70 @@ function CLCSU_KEI_CollectId()
 	return 1;
 }
 
+function CLSCU_ReadArrayTrapeze(Current)
+{
+	var FloatArray = KEI_ReadArray();
+
+	var Overflow = 9.9E+37;
+	for (var i = 0; i < FloatArray.length; i++)
+	{
+		if (FloatArray[i] >= Overflow)
+		{
+			FloatArray[i] = FloatArray[i - 1];
+		}
+	}
+
+	var Threshold = Math.max.apply(null, FloatArray) / 2;
+	var Period_us = 20660 * clcsu_NPLC + 29;
+	var PountsFront = Math.ceil(Current / dev.rf(17) / Period_us);
+
+	var StartMassive = tmc.q(':TRACe:ACTual:STARt? "TestBuffer"');
+
+	var TrapezeArray = FloatArray.concat(FloatArray.splice(0, StartMassive - 1));
+
+	var StartNumber = 0;
+	var EndNumber = 0;
+	var TrapezeLevel = 0;
+
+	for (var i = 0; i < TrapezeArray.length; i++)
+	{
+		if (TrapezeArray[i] > Threshold)
+		{
+			StartNumber = i + (Math.ceil(TrapezeArray.length * 0.1));
+			break;
+		}
+	}
+
+	for (var i = StartNumber; i < TrapezeArray.length; i++)
+	{
+		if (TrapezeArray[i] < Threshold)
+		{
+			EndNumber = (i - (Math.ceil(PountsFront / 2)) - 1);
+			StartNumber = EndNumber - 7;
+			break;
+		}
+	}
+	
+	print("----------------");
+	for (var j = StartNumber; j <= EndNumber; j++)
+	{
+		p(TrapezeArray[j]);
+	}
+	print("----------------");
+
+	for (var c = StartNumber; c <= EndNumber; c++)
+	{
+		TrapezeLevel = TrapezeLevel + TrapezeArray[c];
+	}
+	TrapezeLevel = (TrapezeLevel / (EndNumber - StartNumber + 1));
+
+	return TrapezeLevel;
+}
+
 function CLCSU_KEI_Init()
 {
 	KEI_ConfigVoltageDC(clcsu_NPLC);
-	KEI_MakeTestBufferVoltageDC(clcsu_NPLC, clcsu_Pulse * 1000);
+	KEI_MakeTestBufferVoltageDC(clcsu_NPLC, clcsu_Pulse * 1000 + (6500 * 2 / dev.rf(17)));
 	KEI_ConfigVoltageDCEdgeTrigger();
 }
 
