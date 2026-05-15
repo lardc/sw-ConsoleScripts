@@ -259,46 +259,6 @@ function KEI_BufferLength(SampleRate, Pulse_uS)
 	BufferLength = Math.round(1.5 * SampleRate * Pulse_uS / 1e6);
 }
 
-function KEI_ReadArrayTrapeze()
-{
-	var FloatArray = KEI_ReadArray();
-	var Threshold = Math.max.apply(null, FloatArray) / 2;
-
-	var StartMassive = tmc.q(':TRACe:ACTual:STARt? "TestBuffer"');
-
-	var TrapezeArray = FloatArray.concat(FloatArray.splice(0, StartMassive - 1));
-
-	var StartNumber = 0;
-	var EndNumber = 0;
-	var TrapezeLevel = 0;
-
-	for (var i = 0; i < TrapezeArray.length; i++)
-	{
-		if (TrapezeArray[i] > Threshold)
-		{
-			StartNumber = i + (Math.ceil(TrapezeArray.length * 0.1));
-			break;
-		}
-	}
-
-	for (var i = StartNumber; i < TrapezeArray.length; i++)
-	{
-		if (TrapezeArray[i] < Threshold)
-		{
-			EndNumber = i - (Math.ceil(TrapezeArray.length * 0.1));
-			break;
-		}
-	}
-
-	for (var c = StartNumber; c <= EndNumber; c++)
-	{
-		TrapezeLevel = TrapezeLevel + TrapezeArray[c];
-	}
-	TrapezeLevel = (TrapezeLevel / (EndNumber - StartNumber + 1));
-
-	return TrapezeLevel;
-}
-
 function KEI_ConfigVoltageDigit(SampleRate)
 {
 	KEI_Reset();

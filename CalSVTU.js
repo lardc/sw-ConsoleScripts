@@ -399,7 +399,7 @@ function CAL_CollectUcesat()
 					print("UcesatTek,  mV: " + UcesatSc);
 					break;
 				case "DMM6000":
-					var UcesatSc = (KEI_ReadArrayTrapeze() * 1000).toFixed(2);
+					var UcesatSc = (CALReadArrayTrapeze() * 1000).toFixed(2);
 					print("UcesatDMM,  mV: " + UcesatSc);
 					break;
 				case "E3632A":
@@ -517,7 +517,7 @@ function CAL_CollectIce()
 			
 			SVTU_Print = PrintTemp;
 
-			sleep (2000);
+			sleep (5000);
 
 			// Set data
 			var Iset = CurrentValues[j];
@@ -537,7 +537,7 @@ function CAL_CollectIce()
 			}
 			else if (CAL_measuring_device == "DMM6000")
 			{
-				var IsetSc = (KEI_ReadArrayTrapeze() / CAL_Rshunt).toFixed(2);
+				var IsetSc = (CALReadArrayTrapeze() / CAL_Rshunt).toFixed(2);
 				print("IceDMM, A: " + IsetSc);
 			}
 			CAL_IceSc.push(IsetSc);
@@ -561,11 +561,10 @@ function CAL_CollectIce()
 				case "DMM6000":
 					var E0 = 1.1 * Math.sqrt(Math.pow(CAL_ErrShunt, 2) + Math.pow(CAL_ErrDMM6500, 2) + Math.pow(CAL_NoiseDMM6500, 2));
 					var IsetErrSum = Math.sign_ma(IsetErr) * (Math.abs(IsetErr) + E0);
-					print("UcesatDMM,  mV: " + UcesatSc);
 					break;
 			}
 			CAL_IsetErrSum.push(IsetErrSum);
-			print("IsetЕrrSum, %: " + IsetErrSum);
+			print("IsetErrSum, %: " + IsetErrSum);
 
 			print("--------------------");
 			
@@ -685,6 +684,32 @@ function CAL_CollectUge()
 	}
 
 	return 1;
+}
+
+function CALReadArrayTrapeze()
+{
+	var FloatArray = KEI_ReadArray();
+
+	//var StartMassive = tmc.q(':TRACe:ACTual:STARt? "TestBuffer"');
+
+	var TrapezeArray = FloatArray.concat(FloatArray.splice(0, 0));
+
+	var StartNumber = 1;
+	var EndNumber = 3;
+	var TrapezeLevel = 0;
+	print("--------------------");
+	for(var i = StartNumber; i <= EndNumber; i++)
+	{
+		p(TrapezeArray[i]);
+	}
+	print("--------------------");
+	for (var j = StartNumber; j <= EndNumber; j++)
+	{
+		TrapezeLevel = TrapezeLevel + TrapezeArray[j];
+	}
+	TrapezeLevel = (TrapezeLevel / (EndNumber - StartNumber + 1));
+
+	return TrapezeLevel;
 }
 
 function CLCSU_PlotUcesat()
