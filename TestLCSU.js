@@ -163,6 +163,7 @@ function LCSU_ResourceTest(Current, Pulse_ms, HoursTest, Period_ms)
 	var hours = start.getHours() + HoursTest;
 	stop.setHours(hours);
 	var i = 1;
+	var lastPulseStartMs = null;
 
 	while((new Date()).getTime() < stop.getTime())
 	{
@@ -170,6 +171,14 @@ function LCSU_ResourceTest(Current, Pulse_ms, HoursTest, Period_ms)
 		var stop_pulse = new Date();
 		var milliseconds = start_pulse.getMilliseconds() + Period_ms;
 		stop_pulse.setMilliseconds(milliseconds);
+
+		var beforePulseMs = (new Date()).getTime();
+		if (lastPulseStartMs !== null)
+		{
+			var actualIntervalMs = beforePulseMs - lastPulseStartMs;
+			print("Фактический промежуток между импульсами: " + actualIntervalMs + " мс (задано " + Period_ms + " мс)");
+		}
+		lastPulseStartMs = beforePulseMs;
 
 		LCSU_Start(2, Current, Pulse_ms);
 		var left_time = new Date(stop.getTime() - (new Date()).getTime());
@@ -318,6 +327,18 @@ function CLCSU_SaveCSV_EP(NumberEP)
 			{
 				var EP6 = dev.raff(6);
 				save("data/LCSU_EP6_DAC_RAW_DATA_" + Suffix + ".csv", EP6);
+				break;
+			}
+		case 7:
+			{
+				var EP7 = dev.raff(7);
+				save("data/LCSU_EP7_ADC_FLATTOP_LAST_RAW_DATA_" + Suffix + ".csv", EP7);
+				break;
+			}
+		case 8:
+			{
+				var EP8 = dev.raff(8);
+				save("data/LCSU_EP8_ADC_FLATTOP_DATA_COUNT_" + Suffix + ".csv", EP8);
 				break;
 			}
 		default:

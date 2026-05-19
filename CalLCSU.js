@@ -225,7 +225,7 @@ function CLCSU_KEI_CollectId()
 			if(CurrentArray[j] * clcsu_RShunt / 2 > 1)
 				KEI_VoltageDCTriggerLevel(1);
 			else
-				KEI_VoltageDCTriggerLevel(CurrentArray[j] * clcsu_RShunt / 2);
+				KEI_VoltageDCTriggerLevel(CurrentArray[j] * clcsu_RShunt / 5);
 
 			KEI_SetVoltageDCRange(CurrentArray[j] * clcsu_RShunt);
 			KEI_ActivateTrigger();
@@ -234,7 +234,7 @@ function CLCSU_KEI_CollectId()
 			
 			var lcsu_printt_copy = lcsu_print;
 			lcsu_print = 0;
-			p("Current, A" +CurrentArray[j]);
+
 			if(!LCSU_Start(clcsu_PulseType, CurrentArray[j], clcsu_Pulse))
 				return 0;
 
@@ -326,7 +326,7 @@ function CLSCU_ReadArrayTrapeze(Current)
 		if (TrapezeArray[i] < Threshold)
 		{
 			EndNumber = (i - (Math.ceil(PountsFront / 2)) - 1);
-			StartNumber = EndNumber - 7;
+			StartNumber = EndNumber - 2;
 			break;
 		}
 	}
@@ -386,10 +386,15 @@ function CLCSU_Reset()
 
 function CLCSU_CheckRegulatorStatus()
 {
-	if (dev.rf(44) != 0 || dev.rf(45) != 0 || dev.rf(46) != 0 || dev.rf(47) != 0 || dev.rf(70) != 0 || dev.rf(71) != 0)
-		return true;
-	else
+	if(dev.rf(151) == 1)
 		return false;
+		
+	else
+	{
+		print("Коэффициенты регулятора: reg 44 = " + dev.rf(44) + ", reg 45 = " + dev.rf(45) + ", reg 46 = " + dev.rf(46) +
+			", reg 47 = " + dev.rf(47) + ", reg 70 = " + dev.rf(70) + ", reg 71 = " + dev.rf(71));
+		return true;
+	}
 }
 
 function CLCSU_RegDAC() 
