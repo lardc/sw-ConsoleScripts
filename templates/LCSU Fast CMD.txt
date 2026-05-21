@@ -21,11 +21,11 @@ FWU_DumpLCSU(Num, Nid)
 
 // Загрузить дамп регистров
 i("STM_FWUpdate.js")
-FWU_RestoreLCSU()
+FWU_RestoreLCSU(Num, Nid)
 
 // Запуск измерения
 include("TestLCSU.js");
-LCSU_Start(2, 170, 1);
+LCSU_Start(2, 350, 1);
 
 // Запуск измерения на DMM6500 (режим Digitize)
 include("TestLCSU.js");
@@ -56,10 +56,10 @@ clcsu_IdMax = [350, 1100, 6500];
 clcsu_RShunt = 0.00075;
 clcsu_Pulse = 1;
 clcsu_Points = 10;
-clcsu_Iterations = 3;
-clcsu_CurrentRange = 0; // 0, 1 или 2
+clcsu_Iterations = 1;
+clcsu_CurrentRange = 1; // 0, 1 или 2
 clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
-CLCSU_Init(15);
+CLCSU_Init(13);
 
 CLCSU_CalibrateDAC();
 
@@ -78,10 +78,10 @@ clcsu_IdMax = [350, 1100, 6500];
 clcsu_RShunt = 0.00075;
 clcsu_Pulse = 1;
 clcsu_Points = 10;
-clcsu_Iterations = 3;
-clcsu_CurrentRange = 1; // 0, 1 или 2
+clcsu_Iterations = 1;
+clcsu_CurrentRange = 0; // 0, 1 или 2
 clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
-CLCSU_Init(15);
+CLCSU_Init(12);
 
 CLCSU_CalibrateDAC_Fine();
 
@@ -98,10 +98,10 @@ clcsu_IdMax = [350, 6500];
 clcsu_RShunt = 0.00025;
 clcsu_Pulse = 1;
 clcsu_Points = 10;
-clcsu_Iterations = 1;
-clcsu_CurrentRange = 1; // 0 или 1
+clcsu_Iterations = 3;
+clcsu_CurrentRange = 0; // 0 или 1
 clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
-CLCSU_Init(12);
+CLCSU_Init(13);
 
 CLCSU_CalibrateADC();
 
@@ -121,7 +121,7 @@ clcsu_Points = 10;
 clcsu_Iterations = 3;
 clcsu_CurrentRange = 1; // 0 или 1
 clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
-CLCSU_Init(15);
+CLCSU_Init(13);
 
 CLCSU_CalibrateId();
 

@@ -80,6 +80,7 @@ CAL_UgeSetCorr = [];
 // Summary error
 CAL_UcesatErrSum = [];
 CAL_IsetErrSum = [];
+CAL_UgeSetErrSum = [];
 
 function CAL_Init_Mes_Device(portDevice, portTek, channelMeasureI, channelMeasureU, channelSync)
 {
@@ -152,7 +153,7 @@ function CAL_CalibrateUcesat()
 	{
 		CAL_SaveUcesat("SVTU_Ucesat");
 
-		CLCSU_PlotUcesat();
+		CAL_PlotUcesat();
 
 		// Calculate correction
 		CAL_UcesatCorr = CGEN_GetCorrection2("SVTU_Ucesat");
@@ -174,7 +175,7 @@ function CAL_VerifyUcesat()
 	{
 		CAL_SaveUcesat("SVTU_Ucesat_fixed");
 
-		CLCSU_PlotUcesat();
+		CAL_PlotUcesat();
 	}
 }
 
@@ -192,7 +193,7 @@ function CAL_CalibrateIset()
 	{
 		CAL_SaveIset("SVTU_Iset");
 
-		CLCSU_PlotIce(1, 0);
+		CAL_PlotIce(1, 0);
 		
 		// Calculate correction
 		CAL_IsetCorr = CGEN_GetCorrection2("SVTU_Iset");
@@ -216,7 +217,7 @@ function CAL_CalibrateIce()
 		CAL_SaveIce("SVTU_Ice");
 
 		// Plot relative error distribution
-		CLCSU_PlotIce(0, 1);
+		CAL_PlotIce(0, 1);
 
 		// Calculate correction
 		CAL_IceCorr = CGEN_GetCorrection2("SVTU_Ice");
@@ -239,7 +240,7 @@ function CAL_VerifyIce()
 		CAL_SaveIset("SVTU_Iset_fixed");
 		CAL_SaveIce("SVTU_Ice_fixed");
 
-		CLCSU_PlotIce(1, 1);
+		CAL_PlotIce(1, 1);
 	}
 }
 
@@ -257,7 +258,7 @@ function CAL_CalibrateUge()
 	{
 		CAL_SaveUge("SVTU_Uge");
 
-		CLCSU_PlotUge();
+		CAL_PlotUge();
 
 		// Calculate correction
 		CAL_UgeCorr = CGEN_GetCorrection2("SVTU_Uge");
@@ -282,7 +283,7 @@ function CAL_CalibrateUgeSet()
 	{
 		CAL_SaveUgeSet("SVTU_UgeSet");
 
-		CLCSU_PlotUge();
+		CAL_PlotUge();
 		
 		// Calculate correction
 		CAL_UgeSetCorr = CGEN_GetCorrection2("SVTU_UgeSet");
@@ -307,7 +308,7 @@ function CAL_VerifyUge()
 		CAL_SaveUge("SVTU_Uge_fixed");
 		CAL_SaveUgeSet("SVTU_UgeSet_fixed");
 
-		CLCSU_PlotUge();
+		CAL_PlotUge();
 	}
 }
 
@@ -425,7 +426,7 @@ function CAL_CollectUcesat()
 			print("UcesatMeas, mV: " + UcesatRead);
 
 			// Relative error
-			var UcesatErr = ((UcesatRead - UcesatSc) / UcesatSc * 100).toFixed(2);
+			var UcesatErr = (UcesatRead - UcesatSc) / UcesatSc * 100;
 			CAL_UcesatErr.push(UcesatErr);
 			print("UcesatErr,  %: " + UcesatErr);
 
@@ -436,7 +437,7 @@ function CAL_CollectUcesat()
 					var UcesatErrSum = Math.sign_ma(UcesatErr) * (Math.abs(UcesatErr) + CAL_ErrTek);
 					break;
 				case "DMM6000":
-					var E0 = 1.1 * Math.sqrt(Math.pow(CAL_ErrDMM6500, 2) + Math.pow(CAL_NoiseDMM6500, 2));
+					var E0 = CAL_DMM6500_Err(VoltageValues[j] / 1000);
 					var UcesatErrSum = Math.sign_ma(UcesatErr) * (Math.abs(UcesatErr) + E0);
 					break;
 				case "E3632A":
@@ -445,7 +446,7 @@ function CAL_CollectUcesat()
 					break;
 			}
 			CAL_UcesatErrSum.push(UcesatErrSum);
-			print("UcesatErrSum, %: " + UcesatErrSum.toFixed(2));
+			print("UcesatErrSum, %: " + UcesatErrSum);
 
 			print("--------------------");
 			
@@ -543,12 +544,12 @@ function CAL_CollectIce()
 			CAL_IceSc.push(IsetSc);
 
 			// Set error
-			var IsetErr = ((IsetSc - Iset) / Iset * 100).toFixed(2);
+			var IsetErr = (IsetSc - Iset) / Iset * 100;
 			CAL_IsetErr.push(IsetErr);
 			print("IsetErr, %: " + IsetErr);
 
 			// Relative error
-			var IceErr = ((IceMeas - IsetSc) / IsetSc * 100).toFixed(2);
+			var IceErr = (IceMeas - IsetSc) / IsetSc * 100;
 			CAL_IceErr.push(IceErr);
 			print("IceЕrr, %: " + IceErr);
 
@@ -559,7 +560,8 @@ function CAL_CollectIce()
 					var IsetErrSum = Math.sign_ma(IsetErr) * (Math.abs(IsetErr) + CAL_ErrTek);
 					break;
 				case "DMM6000":
-					var E0 = 1.1 * Math.sqrt(Math.pow(CAL_ErrShunt, 2) + Math.pow(CAL_ErrDMM6500, 2) + Math.pow(CAL_NoiseDMM6500, 2));
+					var Err_DMM = CAL_DMM6500_Err(CurrentValues[j] * CAL_Rshunt);
+					var E0 = 1.1 * Math.sqrt(Math.pow(CAL_ErrShunt, 2) + Math.pow(Err_DMM, 2));
 					var IsetErrSum = Math.sign_ma(IsetErr) * (Math.abs(IsetErr) + E0);
 					break;
 			}
@@ -670,13 +672,22 @@ function CAL_CollectUge()
 				print("UgeDMM,  mV: " + UgeSc);
 
 			// Relative error
-			var UgeSetErr = ((UgeSc - UgeSet) / UgeSet * 100).toFixed(2);
+			var UgeSetErr = (UgeSc - UgeSet) / UgeSet * 100;
 			CAL_UgeSetErr.push(UgeSetErr);
 			print("UgeSetErr,  %: " + UgeSetErr);
 			//
-			var UgeErr = ((Uge - UgeSc) / Uge * 100).toFixed(2);
+			var UgeErr = (Uge - UgeSc) / Uge * 100;
 			CAL_UgeErr.push(UgeErr);
 			print("UgeErr,  %: " + UgeErr);
+			
+			//Summary error
+			if(CAL_measuring_device == "DMM6000")
+			{
+				var E0 = CAL_DMM6500_Err(VoltageValues[j]);
+				var UgeSetErrSum = Math.sign_ma(UgeSetErr) * (Math.abs(UgeSetErr) + E0);
+				CAL_UgeSetErrSum.push(UgeSetErrSum);
+				print("UgeSetErrSum, %: " + UgeSetErrSum);
+			}
 			print("--------------------");
 			
 			if (anykey()) return 0;
@@ -694,15 +705,17 @@ function CALReadArrayTrapeze()
 
 	var TrapezeArray = FloatArray.concat(FloatArray.splice(0, 0));
 
-	var StartNumber = 1;
-	var EndNumber = 3;
+	var StartNumber = 0;
+	var EndNumber = 2;
 	var TrapezeLevel = 0;
-	print("--------------------");
+
+	print("Точки для усреднения с DMM:")
 	for(var i = StartNumber; i <= EndNumber; i++)
 	{
 		p(TrapezeArray[i]);
 	}
-	print("--------------------");
+	print("---------------");
+	
 	for (var j = StartNumber; j <= EndNumber; j++)
 	{
 		TrapezeLevel = TrapezeLevel + TrapezeArray[j];
@@ -711,8 +724,24 @@ function CALReadArrayTrapeze()
 
 	return TrapezeLevel;
 }
+function CAL_DMM6500_Err(Voltage)
+{
+	if(Voltage <= 0.1)
+		var Err_DMM = ((3 * Math.pow(10, -5) * Voltage + 3.5 * Math.pow(10, -5) * 0.1) / Voltage) * 100;
 
-function CLCSU_PlotUcesat()
+	if(Voltage > 0.1 && Voltage <= 1)
+		var Err_DMM = ((2.5 * Math.pow(10, -5) * Voltage + 6 * Math.pow(10, -5) * 1) / Voltage) * 100;
+
+	if(Voltage > 1 && Voltage <= 10)
+		var Err_DMM = ((2.5 * Math.pow(10, -5) * Voltage + 5 * Math.pow(10, -6) * 10) / Voltage) * 100;
+
+	if(Voltage > 10)
+		var Err_DMM = ((4 * Math.pow(10, -5) * Voltage + 6 * Math.pow(10, -6) * 100) / Voltage) * 100;
+
+	return Err_DMM;
+}
+
+function CAL_PlotUcesat()
 {
 	scattern(CAL_UcesatSc, CAL_UcesatErr, "Voltage (in mV)", "Error (in %)", "Ucesat relative error " 
 		+ CAL_UcesatMin[CAL_VoltageRange] + " ... " + CAL_UcesatMax[CAL_VoltageRange] + " mV, " + CAL_measuring_device);
@@ -720,7 +749,7 @@ function CLCSU_PlotUcesat()
 		+ CAL_UcesatMin[CAL_VoltageRange] + " ... " + CAL_UcesatMax[CAL_VoltageRange] + " mV, " + CAL_measuring_device);
 }
 
-function CLCSU_PlotIce(PrintIset, PrintIce)
+function CAL_PlotIce(PrintIset, PrintIce)
 {
 	if(PrintIset)
 	{
@@ -735,11 +764,13 @@ function CLCSU_PlotIce(PrintIset, PrintIce)
 		+ CAL_IceMin[CAL_CurrentRange] + " ... " + CAL_IceMax[CAL_CurrentRange] + " A, " + CAL_measuring_device);
 }
 
-function CLCSU_PlotUge()
+function CAL_PlotUge()
 {
 	scattern(CAL_UgeSc, CAL_UgeErr, "Voltage (in V)", "Error (in %)", "Uge relative error " 
 		+ CAL_UgeMin + " ... " + CAL_UgeMax + " V, " + CAL_measuring_device);
 	scattern(CAL_UgeSc, CAL_UgeSetErr, "Voltage (in V)", "Error (in %)", "Uge set relative error " 
+		+ CAL_UgeMin + " ... " + CAL_UgeMax + " V, " + CAL_measuring_device);
+	scattern(CAL_UgeSc, CAL_UgeSetErrSum, "Voltage (in V)", "Error (in %)", "Uge set summary error " 
 		+ CAL_UgeMin + " ... " + CAL_UgeMax + " V, " + CAL_measuring_device);
 }
 
@@ -812,6 +843,7 @@ function CAL_ResetA()
 	// Summary error
 	CAL_UcesatErrSum = [];
 	CAL_IsetErrSum = [];
+	CAL_UgeSetErrSum = [];
 }
 
 // Save
