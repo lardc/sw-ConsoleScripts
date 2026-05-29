@@ -37,6 +37,11 @@ function SVTU_StartMeasure(Current, GateVoltage)
 
 		while (dev.r(192) != SVTU_DS_Ready)
 		{
+			if(dev.r(192) == SVTU_DS_Fault)
+			{
+				PrintStatus();
+				return 0;
+			}
 			var end = new Date();
 			pinline('\rВремя заряда, с: ' + (end - start) / 1000);
 			sleep(100);

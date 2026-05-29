@@ -1,0 +1,42 @@
+// Пояснения
+
+
+// Посмотреть версию прошивки
+i("PrintStatus.js")
+PrintFWInfo()
+
+// Обновление прошивки
+i("STM_FWUpdate.js")
+FWU_IGTU()
+
+// Скачать дамп регистров
+i("STM_FWUpdate.js")
+FWU_DumpIGTU(Num, Nid)
+
+// Загрузить дамп регистров
+i("STM_FWUpdate.js")
+FWU_RestoreIGTU(Num, Nid)
+
+// Запуск измерения
+include("TestIGTU.js");
+
+
+// Запуск измерения на DMM6500 (режим Digitize)
+include("TestIGTU.js");
+
+
+// Отключение регулятора
+include("TestIGTU.js");
+
+
+// Сохранение EP в формате csv.
+include("TestIGTU.js");
+CIGTU_SaveCSV_EP();
+
+// Ресурсный тест
+include("TestIGTU.js");
+
+
+/// Калибровка ЦАП 
+
+/// Калибровка АЦП 

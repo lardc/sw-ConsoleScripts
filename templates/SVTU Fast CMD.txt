@@ -8,10 +8,10 @@ PrintFWInfo();
 FWU_SVTU();
 
 // Скачать дамп регистров
-FWU_DumpSVTU(Num);
+FWU_DumpSVTU(Num, Nid);
 
 // Загрузить дамп регистров
-FWU_RestoreSVTU(Num);
+FWU_RestoreSVTU(Num, Nid);
 
 // Формирование и измерение
 include("TestSVTU.js");
@@ -32,14 +32,14 @@ SVTU_StartMeasure_KEI(200, 15);
 // Регистры задания 1 диапазон
 / [P0: 52] [P1: 51] [P2: 50]
 include("CalSVTU.js");
-CAL_IceMin = [75, 1000];
-CAL_IceMax = [1001, 6500];
-CAL_Rshunt = 0.00025;
+CAL_IceMin = [75, 1001];
+CAL_IceMax = [1000, 7200];
+CAL_Rshunt = 0.00075;
 CAL_CurrentRange = 1; // 0 или 1
 CAL_Points = 10;
 CAL_UseAvg = 0;
-CAL_Iterations = 10;
-CAL_measuring_device = "TPS2000"; // "DMM6000" or "TPS2000"
+CAL_Iterations = 3;
+CAL_measuring_device = "DMM6000"; // "DMM6000" or "TPS2000"
 CAL_Init_Mes_Device(12, 7, 1, 2, 3);
 
 CAL_VerifyIce();
@@ -56,11 +56,11 @@ CAL_CalibrateIset();
 include("CalSVTU.js");
 CAL_IceMin = [75, 1001];
 CAL_IceMax = [1000, 6500];
-CAL_Rshunt = 0.00025;
+CAL_Rshunt = 0.00075;
 CAL_CurrentRange = 0; // 0 или 1
 CAL_Points = 10;
 CAL_UseAvg = 0;
-CAL_Iterations = 3;
+CAL_Iterations = 1;
 CAL_measuring_device = "DMM6000"; // "DMM6000" or "TPS2000"
 CAL_Init_Mes_Device(12, 7, 1, 2, 3);
 
@@ -84,7 +84,7 @@ CAL_E3632A_manual_input = 0; // 0 - калибровка по заданию, 1 
 CAL_Points = 10;
 CAL_UseAvg = 0;
 CAL_Iterations = 3;
-CAL_measuring_device = "E3632A"; // "DMM6000", "TPS2000" or "E3632A"
+CAL_measuring_device = "DMM6000"; // "DMM6000", "TPS2000" or "E3632A"
 CAL_Init_Mes_Device(12, 7, 1, 2, 3);
 
 CAL_VerifyUcesat();
@@ -102,8 +102,8 @@ include("CalSVTU.js");
 CAL_UgeMin = 10;
 CAL_UgeMax = 20;
 CAL_UseAvg = 0;
-CAL_Iterations = 10;
-CAL_measuring_device = "TPS2000"; // "DMM6000" or "TPS2000"
+CAL_Iterations = 3;
+CAL_measuring_device = "DMM6000"; // "DMM6000" or "TPS2000"
 CAL_Init_Mes_Device(12, 7, 1, 2, 3);
 
 CAL_VerifyUge();
