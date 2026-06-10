@@ -7,10 +7,9 @@ save('Vdrm_Unit.csv', a.Voltage)
 save('Idrm_Unit.csv', a.Current)
 
 include("TEK_GetData.js");
-include("SiC_GetData.js");
 TEK_GD_Init(12);
-SaveChannelData("Vdrm_OSC", SiC_GD_GetChannelCurve(1));
-SaveChannelData("Idrm_OSC", SiC_GD_GetChannelCurve(2));
+SaveChannelData("Vdrm_OSC", TEK_GetChannelData(1));
+SaveChannelData("Idrm_OSC", TEK_GetChannelData(2));
 
 ///BVT
 //reverse
@@ -20,10 +19,9 @@ save('Vrrm_Unit.csv', a.Voltage)
 save('Irrm_Unit.csv', a.Current)
 
 include("TEK_GetData.js");
-include("SiC_GetData.js");
 TEK_GD_Init(12);
-SaveChannelData("Vrrm_OSC", SiC_GD_GetChannelCurve(1));
-SaveChannelData("Irrm_OSC", SiC_GD_GetChannelCurve(2));
+SaveChannelData("Vrrm_OSC", TEK_GetChannelData(1));
+SaveChannelData("Irrm_OSC", TEK_GetChannelData(2));
 
 
 /// LSL for diode
@@ -34,10 +32,9 @@ save('Vfm_Unit.csv', Vfm_Unit)
 save('Ifm_Unit.csv', Ifm_Unit)
 
 include("TEK_GetData.js");
-include("SiC_GetData.js");
 TEK_GD_Init(12);
-SaveChannelData("Vfm_OSC", SiC_GD_GetChannelCurve(1));
-SaveChannelData("Ifm_OSC", SiC_GD_GetChannelCurve(2));
+SaveChannelData("Vfm_OSC", TEK_GetChannelData(1));
+SaveChannelData("Ifm_OSC", TEK_GetChannelData(2));
 
 /// LSL for thyristor
 Itm_Unit = dev.rafs(1)
@@ -47,11 +44,10 @@ save('Itm_Unit.csv', Itm_Unit)
 save('Vtm_Unit.csv', Vtm_Unit)
 
 include("TEK_GetData.js");
-include("SiC_GetData.js");
 TEK_GD_Init(12);
-SaveChannelData("Vtm_OSC", SiC_GD_GetChannelCurve(1));
-SaveChannelData("Itm_OSC", SiC_GD_GetChannelCurve(2));
-SaveChannelData("Ig_OSC", SiC_GD_GetChannelCurve(3));
+SaveChannelData("Vtm_OSC", TEK_GetChannelData(1));
+SaveChannelData("Itm_OSC", TEK_GetChannelData(2));
+SaveChannelData("Ig_OSC", TEK_GetChannelData(3));
 
 /// GTU
 // Vgt/Igt
@@ -64,11 +60,10 @@ save('Vg_Unit.csv', Vg_Unit)
 save('Ig_Unit.csv', Ig_Unit)
 
 include("TEK_GetData.js");
-include("SiC_GetData.js");
 TEK_GD_Init(12);
-SaveChannelData("Vg_OSC", SiC_GD_GetChannelCurve(1));
-SaveChannelData("Ig_OSC", SiC_GD_GetChannelCurve(2));
-SaveChannelData("Id_OSC", SiC_GD_GetChannelCurve(3));
+SaveChannelData("Vg_OSC", TEK_GetChannelData(1));
+SaveChannelData("Ig_OSC", TEK_GetChannelData(2));
+SaveChannelData("Id_OSC", TEK_GetChannelData(3));
 
 // Ih
 include("TestGTU_4.0.js");
@@ -90,15 +85,13 @@ save('Id_Unit.csv', Id_Unit)
 
 
 include("TEK_GetData.js");
-include("SiC_GetData.js");
 TEK_GD_Init(12);
-SaveChannelData("Vd_OSC", SiC_GD_GetChannelCurve(1));
-SaveChannelData("Ig_OSC", SiC_GD_GetChannelCurve(2));
-SaveChannelData("Id_OSC", SiC_GD_GetChannelCurve(3));
+SaveChannelData("Vd_OSC", TEK_GetChannelData(1));
+SaveChannelData("Ig_OSC", TEK_GetChannelData(2));
+SaveChannelData("Id_OSC", TEK_GetChannelData(3));
 
 
 /// CROVU
 include("TEK_GetData.js");
-include("SiC_GetData.js");
 TEK_GD_Init(12);
-SaveChannelData("Vd_OSC", SiC_GD_GetChannelCurve(1));
+SaveChannelData("Vd_OSC", TEK_GetChannelData(1));

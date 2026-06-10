@@ -116,3 +116,33 @@ function IGTU_Res()
 		PrintStatus();
 }
 //--------------------
+
+function CIGTU_SaveCSV_EP()
+{
+	var Suffix = GetDateTimeSuffix();
+
+	save("data/LCSU_EP1_VOLTAGE_" + Suffix + ".csv", dev.raff(1));
+	save("data/LCSU_EP2_CURRENT_" + Suffix + ".csv", dev.raff(2));
+	save("data/LCSU_EP3_REGULATOR_ERR_" + Suffix + ".csv", dev.raff(3));
+	save("data/LCSU_EP4_REGULATOR_OUTPUT_" + Suffix + ".csv", dev.raff(4));
+}
+
+function GetDateTimeSuffix()
+{
+	var now = new Date();
+
+	var day = FormatTwoDigits(now.getDate());
+	var month = FormatTwoDigits(now.getMonth() + 1);
+	var year = now.getFullYear();
+
+	var hours = FormatTwoDigits(now.getHours());
+	var minutes = FormatTwoDigits(now.getMinutes());
+	var seconds = FormatTwoDigits(now.getSeconds());
+
+	return day + "." + month + "." + year + "_" + hours + "-" + minutes + "-" + seconds;
+}
+
+function FormatTwoDigits(value)
+{
+	return (value < 10 ? "0" : "") + value;
+}

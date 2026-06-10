@@ -1,24 +1,17 @@
 include("PrintStatus.js")
 
-// Совместимость: 0 - версия 1.0.0, 1 - версия 1.0
-compatibility = 0
-
-function ITU_Start(Voltage, Current, VReadyCallback, MutePrint)
+function ITU_Start(Voltage, Current, Time, VReadyCallback, MutePrint)
 {
-	dev.w(128, Voltage)
-	if(compatibility)
-	{
-		dev.w(129, Math.floor(Current))
-		dev.w(130, Math.floor(Current % 1 * 1000))
-	}
-	else
-		dev.wf(129,Current)
+	dev.wf(128, Voltage)
+	dev.wf(129, Current)
+	dev.wf(132, Time)
+
 	dev.c(100)
 	var start_time = Date.now() / 1000
 	var time_div = 0
 	if(!MutePrint)
 		p('Start:  ' + (new Date()).toLocaleTimeString())
-	
+
 	while(dev.r(192) == 4)
 	{
 		if(typeof(VReadyCallback) == 'function')
@@ -26,8 +19,8 @@ function ITU_Start(Voltage, Current, VReadyCallback, MutePrint)
 		
 		if(anykey())
 		{
-			dev.c(101)
-			return false
+			dev.c(101);
+			return false;
 		}
 		
 		if(!MutePrint)
@@ -41,61 +34,60 @@ function ITU_Start(Voltage, Current, VReadyCallback, MutePrint)
 			}
 		}
 		
-		sleep(100)
+		//sleep(100)
 	}
 	if(!MutePrint)
 		p('Finish: ' + (new Date()).toLocaleTimeString())
 	
-	if(dev.r(192) == 3)
+
+	if(!MutePrint)
 	{
-		if(!MutePrint)
-		{
-			var res = ITU_ReadResult()
-			
-			p('Voltage,      V: ' + res.v.toFixed(0))
-			p('Current,     mA: ' + res.i.toFixed(3))
-			if(!compatibility)
-			{
-				p('Current2,     mA: ' + res.i2.toFixed(3))
-				p('Current3,     mA: ' + res.i3.toFixed(3))
-				p('Current4,     mA: ' + res.i4.toFixed(3))	
-			}
-			p('Current act, mA: ' + res.i_act.toFixed(3))
-			if(!compatibility)
-			{
-				p('Current2 act, mA: ' + res.i2_act.toFixed(3))
-				p('Current3 act, mA: ' + res.i3_act.toFixed(3))
-				p('Current4 act, mA: ' + res.i4_act.toFixed(3))
-			}	
-			p('Cos Phi        : ' + res.cos_phi.toFixed(3))
-			if(!compatibility)
-			{
-				p('Cos Phi2        : ' + res.cos_phi2.toFixed(3))
-				p('Cos Phi3        : ' + res.cos_phi3.toFixed(3))
-				p('Cos Phi4        : ' + res.cos_phi4.toFixed(3))
-			}	
-			if(dev.r(195) == 1)
-				p('Output current saturation')
-		}
+		var res = ITU_ReadResult()
 		
-		return true
+		p('Voltage,      V: ' + res.v.toFixed(0))
+		p('Current1,     mA: ' + res.i.toFixed(3))
+		p('Current2,     mA: ' + res.i2.toFixed(3))
+		p('Current3,     mA: ' + res.i3.toFixed(3))
+		p('Current4,     mA: ' + res.i4.toFixed(3))
+		p('-----------------------');
+		
+		p('Current1 act, mA: ' + res.i_act.toFixed(3))
+		p('Current2 act, mA: ' + res.i2_act.toFixed(3))
+		p('Current3 act, mA: ' + res.i3_act.toFixed(3))
+		p('Current4 act, mA: ' + res.i4_act.toFixed(3))
+		p('-----------------------');
+		
+		p('Cos Phi1        : ' + res.cos_phi.toFixed(3))
+		p('Cos Phi2        : ' + res.cos_phi2.toFixed(3))
+		p('Cos Phi3        : ' + res.cos_phi3.toFixed(3))
+		p('Cos Phi4        : ' + res.cos_phi4.toFixed(3))
+		p('-----------------------');
+
+		if(dev.r(195) == 1)
+		{
+			p('Output current saturation')
+			p('Failed current CH = ' + (dev.rf(221) + 1))
+		}	
+
+		if(dev.r(192) != 3 || dev.r(193) != 0 || dev.r(194) != 0 || dev.r(195) != 0 || dev.r(196) != 0)
+		{
+			PrintStatus()
+			//return false;
+		}
+
 	}
-	else
-	{
-		PrintStatus()
-		return false
-	}
+	return true;
 }
 
-function ITU_Cycle(Count, Voltage, Current, Sleep)
+function ITU_Cycle(Count, Voltage, Current, Time, Sleep)
 {
-	if(typeof citu_Count == 'undefined')
-		citu_Count = 0
+	if(typeof Count == 'undefined')
+		Count = 0
 	
-	for(var i = 0; i < Count; i++)
+	for(var i = 0; i < Count;)
 	{
-		p('Test #' + (citu_Count++ + 1))
-		if(ITU_Start(Voltage, Current))
+		p('Test #' + (Count-- + 1))
+		if(ITU_Start(Voltage, Current, Time))
 		{
 			p('-----')
 			sleep(Sleep ? Sleep : 1000)
@@ -111,34 +103,23 @@ function ITU_Cycle(Count, Voltage, Current, Sleep)
 function ITU_ReadResult()
 {
 	var voltage 	= dev.rf(200)
-	
-	if(compatibility)
-	{
-		var current 	= dev.r(201) + dev.r(202) / 1000
-		var current_act = dev.r(203) + dev.r(204) / 1000
-		var cos_phi		= dev.rs(205) / 1000
-	}
-	else
-	{	
-		var current 	= dev.rf(201)
-		var current2 	= dev.rf(204)
-		var current3 	= dev.rf(207)
-		var current4 	= dev.rf(210)	
-	
-		var current_act  = dev.rf(202)
-		var current2_act = dev.rf(205)
-		var current3_act = dev.rf(208)
-		var current4_act = dev.rf(211)
-	
-		var cos_phi		= dev.rf(203)
-		var cos_phi2	= dev.rf(206)
-		var cos_phi3	= dev.rf(209)
-		var cos_phi4	= dev.rf(212)
-	}	
-	if(compatibility)
-		return {v : voltage, i : current, i_act : current_act, cos_phi : cos_phi}
-	else
-		return {v : voltage, i : current, i2 : current2, i3 : current3, i4 :current4, i_act : current_act, i2_act : current2_act, i3_act : current3_act, 
+
+	var current 	= dev.rf(201)
+	var current2 	= dev.rf(204)
+	var current3 	= dev.rf(207)
+	var current4 	= dev.rf(210)
+
+	var current_act  = dev.rf(202)
+	var current2_act = dev.rf(205)
+	var current3_act = dev.rf(208)
+	var current4_act = dev.rf(211)
+
+	var cos_phi		= dev.rf(203)
+	var cos_phi2	= dev.rf(206)
+	var cos_phi3	= dev.rf(209)
+	var cos_phi4	= dev.rf(212)
+
+	return {v : voltage, i : current, i2 : current2, i3 : current3, i4 :current4, i_act : current_act, i2_act : current2_act, i3_act : current3_act, 
 	i4_act : current4_act, cos_phi : cos_phi, cos_phi2 : cos_phi2, cos_phi3 : cos_phi3, cos_phi4 : cos_phi4}
 }
 
@@ -256,35 +237,6 @@ function ITU_Read()
 	return res
 }
 
-function ITU_CalibrateRawOffset()
-{
-	var cnt = 1000, voltage = 0, current = 0
-	for(var i = 0; i < cnt; i++)
-	{
-		dev.c(12)
-		dev.c(10)
-		if(dev.r(230) == 1)
-		{
-			voltage += dev.r(232)
-			current += dev.r(233)
-		}
-		else
-		{
-			p('Optical interface error')
-			return
-		}
-	}
-	
-	voltage = Math.floor(voltage / cnt)
-	current = Math.floor(current / cnt)
-	
-	p('Voltage offset: ' + voltage)
-	p('Current offset: ' + current)
-	
-	dev.w(0, voltage)
-	dev.w(1, current)
-}
-
 function ITU_Save(Result, Prefix)
 {
 	if (typeof Prefix === 'undefined')
@@ -298,4 +250,68 @@ function ITU_Save(Result, Prefix)
 	save(Prefix + '_irms.txt', Result.irms)
 	save(Prefix + '_pwm.txt', Result.pwm)
 	save(Prefix + '_cosphi.txt', Result.cosphi)
+}
+
+function ITU_CalibrateRawOffset()
+{
+	var ADC_REF_VOLTAGE = 3000
+	var ADC_RESOLUTION = 4095
+	var CHANNEL_COUNT = 4
+
+	for (var channel = 1; channel <= CHANNEL_COUNT; channel++)
+		print("Old RAW_ZERO_SCURRENT" + channel + " = " + dev.rf(channel))
+	print("-------------------------")
+
+	for (var channel = 1; channel <= CHANNEL_COUNT; channel++)
+	{
+		var avgCurrent = ITU_CalculateAverage(dev.raff(channel + 1))
+		var shunt = ITU_SelectShunt(channel)
+		var underShuntCurrent = avgCurrent * shunt.ResShunt
+		var underKCurrent = underShuntCurrent / shunt.KShunt
+		var underADCCurrent = underKCurrent * ADC_RESOLUTION / ADC_REF_VOLTAGE
+
+		dev.wf(channel, dev.rf(channel) + underADCCurrent)
+		print("New RAW_ZERO_SCURRENT" + channel + " = " + dev.rf(channel))
+	}
+
+	return;
+}
+
+function ITU_CalculateAverage(arr)
+{
+	var sum = 0
+	for (var i = 0; i < arr.length; i++)
+		sum += arr[i];
+	return sum / arr.length;
+}
+
+function ITU_SelectShunt(number)
+{
+	var limitIrms = dev.rf(129)
+	var regIRangeLow = dev.rf(73)
+	var regIRangeMid = dev.rf(74)
+	var kShuntBaseRegs = [9, 21, 33, 45]
+	var kShuntReg
+	var resShuntReg
+
+	if (number < 1 || number > 4)
+		return {ResShunt : 0, KShunt : 0}
+
+	if(limitIrms <= regIRangeLow)
+	{
+		resShuntReg = 59
+		kShuntReg = kShuntBaseRegs[number - 1] + 8
+	}
+	else if(limitIrms <= regIRangeMid)
+	{
+		resShuntReg = 58
+		kShuntReg = kShuntBaseRegs[number - 1] + 4
+	}
+	else
+	{
+		resShuntReg = 57
+		kShuntReg = kShuntBaseRegs[number - 1]
+	}
+
+	return {ResShunt : dev.rf(resShuntReg), KShunt : dev.rf(kShuntReg)}
 }

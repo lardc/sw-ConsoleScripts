@@ -156,44 +156,43 @@ function LCSU_SyncTest(Current,sync_time)
 	return true;
 }
 
-function LCSU_ResourceTest(Current, HoursTest)
+function LCSU_ResourceTest(Current, Pulse_ms, HoursTest, Period_ms)
 {
-	var i = 1;
-	var count_plot = 0;
-	var MinutesInMs = 60 * 1000;
-	var end = new Date();
 	var start = new Date();
+	var stop = new Date();
 	var hours = start.getHours() + HoursTest;
-	end.setHours(hours);
+	stop.setHours(hours);
+	var i = 1;
+	var lastPulseStartMs = null;
 
-	var RegulatorError = 0;
-
-	while((new Date()).getTime() < end.getTime())
+	while((new Date()).getTime() < stop.getTime())
 	{
-		LCSU_Start(2,Current);
-		//sleep(1000);
+		var start_pulse = new Date();
+		var stop_pulse = new Date();
+		var milliseconds = start_pulse.getMilliseconds() + Period_ms;
+		stop_pulse.setMilliseconds(milliseconds);
 
-		RegulatorError = dev.rf(196);
-		if (RegulatorError==1)
+		var beforePulseMs = (new Date()).getTime();
+		if (lastPulseStartMs !== null)
 		{
-			p("Following regulator error. Test stopped.")
-			break;
+			var actualIntervalMs = beforePulseMs - lastPulseStartMs;
+			print("Фактический промежуток между импульсами: " + actualIntervalMs + " мс (задано " + Period_ms + " мс)");
 		}
+		lastPulseStartMs = beforePulseMs;
 
-		var left_time = new Date(end.getTime() - (new Date()).getTime());
+		LCSU_Start(2, Current, Pulse_ms);
+		var left_time = new Date(stop.getTime() - (new Date()).getTime());
 		print("#" + i + " Осталось " + (left_time.getHours() - 3) + " ч и " + left_time.getMinutes() + " мин");
 
-		var elapsed_time = new Date((new Date()).getTime() - start.getTime());
-		if (elapsed_time.getTime() > 10 * MinutesInMs * count_plot)
+		while((new Date()).getTime() < stop_pulse.getTime())
 		{
-			pl(dev.raff(1));
-			p("Вывод графика #" + (count_plot + 1) + " спустя " + (elapsed_time.getHours() - 3) + " ч и " + elapsed_time.getMinutes() + " мин");
-			count_plot++;
+			if (anykey()) return;
+			sleep(1);
 		}
 
-		if (anykey()) break;
-
 		i++;
+
+		if (anykey()) break;
 	}
 }
 
@@ -328,6 +327,18 @@ function CLCSU_SaveCSV_EP(NumberEP)
 			{
 				var EP6 = dev.raff(6);
 				save("data/LCSU_EP6_DAC_RAW_DATA_" + Suffix + ".csv", EP6);
+				break;
+			}
+		case 7:
+			{
+				var EP7 = dev.raff(7);
+				save("data/LCSU_EP7_ADC_FLATTOP_LAST_RAW_DATA_" + Suffix + ".csv", EP7);
+				break;
+			}
+		case 8:
+			{
+				var EP8 = dev.raff(8);
+				save("data/LCSU_EP8_ADC_FLATTOP_DATA_COUNT_" + Suffix + ".csv", EP8);
 				break;
 			}
 		default:

@@ -1,9 +1,9 @@
 // Пояснения
 CAL_Init(portDevice, portTek, channelMeasureId) 
-LCSU_Start(Type, Current, Pulse) // Type 0 - синус, 1 - мод. синус, 2 - трапеция; Current в А, Pulse в мс
-LCSU_Start_KEI(0, 200, 10) // Type 0 - синус, 1 - мод. синус, 2 - трапеция; Current в А, Pulse в мс
+LCSU_Start(Type, Current, Pulse_ms) // Type 0 - синус, 1 - мод. синус, 2 - трапеция; Current в А, Pulse в мс
+LCSU_Start_KEI(Type, Current, Pulse_ms) // Type 0 - синус, 1 - мод. синус, 2 - трапеция; Current в А, Pulse в мс
 CLCSU_Regulator(Range, OnOff) // диапазон 0, 1, 2; вкл (1), выкл (0)
-LCSU_ResourceTest(Current, hours_resource_test)
+LCSU_ResourceTest(Current, Pulse_ms, HoursTest, Period_ms) // Pulse_ms - длительность полки, HoursTest - длительность теста в часах, Period_ms - период следования импульсов в мс
 CLCSU_SaveCSV_EP(NumberEP) // NumberEP - Endpoints 1 - 6  
 Nid = 110...
 
@@ -21,11 +21,11 @@ FWU_DumpLCSU(Num, Nid)
 
 // Загрузить дамп регистров
 i("STM_FWUpdate.js")
-FWU_RestoreLCSU()
+FWU_RestoreLCSU(Num, Nid)
 
 // Запуск измерения
 include("TestLCSU.js");
-LCSU_Start(2, 170, 1);
+LCSU_Start(2, 350, 1);
 
 // Запуск измерения на DMM6500 (режим Digitize)
 include("TestLCSU.js");
@@ -39,6 +39,10 @@ CLCSU_Regulator(0, 0);
 include("TestLCSU.js");
 CLCSU_SaveCSV_EP(1);
 
+// Ресурсный тест
+include("TestLCSU.js");
+LCSU_ResourceTest(6500, 1, 8, 15000) // перед тестом проверить регистр 9
+
 // Калибровка ЦАП без регулятора коэффициентами K и B
 // Диапазон 0 [75/160 - 350] А
 / (Offset: 24) (K: 23)
@@ -47,15 +51,15 @@ CLCSU_SaveCSV_EP(1);
 // Диапазон 2 [1101 - 6500] А
 / (Offset: 68) (K: 67)
 include("CalLCSU.js")
-clcsu_IdMin = [160, 351, 1101];
+clcsu_IdMin = [75, 351, 1101];
 clcsu_IdMax = [350, 1100, 6500];
-clcsu_RShunt = 0.00025;
-clcsu_Pulse = 10;
+clcsu_RShunt = 0.00075;
+clcsu_Pulse = 1;
 clcsu_Points = 10;
-clcsu_Iterations = 3;
-clcsu_CurrentRange = 0; // 0, 1 или 2
+clcsu_Iterations = 1;
+clcsu_CurrentRange = 1; // 0, 1 или 2
 clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
-CLCSU_Init(12);
+CLCSU_Init(13);
 
 CLCSU_CalibrateDAC();
 
@@ -71,12 +75,12 @@ CLCSU_VerifyId();
 include("CalLCSU.js")
 clcsu_IdMin = [75, 351, 1101];
 clcsu_IdMax = [350, 1100, 6500];
-clcsu_RShunt = 0.00025;
-clcsu_Pulse = 10;
+clcsu_RShunt = 0.00075;
+clcsu_Pulse = 1;
 clcsu_Points = 10;
 clcsu_Iterations = 1;
 clcsu_CurrentRange = 0; // 0, 1 или 2
-clcsu_PulseType = 0; // 0 - синус, 1 - мод. синус, 2 - трапеция
+clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
 CLCSU_Init(12);
 
 CLCSU_CalibrateDAC_Fine();
@@ -92,12 +96,12 @@ include("CalLCSU.js")
 clcsu_IdMin = [75, 351];
 clcsu_IdMax = [350, 6500];
 clcsu_RShunt = 0.00025;
-clcsu_Pulse = 10;
+clcsu_Pulse = 1;
 clcsu_Points = 10;
-clcsu_Iterations = 1;
-clcsu_CurrentRange = 1; // 0 или 1
+clcsu_Iterations = 3;
+clcsu_CurrentRange = 0; // 0 или 1
 clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
-CLCSU_Init(12);
+CLCSU_Init(13);
 
 CLCSU_CalibrateADC();
 
@@ -111,13 +115,13 @@ CLCSU_VerifyId();
 include("CalLCSU.js")
 clcsu_IdMin = [75, 351];
 clcsu_IdMax = [350, 6500];
-clcsu_RShunt = 0.00025;
+clcsu_RShunt = 0.00075;
 clcsu_Pulse = 1;
 clcsu_Points = 10;
 clcsu_Iterations = 3;
 clcsu_CurrentRange = 1; // 0 или 1
 clcsu_PulseType = 2; // 0 - синус, 1 - мод. синус, 2 - трапеция
-CLCSU_Init(12);
+CLCSU_Init(13);
 
 CLCSU_CalibrateId();
 
