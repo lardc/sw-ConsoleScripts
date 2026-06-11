@@ -1,4 +1,8 @@
-﻿// Измерение
+﻿//подключение к библиотекам
+i("TestIGTU_303.js");
+i("CalIGTU_303.js");
+
+// Измерение
 IGTU_Res(); // измерение сопротивления термистора
 IGTU_Iges(Voltage); // измерение тока утечки затвора
 IGTU_Vgs(Current); // измерение порогового напряжения затвор эмиттер  
@@ -7,79 +11,44 @@ IGTU_Vgs(Current); // измерение порогового напряжени
 // Пояснения
 CIGTU_Init(portDevice); // инициализация c DMM6500
 
+// Варианты CalibrationType
+cigtu_Cal_Vmes = 0;
+cigtu_Cal_Vpotmes = 1;
+cigtu_Cal_Vset = 2;
+cigtu_Cal_Imes = 3;
+cigtu_Cal_Iset = 4;
 
+// Варианты CurrentRange
+
+cigtu_Cal_Imes_50_500_mA = 10;
+cigtu_Cal_Imes_5_50_mA = 11;
+cigtu_Cal_Imes_0.5_5mA = 12;
+cigtu_Cal_Imes_50_500mkA = 13;
+cigtu_Cal_Imes_2_50mkA = 14;
+cigtu_Cal_Imes_200_2000nA = 15;
+cigtu_Cal_Imes_20_200nA = 16;
+cigtu_Cal_Imes_2_20nA = 17;
+
+CIGTU_Calibrate(CalibrationType, CurrentRange); // Калибровка
+
+CIGTU_Verify(CalibrationType, CurrentRange); // Верификация
 
 GTU_All(Num, Pause);
 
 // Обновление прошивки
-i("FWUpdate.js");
-FWU_GTU();
+i("STM_FWUpdate.js");
+FWU_IGTU();
 
 // Скачать дамп регистров
-i("FWUpdate.js");
-FWU_DumpGTU();
+i("STM_FWUpdate.js");
+FWU_DumpIGTU(Num);
 
 // Загрузить дамп регистров
-i("FWUpdate.js");
-FWU_RestoreGTU();
+i("STM_FWUpdate.js");
+FWU_RestoreGTU(Num, Nid);
 
 // Подготовка блока
-dev.co(7); //  номер COM-порта блока pp()
-dev.nid(3);
+dev.w(130,1) // отключение контура безопасности (при необходимости)
+dev.с(1);
 
-// Измерение
-GTU_All(1,1);
-GTU_Kelvin();
-GTU_Gate();
-GTU_Res();
-GTU_Holding();
-GTU_Latching();
 
-/// Igt 50 - 600 мА
-// Регистры измерения ADC
-/ (Offset: 37) (K: 36)
-/ [P0: 35] [P1: 34] [P2: 33]
-// Регистры задания DAC
-/ (Offset: 51) (K: 50)
-/ [P0: 49] [P1: 48] [P2: 47]
-i("CalGTU.js");
-cgtu_ResGate = 5;
-cgtu_Imax = 600;
-cgtu_Imin = 50;
-cgtu_Istp = 55;
-cgtu_Iterations = 1;
-cgtu_UseAvg = 0;
-CGTU_Init(1,2,1,2);
-CGTU_VerifyGate();
-
-/// Vgt 0.03 - 5 В
-// Регистры измерения ADC
-/ (Offset: 32) (K: 31)
-/ [P0: 30] [P1: 29] [P2: 28]
-// Регистры задания DAC
-/ (Offset: 46) (K: 45)
-/ [P0: -] [P1: -] [P2: -]
-i("CalGTU.js");
-cgtu_ResGate = 10;
-cgtu_Imax = 470;
-cgtu_Imin = 8;
-cgtu_Istp = 48;
-cgtu_Iterations = 3;
-cgtu_UseAvg = 0;
-CGTU_Init(1,2,1,2);
-CGTU_VerifyGate()
-
-/// Ih 50 - 600мА
-// Регистры задания DAC
-/ (Offset: 35) (K: 33/34)
-/ [P0: 35] [P1: 34] [P2: 35]
-i("CalGTU.js");
-cgtu_ResPower = 10;	// in Ohms
-cgtu_Imax = 600;
-cgtu_Imin = 50;
-cgtu_Istp = 55;
-cgtu_Iterations = 3;
-cgtu_UseAvg = 0;
-CGTU_Init(1,2,1,2);
-
-CGTU_VerifyPower()
