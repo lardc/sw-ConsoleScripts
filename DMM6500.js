@@ -189,9 +189,20 @@ function KEI_ConfigVoltageDC(NPLC)
 
 	tmc.w('SENSe:FUNCtion "VOLTage"');
 	tmc.w(':VOLTage:NPLC ' + NPLC);
-	tmc.w(':DISPlay:VOLTage:DIGits ' +KEI_DisplayDigits(NPLC));
+	tmc.w(':DISPlay:VOLTage:DIGits ' + KEI_DisplayDigits(NPLC));
 	tmc.w(':VOLTage:AZERo OFF');
 	tmc.w(':SENSe:VOLTage:RANGe 1');
+}
+
+function KEI_ConfigCurrentDC(NPLC)
+{
+	KEI_Reset();
+
+	tmc.w('SENSe:FUNCtion "CURR"');
+	tmc.w(':CURR:NPLC ' + NPLC);
+	tmc.w(':DISPlay:CURR:DIGits ' + KEI_DisplayDigits(NPLC));
+	tmc.w(':CURR:AZERo OFF');
+	tmc.w(':SENSe:CURR:RANGe 1');
 }
 
 function KEI_DisplayDigits(NPLC)
@@ -246,9 +257,13 @@ function KEI_OPC()
 
 function KEI_SetVoltageDCRange(Range)
 {
-	tmc.w(':SENSe:VOLTage:RANGe ' +Range);
+	tmc.w(':SENSe:VOLTage:RANGe ' + Range);
 }
 
+function KEI_SetCurrentDCRange(Range)
+{
+	tmc.w(':SENSe:CURR:RANGe ' + Range);
+}
 function KEI_ClearBuffer()
 {
 	tmc.w(':TRACe:CLEar "TestBuffer"');

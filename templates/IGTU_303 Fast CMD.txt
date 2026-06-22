@@ -1,0 +1,54 @@
+﻿//подключение к библиотекам
+i("TestIGTU_303.js");
+i("CalIGTU_303.js");
+
+// Измерение
+IGTU_Res(); // измерение сопротивления термистора
+IGTU_Iges(Voltage); // измерение тока утечки затвора
+IGTU_Vgs(Current); // измерение порогового напряжения затвор эмиттер  
+
+
+// Пояснения
+CIGTU_Init(portDevice); // инициализация c DMM6500
+
+// Варианты CalibrationType
+cigtu_Cal_Vmes = 0;
+cigtu_Cal_Vpotmes = 1;
+cigtu_Cal_Vset = 2;
+cigtu_Cal_Imes = 3;
+cigtu_Cal_Iset = 4;
+
+// Варианты CurrentRange
+
+cigtu_Cal_Imes_50_500_mA = 10;
+cigtu_Cal_Imes_5_50_mA = 11;
+cigtu_Cal_Imes_0.5_5mA = 12;
+cigtu_Cal_Imes_50_500mkA = 13;
+cigtu_Cal_Imes_2_50mkA = 14;
+cigtu_Cal_Imes_200_2000nA = 15;
+cigtu_Cal_Imes_20_200nA = 16;
+cigtu_Cal_Imes_2_20nA = 17;
+
+CIGTU_Calibrate(CalibrationType, CurrentRange); // Калибровка
+
+CIGTU_Verify(CalibrationType, CurrentRange); // Верификация
+
+GTU_All(Num, Pause);
+
+// Обновление прошивки
+i("STM_FWUpdate.js");
+FWU_IGTU();
+
+// Скачать дамп регистров
+i("STM_FWUpdate.js");
+FWU_DumpIGTU(Num);
+
+// Загрузить дамп регистров
+i("STM_FWUpdate.js");
+FWU_RestoreGTU(Num, Nid);
+
+// Подготовка блока
+dev.w(130,1) // отключение контура безопасности (при необходимости)
+dev.с(1);
+
+
