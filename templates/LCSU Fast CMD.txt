@@ -4,7 +4,7 @@ LCSU_Start(Type, Current, Pulse_ms) // Type 0 - синус, 1 - мод. сину
 LCSU_Start_KEI(Type, Current, Pulse_ms) // Type 0 - синус, 1 - мод. синус, 2 - трапеция; Current в А, Pulse в мс
 CLCSU_Regulator(Range, OnOff) // диапазон 0, 1, 2; вкл (1), выкл (0)
 LCSU_ResourceTest(Current, Pulse_ms, HoursTest, Period_ms) // Pulse_ms - длительность полки, HoursTest - длительность теста в часах, Period_ms - период следования импульсов в мс
-CLCSU_SaveCSV_EP(NumberEP) // NumberEP - Endpoints 1 - 6  
+CLCSU_SaveCSV_EP() // сохраняет все EP 1 - 8 в csv с уникальным суффиксом даты-времени  
 Nid = 110...
 
 // Посмотреть версию прошивки
@@ -37,7 +37,7 @@ CLCSU_Regulator(0, 0);
 
 // Сохранение EP в формате csv.
 include("TestLCSU.js");
-CLCSU_SaveCSV_EP(1);
+CLCSU_SaveCSV_EP();
 
 // Ресурсный тест
 include("TestLCSU.js");
