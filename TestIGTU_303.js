@@ -29,6 +29,11 @@ function IGTU_Iges(Voltage)
 	
 	if(dev.r(192) == 3)
 	{
+		dev.w(150,2);
+		dev.c(14);
+		sleep(1000);
+		dev.w(150,0);
+		dev.c(14);
 		dev.c(101);
 		
 		p("Start process...")
@@ -47,7 +52,7 @@ function IGTU_Iges(Voltage)
 		if(dev.r(196) != 0)
 			PrintStatus();
 		
-		p("Iges, mA:" + dev.rf(201).toFixed(6));
+		p("Iges, A:" + dev.rf(201).toFixed(12));
 	}
 	else
 		PrintStatus();
@@ -62,7 +67,7 @@ function IGTU_Vgs(Current)
 	{
 		dev.c(102);
 		
-		sleep(100);
+		sleep(1000);
 		
 		if(dev.r(192) == 3 && !dev.r(196))
 		{

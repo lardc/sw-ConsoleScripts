@@ -183,25 +183,25 @@ function KEI_ReadArray()
 	return FloatArray;
 }
 
-function KEI_ConfigVoltageDC(NPLC)
+function KEI_ConfigVoltageDC(NPLC, AutoZero)
 {
 	KEI_Reset();
 
 	tmc.w('SENSe:FUNCtion "VOLTage"');
 	tmc.w(':VOLTage:NPLC ' + NPLC);
 	tmc.w(':DISPlay:VOLTage:DIGits ' + KEI_DisplayDigits(NPLC));
-	tmc.w(':VOLTage:AZERo OFF');
+	tmc.w(':VOLTage:AZERo ' + AutoZero);
 	tmc.w(':SENSe:VOLTage:RANGe 1');
 }
 
-function KEI_ConfigCurrentDC(NPLC)
+function KEI_ConfigCurrentDC(NPLC, AutoZero)
 {
 	KEI_Reset();
 
 	tmc.w('SENSe:FUNCtion "CURR"');
 	tmc.w(':CURR:NPLC ' + NPLC);
 	tmc.w(':DISPlay:CURR:DIGits ' + KEI_DisplayDigits(NPLC));
-	tmc.w(':CURR:AZERo OFF');
+	tmc.w(':CURR:AZERo ' + AutoZero);
 	tmc.w(':SENSe:CURR:RANGe 1');
 }
 
@@ -271,7 +271,7 @@ function KEI_ClearBuffer()
 
 function KEI_BufferLength(SampleRate, Pulse_uS)
 {
-	BufferLength = Math.round(1.5 * SampleRate * Pulse_uS / 1e6);
+	BufferLength = Math.round(SampleRate * (Pulse_uS / 1e6));
 }
 
 function KEI_ConfigVoltageDigit(SampleRate)
@@ -302,4 +302,11 @@ function KEI_SetVoltageDigitRange(Range)
 function KEI_VoltageDigitTriggerLevel(Level)
 {
 	tmc.w(':DIGitize:VOLTage:ATRigger:EDGE:LEVel ' + Level);
+}
+
+function KEI_FilterConfig(Func, On, Type, Count)
+{
+	tmc.w('SENS:' + Func + ':AVER:TCON ' + Type);
+	tmc.w('SENS:' + Func + ':AVER:COUN ' + Count);
+	tmc.w('SENS:' + Func + ':AVER ' + On );
 }
