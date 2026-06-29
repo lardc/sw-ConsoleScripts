@@ -20,20 +20,18 @@ cigtu_Cal_Iset = 4;
 
 // Варианты CurrentRange
 
-cigtu_Cal_Imes_50_500_mA = 10;
-cigtu_Cal_Imes_5_50_mA = 11;
-cigtu_Cal_Imes_0.5_5mA = 12;
-cigtu_Cal_Imes_50_500mkA = 13;
-cigtu_Cal_Imes_2_50mkA = 14;
-cigtu_Cal_Imes_200_2000nA = 15;
-cigtu_Cal_Imes_20_200nA = 16;
-cigtu_Cal_Imes_2_20nA = 17;
+cigtu_Cal_Imes_50_500_mA = 1;
+cigtu_Cal_Imes_5_50_mA = 2;
+cigtu_Cal_Imes_0.5_5mA = 3;
+cigtu_Cal_Imes_50_500mkA = 4;
+cigtu_Cal_Imes_2_50mkA = 5;
+cigtu_Cal_Imes_200_2000nA = 6;
+cigtu_Cal_Imes_20_200nA = 7;
+cigtu_Cal_Imes_2_20nA = 8;
 
-CIGTU_Calibrate(CalibrationType, CurrentRange); // Калибровка
+CIGTU_Calibrate(Calibration_Type, Current_Range); // Калибровка
 
-CIGTU_Verify(CalibrationType, CurrentRange); // Верификация
-
-GTU_All(Num, Pause);
+CIGTU_Verify(Calibration_Type, Current_Range); // Верификация
 
 // Обновление прошивки
 i("STM_FWUpdate.js");
@@ -52,3 +50,26 @@ dev.w(130,1) // отключение контура безопасности (п
 dev.с(1);
 
 
+dev.co(9)
+dev.c(1)
+dev.w(130,1)
+dev.w(151,8)
+
+dev.w(150,2);
+dev.c(14);
+sleep(1000);
+dev.w(150,0);
+dev.c(14);
+
+В регистры 83 и 87 записать значение 1 чтобы исключить Problem 1 и 3 при калибровках 
+В регистры 82 и 88 записать значение 1000 чтобы исключить Problem 1 и 3 при калибровках 
+
+При калибровке Ugeth 
+CAL_V_PulsePlate 	= 2000000 // in us
+CAL_V_TriggerDelay	= 1000000 // in us
+
+При калибровке Iges 
+CAL_V_PulsePlate 	= 5000000 // in us
+CAL_V_TriggerDelay	= 2000000 // in us
+
+ plot2(dev.raff(1),dev.raff(2),1,1)
