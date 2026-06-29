@@ -287,77 +287,36 @@ function CLCSU_RegulatorCall(Range)
 	}
 }
 
-function CLCSU_SaveCSV_EP(NumberEP)
+function CLCSU_SaveCSV_EP()
 {
 	var Suffix = GetDateTimeSuffix();
 
-	switch(NumberEP)
-	{
-		case 1:
-			{
-				var EP1 = dev.raff(1);
-				save("data/LCSU_EP1_CURRENT_" + Suffix + ".csv", EP1);
-				break;
-			}
-		case 2:
-			{
-				var EP2 = dev.raff(2);
-				save("data/LCSU_EP2_BATTERY_VOLTAGE_" + Suffix + ".csv", EP2);
-				break;
-			}
-		case 3:
-			{
-				var EP3 = dev.raff(3);
-				save("data/LCSU_EP3_REGULATOR_OUTPUT_" + Suffix + ".csv", EP3);
-				break;
-			}
-		case 4:
-			{
-				var EP4 = dev.raff(4);
-				save("data/LCSU_EP4_REGULATOR_ERR_" + Suffix + ".csv", EP4);
-				break;
-			}
-		case 5:
-			{
-				var EP5 = dev.raff(5);
-				save("data/LCSU_EP5_CUR_TABLE_" + Suffix + ".csv", EP5);
-				break;
-			}
-		case 6:
-			{
-				var EP6 = dev.raff(6);
-				save("data/LCSU_EP6_DAC_RAW_DATA_" + Suffix + ".csv", EP6);
-				break;
-			}
-		case 7:
-			{
-				var EP7 = dev.raff(7);
-				save("data/LCSU_EP7_ADC_FLATTOP_LAST_RAW_DATA_" + Suffix + ".csv", EP7);
-				break;
-			}
-		case 8:
-			{
-				var EP8 = dev.raff(8);
-				save("data/LCSU_EP8_ADC_FLATTOP_DATA_COUNT_" + Suffix + ".csv", EP8);
-				break;
-			}
-		default:
-			{
-				print("Incorrect Number EP");
-				break;
-			}
-	}
+	save("data/LCSU_EP1_CURRENT_" + Suffix + ".csv", dev.raff(1));
+	save("data/LCSU_EP2_BATTERY_VOLTAGE_" + Suffix + ".csv", dev.raff(2));
+	save("data/LCSU_EP3_REGULATOR_OUTPUT_" + Suffix + ".csv", dev.raff(3));
+	save("data/LCSU_EP4_REGULATOR_ERR_" + Suffix + ".csv", dev.raff(4));
+	save("data/LCSU_EP5_CUR_TABLE_" + Suffix + ".csv", dev.raff(5));
+	save("data/LCSU_EP6_DAC_RAW_DATA_" + Suffix + ".csv", dev.raff(6));
+	save("data/LCSU_EP7_ADC_FLATTOP_LAST_RAW_DATA_" + Suffix + ".csv", dev.raff(7));
+	save("data/LCSU_EP8_ADC_FLATTOP_DATA_COUNT_" + Suffix + ".csv", dev.raff(8));
 }
 
 function GetDateTimeSuffix()
 {
 	var now = new Date();
-	var datePart = Pad2(now.getDate()) + "." + Pad2(now.getMonth() + 1) + "." + now.getFullYear();
-	var timePart = Pad2(now.getHours()) + "-" + Pad2(now.getMinutes());
-	return datePart + "_" + timePart;
+
+	var day = FormatTwoDigits(now.getDate());
+	var month = FormatTwoDigits(now.getMonth() + 1);
+	var year = now.getFullYear();
+
+	var hours = FormatTwoDigits(now.getHours());
+	var minutes = FormatTwoDigits(now.getMinutes());
+	var seconds = FormatTwoDigits(now.getSeconds());
+
+	return day + "." + month + "." + year + "_" + hours + "-" + minutes + "-" + seconds;
 }
 
-function Pad2(value)
+function FormatTwoDigits(value)
 {
 	return (value < 10 ? "0" : "") + value;
 }
