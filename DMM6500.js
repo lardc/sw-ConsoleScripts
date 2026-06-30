@@ -310,3 +310,49 @@ function KEI_FilterConfig(Func, On, Type, Count)
 	tmc.w('SENS:' + Func + ':AVER:COUN ' + Count);
 	tmc.w('SENS:' + Func + ':AVER ' + On );
 }
+
+function KEI_V_Err(Voltage)
+{
+	if(Voltage <= 0.1)
+		var Err_DMM = ((3 * Math.pow(10, -5) * Voltage + 3.5 * Math.pow(10, -5) * 0.1) / Voltage) * 100;
+
+	if(Voltage > 0.1 && Voltage <= 1)
+		var Err_DMM = ((2.5 * Math.pow(10, -5) * Voltage + 6 * Math.pow(10, -5) * 1) / Voltage) * 100;
+
+	if(Voltage > 1 && Voltage <= 10)
+		var Err_DMM = ((2.5 * Math.pow(10, -5) * Voltage + 5 * Math.pow(10, -6) * 10) / Voltage) * 100;
+
+	if(Voltage > 10)
+		var Err_DMM = ((4 * Math.pow(10, -5) * Voltage + 6 * Math.pow(10, -6) * 100) / Voltage) * 100;
+
+	return Err_DMM;
+}
+
+function KEI_I_Err(Current)
+{
+	if(Current <= 0.00001)
+		var Err_DMM = ((4.5 * Math.pow(10, -4) * Current + 5 * Math.pow(10, -5) * 0.00001) / Current) * 100;
+
+	if(Current > 0.00001 && Current <= 0.0001)
+		var Err_DMM = ((4.5 * Math.pow(10, -4) * Current + 5 * Math.pow(10, -5) * 0.0001) / Current) * 100;
+
+	if(Current > 0.0001 && Current <= 0.001)
+		var Err_DMM = ((4.5 * Math.pow(10, -4) * Current + 5 * Math.pow(10, -5) * 0.001) / Current) * 100;
+
+	if(Current > 0.001 && Current <= 0.01)
+		var Err_DMM = ((2 * Math.pow(10, -4) * Current + 5 * Math.pow(10, -5) * 0.01) / Current) * 100;
+	
+	if(Current > 0.01 && Current <= 0.1)
+		var Err_DMM = ((2 * Math.pow(10, -4) * Current + 5 * Math.pow(10, -5) * 0.1) / Current) * 100;
+
+	if(Current > 0.1 && Current <= 1)
+		var Err_DMM = ((4 * Math.pow(10, -4) * Current + 5 * Math.pow(10, -5) * 1) / Current) * 100;
+
+	if(Current > 1 && Current <= 3)
+		var Err_DMM = ((5 * Math.pow(10, -4) * Current + 5 * Math.pow(10, -5) * 3) / Current) * 100;
+
+	if(Current > 3)
+		var Err_DMM = ((2.2 * Math.pow(10, -3) * Current + 2.5 * Math.pow(10, -4) * 10) / Current) * 100;
+
+	return Err_DMM;
+}

@@ -169,7 +169,7 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 			dev.w(150,2);
 			dev.c(14);	
 			sleep(1000);
-			dev.w(150,0);
+			dev.w(150,1);
 			dev.c(14);
 			
 			if (CurrentRange == cigtu_Cal_Imes_50_500_mA || CurrentRange == cigtu_Cal_Imes_5_50_mA)
@@ -211,9 +211,9 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 			cigtu_err.push(errdata);
 			// Summary error
 			if(CalibrationType == cigtu_Cal_Vmes || CalibrationType == cigtu_Cal_Vpotmes || CalibrationType == cigtu_Cal_Vset)
-				var E0 = CAL_V_DMM6500_Err(cigtu_Values[j]);
+				var E0 = KEI_V_Err(cigtu_Values[j]);
 			else
-				var E0 = CAL_I_DMM6500_Err(cigtu_Values[j]);
+				var E0 = KEI_I_Err(cigtu_Values[j]);
 			var err_sumdata = Math.sign_ma(errdata) * (Math.abs(errdata) + E0);
 			cigtu_err_sum.push(err_sumdata);
 				
