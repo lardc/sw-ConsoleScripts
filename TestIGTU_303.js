@@ -11,8 +11,8 @@ function IGTU_Res()
 		//if(dev.r(197) == 1)
 		if(dev.r(192) == 3)
 		{
-			p('R, Ohm: ' + dev.rf(200).toFixed(1));
-			p("V, V:" + dev.rf(231).toFixed(6));
+			p('R, Ohm: ' + dev.rf(205).toFixed(3));
+			p("V, V:" + dev.rf(232).toFixed(6));
 			p("I, mA:" + dev.rf(230).toFixed(6));
 		}
 		else
@@ -29,12 +29,7 @@ function IGTU_Iges(Voltage)
 	
 	if(dev.r(192) == 3)
 	{
-		dev.w(150,2);
-		dev.c(14);
-		sleep(1000);
-		dev.w(150,0);
-		dev.c(14);
-		dev.c(101);
+		dev.c(102);
 		
 		p("Start process...")
 		
@@ -52,7 +47,7 @@ function IGTU_Iges(Voltage)
 		if(dev.r(196) != 0)
 			PrintStatus();
 		
-		p("Iges, A:" + dev.rf(201).toFixed(12));
+		p("Iges, A:" + dev.rf(204).toFixed(12));
 	}
 	else
 		PrintStatus();
@@ -65,14 +60,14 @@ function IGTU_Vgs(Current)
 	
 	if(dev.r(192) == 3)
 	{
-		dev.c(102);
+		dev.c(100);
 		
 		sleep(1000);
 		
 		if(dev.r(192) == 3 && !dev.r(196))
 		{
-			p("Vges, V:" + dev.rf(202).toFixed(6));
-			p("V, V:" + dev.rf(231).toFixed(6));
+			p("Vges, V:" + dev.rf(200).toFixed(6));
+			p("V, V:" + dev.rf(232).toFixed(6));
 			p("I, mA:" + dev.rf(230).toFixed(6));
 		}
 		else
