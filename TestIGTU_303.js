@@ -25,7 +25,7 @@ function IGTU_Res()
 
 function IGTU_Iges(Voltage)
 {
-	dev.wf(128, Voltage);
+	dev.wf(136, Voltage);
 	
 	if(dev.r(192) == 3)
 	{
@@ -56,25 +56,24 @@ function IGTU_Iges(Voltage)
 
 function IGTU_Vgs(Current)
 {
-	dev.wf(129, Current);
+	dev.wf(128, Current);
 	
 	if(dev.r(192) == 3)
 	{
 		dev.c(100);
+			
+		while (dev.r(192) != 3) sleep(50);
 		
-		sleep(1000);
-		
-		if(dev.r(192) == 3 && !dev.r(196))
+		if(dev.r(196) != 0)
 		{
-			p("Vges, V:" + dev.rf(200).toFixed(6));
-			p("V, V:" + dev.rf(232).toFixed(6));
-			p("I, mA:" + dev.rf(230).toFixed(6));
-		}
-		else
 			PrintStatus();
+			return;
+		}
+		
+		p("Vges, V:" + dev.rf(200).toFixed(6));
+		p("V, V:" + dev.rf(232).toFixed(6));
+		p("I, mA:" + dev.rf(230).toFixed(6));
 	}
-	else
-		PrintStatus();
 }
 //--------------------
 

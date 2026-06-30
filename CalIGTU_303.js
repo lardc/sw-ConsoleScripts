@@ -40,7 +40,7 @@ cigtu_err_sum = [];
 cigtu_corr = [];
 
 // Iterations
-cigtu_Iterations = 3;
+cigtu_Iterations = 1;
 
 // Calibration types 
 cigtu_Cal_Vmes = 0;
@@ -157,41 +157,36 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 	{
 		for (var j = 0; j < cigtu_Values.length; j++)
 		{
-			KEI_ClearBuffer();
+			KEI_ClearBuffer();	
 			if(CalibrationType == cigtu_Cal_Vmes || CalibrationType == cigtu_Cal_Vpotmes || CalibrationType == cigtu_Cal_Vset) 	
 				KEI_SetVoltageDCRange(cigtu_Values[j]);
 			else if(CurrentRange == cigtu_Cal_Imes_50_500_mA || CurrentRange == cigtu_Cal_Imes_5_50_mA)	
 				KEI_SetCurrentDCRange(cigtu_Values[j]);
 			else
 				KEI_SetCurrentDCRange(cigtu_Values[j] / cigtu_Res);
-			
+			KEI_OPC();
 			KEI_ActivateTrigger();
-			dev.w(150,2);
-			dev.c(14);	
-			sleep(1000);
-			dev.w(150,1);
-			dev.c(14);
-			
 			if (CurrentRange == cigtu_Cal_Imes_50_500_mA || CurrentRange == cigtu_Cal_Imes_5_50_mA)
 			{ 
 				dev.w(151,CurrentRange);
-				dev.wf(129, cigtu_Values[j] * 1e3);
+				dev.wf(128, cigtu_Values[j] * 1e3);
 				dev.w(92,CAL_Ugeth_PulsePlate * 1e-3);
-				dev.c(102);
+				dev.c(100);
 			}	
 			else 
 			{
 				dev.w(151,CurrentRange);
-				dev.wf(128, cigtu_Values[j] * 1e3);
+				dev.wf(136, cigtu_Values[j] * 1e3);
 				dev.w(91,CAL_Iges_PulsePlate * 1e-3);
-				dev.c(101);
+				dev.c(102);
 			}	
-			while (dev.r(192) != 3) sleep(50);
+			while (dev.r(192) != 3) sleep(500);
 
-			KEI_OPC();	
+			//KEI_OPC();	
 			// Получаем значения
+			sleep(2000);
 			var scdata = KEI_ReadAverage();
-			//sleep(2000);
+			
 			if(CalibrationType == cigtu_Cal_Vset || CalibrationType == cigtu_Cal_Iset) 
 				var igtudata = cigtu_Values[j];
 			else if(CalibrationType == cigtu_Cal_Vmes) 	
@@ -408,7 +403,7 @@ function CIGTU_KEI_Init(CalibrationType)
 
 	if(CurrentRange == cigtu_Cal_Imes_50_500_mA || CurrentRange == cigtu_Cal_Imes_5_50_mA)
 	{
-		KEI_MakeTestBufferVoltageDC(CAL_NPLC, (CAL_Ugeth_PulsePlate - CAL_Ugeth_TriggerDelay));
+		KEI_MakeTestBufferVoltageDC(CAL_NPLC, (CAL_Ugeth_PulsePlate * 0.9 - CAL_Ugeth_TriggerDelay));
 		KEI_ConfigExtTrigger(CAL_Ugeth_TriggerDelay * 1e-6);
 	}
 	else
