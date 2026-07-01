@@ -2,15 +2,6 @@ include("TestIGTU_303.js")
 include("DMM6500.js")
 include("CalGeneral.js")
 
-// Global definitions
-
-cigtu_Res = 20;	// in Ohms
-cigtu_Values = [];
-cigtu_min = 1; // in V / in A
-cigtu_max = 30; // in V / in A
-cigtu_stp = 10; // in V / in A
-
-
 // Setup parameters for "DMM6000"
 CAL_Iges_PulsePlate 	= 5000000 		// in us
 CAL_Iges_TriggerDelay	= 2000000 		// in us
@@ -40,7 +31,7 @@ cigtu_err_sum = [];
 cigtu_corr = [];
 
 // Iterations
-cigtu_Iterations = 1;
+cigtu_Iterations = 3;
 
 // Calibration types 
 cigtu_Cal_Vmes = 0;
@@ -60,6 +51,11 @@ cigtu_Cal_Imes_200_2000nA = 6;
 cigtu_Cal_Imes_20_200nA = 7;
 cigtu_Cal_Imes_2_20nA = 8;
 CurrentRange = cigtu_Cal_Imes_50_500_mA;
+
+// Voltage Renge
+cigtu_Cal_Vpotmes_300_700_mV = 11;
+cigtu_Cal_Vpotmes_3_9_V = 12;
+
 
 function CIGTU_Init(portDevice)
 {
@@ -114,10 +110,10 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 {
 	// Находим диапазон 
 	var Range = CIGTU_GetRange(CalibrationType, CurrentRange);
-	cigtu_min = Range[0];
-	cigtu_max = Range[1];
-	cigtu_stp = Range[2];
-	cigtu_Values = CGEN_GetRange(cigtu_min, cigtu_max, cigtu_stp);
+	var cigtu_min = Range[0];
+	var cigtu_max = Range[1];
+	var cigtu_stp = Range[2];
+	var cigtu_Values = CGEN_GetRange(cigtu_min, cigtu_max, cigtu_stp);
 	
 	// Спрашиваем о корректности подключения к СИ
 	if(CalibrationType == cigtu_Cal_Imes || CalibrationType == cigtu_Cal_Iset)
@@ -140,7 +136,7 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 	// Спрашиваем о корректности подключения нагрузки
 	print("Enter resistance set to Ohms ?");
 	print("-----------");
-	cigtu_Res = parseFloat(readline());
+	var cigtu_Res = parseFloat(readline());
 	
 	if (isNaN(cigtu_Res))
 		cigtu_Res = 1;
@@ -173,6 +169,13 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 				dev.w(92,CAL_Ugeth_PulsePlate * 1e-3);
 				dev.c(100);
 			}	
+			else if(CurrentRange == cigtu_Cal_Vpotmes_300_3000_mV || CurrentRange == cigtu_Cal_Vpotmes_3_9_V)
+			{
+				dev.w(151,cigtu_Cal_Imes_50_500mkA);
+				dev.wf(136, cigtu_Values[j] * 1e3);
+				dev.w(91,CAL_Iges_PulsePlate * 1e-3);
+				dev.c(102);
+			}	
 			else 
 			{
 				dev.w(151,CurrentRange);
@@ -181,8 +184,7 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 				dev.c(102);
 			}	
 			while (dev.r(192) != 3) sleep(500);
-
-			//KEI_OPC();	
+	
 			// Получаем значения
 			sleep(2000);
 			var scdata = KEI_ReadAverage();
@@ -249,47 +251,53 @@ cigtu_corr = [];
 }
 //--------------------
 //
-function CIGTU_GetRange(CalibrationType, CurrentRange)
+function CIGTU_GetRange(CalibrationType, Range)
 {
 	switch(CalibrationType)
 	{
 		case cigtu_Cal_Vmes:
-			return [2, 30, 1];		// [min, max, step] in V
+			return [2, 30, 1];							// [min, max, step] in V
 
 		case cigtu_Cal_Vpotmes:
-			return [3, 9, 0.5];		// [min, max, step] in V
+			switch(Range)
+			{
+				case cigtu_Cal_Vpotmes_300_700_mV:
+					return [0.3, 0.7, 0.05];			// [min, max, step] in V
+				case cigtu_Cal_Vpotmes_3_9_V:
+					return [3, 9, 0.5];					// [min, max, step] in V
+			}		
 
 		case cigtu_Cal_Vset:
-			return [2, 30, 1];		// [min, max, step] in V
+			return [2, 30, 1];							// [min, max, step] in V
 			
 		case cigtu_Cal_Imes:
-			switch(CurrentRange)
+			switch(Range)
 			{
 				case cigtu_Cal_Imes_50_500_mA:
-					return [0.05, 0.3, 0.05];			// [min, max, step] in A 15 Om
+					return [0.05, 0.4, 0.05];			// [min, max, step] in A 20 Om
 				case cigtu_Cal_Imes_5_50_mA:
 					return [0.005, 0.05, 0.01];			// [min, max, step] in A 150 Om
 				case cigtu_Cal_Imes_05_5mA:
-					return [0.0005, 0.005, 0.001];		// [min, max, step] in A
+					return [3, 28, 1];					// [min, max, step] in V 5.6 kOm
 				case cigtu_Cal_Imes_50_500mkA:
-					return [1, 10, 3];					// [min, max, step] in mA
+					return [2, 27, 1];					// [min, max, step] in V 51 kOm
 				case cigtu_Cal_Imes_2_50mkA:
-					return [1, 10, 3];					// [min, max, step] in mA
+					return [2, 28, 1];					// [min, max, step] in V 560 kOm
 				case cigtu_Cal_Imes_200_2000nA:
 					return [2, 22, 2];					// [min, max, step] in V 10 MOm
 				case cigtu_Cal_Imes_20_200nA:
 					return [3, 21, 2];					// [min, max, step]	in V 110 MOm
 				case cigtu_Cal_Imes_2_20nA:
-					return [5.5, 20, 1];					// [min, max, step]	in V 1 GOm
+					return [5.5, 20, 1];				// [min, max, step]	in V 1 GOm
 				default:
 					return [];
 			}
 
 		case cigtu_Cal_Iset:
-			switch(CurrentRange)
+			switch(Range)
 			{
 				case cigtu_Cal_Imes_50_500_mA:
-					return [0.05, 0.3, 0.05];			// [min, max, step] in A 15 Om
+					return [0.05, 0.4, 0.05];			// [min, max, step] in A 20 Om
 				case cigtu_Cal_Imes_5_50_mA:
 					return [0.005, 0.05, 0.01];			// [min, max, step] in A 150 Om
 				default:
@@ -463,50 +471,4 @@ function CIGTU_NameSwitch(CalibrationType, CurrentRange)
 	}
 	
 	return 0;
-}
-
-function CAL_V_DMM6500_Err(Voltage)
-{
-	if(Voltage <= 0.1)
-		var Err_DMM = ((3 * Math.pow(10, -5) * Voltage + 3.5 * Math.pow(10, -5) * 0.1) / Voltage) * 100;
-
-	if(Voltage > 0.1 && Voltage <= 1)
-		var Err_DMM = ((2.5 * Math.pow(10, -5) * Voltage + 6 * Math.pow(10, -5) * 1) / Voltage) * 100;
-
-	if(Voltage > 1 && Voltage <= 10)
-		var Err_DMM = ((2.5 * Math.pow(10, -5) * Voltage + 5 * Math.pow(10, -6) * 10) / Voltage) * 100;
-
-	if(Voltage > 10)
-		var Err_DMM = ((4 * Math.pow(10, -5) * Voltage + 6 * Math.pow(10, -6) * 100) / Voltage) * 100;
-
-	return Err_DMM;
-}
-
-function CAL_I_DMM6500_Err(Current)
-{
-	if(Current <= 0.00001)
-		var Err_DMM = ((4.5 * Math.pow(10, -4) * Current + 5 * Math.pow(10, -5) * 0.00001) / Current) * 100;
-
-	if(Current > 0.00001 && Current <= 0.0001)
-		var Err_DMM = ((4.5 * Math.pow(10, -4) * Current + 5 * Math.pow(10, -5) * 0.0001) / Current) * 100;
-
-	if(Current > 0.0001 && Current <= 0.001)
-		var Err_DMM = ((4.5 * Math.pow(10, -4) * Current + 5 * Math.pow(10, -5) * 0.001) / Current) * 100;
-
-	if(Current > 0.001 && Current <= 0.01)
-		var Err_DMM = ((2 * Math.pow(10, -4) * Current + 5 * Math.pow(10, -5) * 0.01) / Current) * 100;
-	
-	if(Current > 0.01 && Current <= 0.1)
-		var Err_DMM = ((2 * Math.pow(10, -4) * Current + 5 * Math.pow(10, -5) * 0.1) / Current) * 100;
-
-	if(Current > 0.1 && Current <= 1)
-		var Err_DMM = ((4 * Math.pow(10, -4) * Current + 5 * Math.pow(10, -5) * 1) / Current) * 100;
-
-	if(Current > 1 && Current <= 3)
-		var Err_DMM = ((5 * Math.pow(10, -4) * Current + 5 * Math.pow(10, -5) * 3) / Current) * 100;
-
-	if(Current > 3)
-		var Err_DMM = ((2.2 * Math.pow(10, -3) * Current + 2.5 * Math.pow(10, -4) * 10) / Current) * 100;
-
-	return Err_DMM;
 }

@@ -12,26 +12,31 @@ IGTU_Vgs(Current); // измерение порогового напряжени
 CIGTU_Init(portDevice); // инициализация c DMM6500
 
 // Варианты CalibrationType
-cigtu_Cal_Vmes = 0;
-cigtu_Cal_Vpotmes = 1;
-cigtu_Cal_Vset = 2;
-cigtu_Cal_Imes = 3;
-cigtu_Cal_Iset = 4;
+cigtu_Cal_Vmes = 0; 	// Нагрузка 20МОм
+cigtu_Cal_Vpotmes = 1;	// Нагрузка 20МОм
+cigtu_Cal_Vset = 2;	// Нагрузка 20МОм
+cigtu_Cal_Imes = 3;	// Нагрузка в CurrentRange
+cigtu_Cal_Iset = 4;	// Нагрузка 20МОм
 
 // Варианты CurrentRange
 
-cigtu_Cal_Imes_50_500_mA = 1;
-cigtu_Cal_Imes_5_50_mA = 2;
-cigtu_Cal_Imes_0.5_5mA = 3;
-cigtu_Cal_Imes_50_500mkA = 4;
-cigtu_Cal_Imes_2_50mkA = 5;
-cigtu_Cal_Imes_200_2000nA = 6;
-cigtu_Cal_Imes_20_200nA = 7;
-cigtu_Cal_Imes_2_20nA = 8;
+cigtu_Cal_Imes_50_500_mA = 1; 	// Нагрузка 20Ом
+cigtu_Cal_Imes_5_50_mA = 2;	// Нагрузка 150Ом	
+cigtu_Cal_Imes_0.5_5mA = 3;	// Нагрузка 5.6кОм
+cigtu_Cal_Imes_50_500mkA = 4;	// Нагрузка 51кОм
+cigtu_Cal_Imes_2_50mkA = 5;	// Нагрузка 560кОм
+cigtu_Cal_Imes_200_2000nA = 6;	// Нагрузка 10МОм
+cigtu_Cal_Imes_20_200nA = 7;	// Нагрузка 110МОм
+cigtu_Cal_Imes_2_20nA = 8;	// Нагрузка 1ГОм
 
-CIGTU_Calibrate(Calibration_Type, Current_Range); // Калибровка
+// Варианты VoltageRange
 
-CIGTU_Verify(Calibration_Type, Current_Range); // Верификация
+cigtu_Cal_Vpotmes_300_700_mV = 11;	// Нагрузка 
+cigtu_Cal_Vpotmes_3_9_V = 12; 		// Нагрузка 
+
+CIGTU_Calibrate(Calibration_Type, Current_Range); // Функция калибровки
+
+CIGTU_Verify(Calibration_Type, Current_Range); // Функция верификации
 
 // Обновление прошивки
 i("STM_FWUpdate.js");
@@ -63,13 +68,5 @@ dev.c(14);
 
 В регистры 83 и 87 записать значение 1 чтобы исключить Problem 1 и 3 при калибровках 
 В регистры 82 и 88 записать значение 1000 чтобы исключить Problem 1 и 3 при калибровках 
-
-При калибровке Ugeth 
-CAL_V_PulsePlate 	= 2000000 // in us
-CAL_V_TriggerDelay	= 1000000 // in us
-
-При калибровке Iges 
-CAL_V_PulsePlate 	= 5000000 // in us
-CAL_V_TriggerDelay	= 2000000 // in us
 
  plot2(dev.raff(1),dev.raff(2),1,1)

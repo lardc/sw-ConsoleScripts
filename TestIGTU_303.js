@@ -5,21 +5,21 @@ function IGTU_Res()
 {
 	if(dev.r(192) == 3)
 	{
-		dev.c(100);
-		sleep(1000);
+		dev.c(103);
+		sleep(dev.r(90));
+	}	
+	while (dev.r(192) != 3) sleep(50);
 		
-		//if(dev.r(197) == 1)
-		if(dev.r(192) == 3)
-		{
-			p('R, Ohm: ' + dev.rf(205).toFixed(3));
-			p("V, V:" + dev.rf(232).toFixed(6));
-			p("I, mA:" + dev.rf(230).toFixed(6));
-		}
-		else
-			PrintStatus();
-	}
-	else
+	if(dev.r(196) != 0)
+	{
 		PrintStatus();
+		return;
+	}
+
+	p('R, Ohm: ' + dev.rf(205).toFixed(3));
+	p("V, V:" + dev.rf(232).toFixed(6));
+	p("I, mA:" + dev.rf(230).toFixed(6));
+
 }
 //--------------------
 
