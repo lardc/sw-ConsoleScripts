@@ -776,7 +776,7 @@ function CAL_PlotUge()
 
 function CAL_KEI_Init()
 {
-	KEI_ConfigVoltageDC(CAL_NPLC);
+	KEI_ConfigVoltageDC(CAL_NPLC, 'OFF');
 	KEI_MakeTestBufferVoltageDC(CAL_NPLC, CAL_V_PulsePlate);
 	KEI_ConfigExtTrigger(CAL_V_TriggerDelay);
 }

@@ -349,8 +349,9 @@ function CLSCU_ReadArrayTrapeze(Current)
 
 function CLCSU_KEI_Init()
 {
-	KEI_ConfigVoltageDC(clcsu_NPLC);
-	KEI_MakeTestBufferVoltageDC(clcsu_NPLC, clcsu_Pulse * 1000 + (6500 * 2 / dev.rf(17)));
+	var dt = clcsu_IdMax[clcsu_CurrentRange] * 2 / dev.rf(17); // суммарная длительность фронтов
+	KEI_ConfigVoltageDC(clcsu_NPLC, 'OFF');
+	KEI_MakeTestBufferVoltageDC(clcsu_NPLC, 1.5 * clcsu_Pulse * 1000 + dt);
 	KEI_ConfigVoltageDCEdgeTrigger();
 }
 
