@@ -332,6 +332,7 @@ function CLSCU_ReadArrayTrapeze(Current)
 	}
 	
 	print("----------------");
+	print("Averaged points DMM:");
 	for (var j = StartNumber; j <= EndNumber; j++)
 	{
 		p(TrapezeArray[j]);

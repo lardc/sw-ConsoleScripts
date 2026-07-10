@@ -97,68 +97,43 @@ function SVTU_StartMeasure_KEI(Current, GateVoltage)
 	print("---------------------------");
 }
 //--------------------------
-function SVTU_ResourceTest(Current_R0, Current_R1, HoursTest)
+
+function SVTU_ResourceTest(Current, GateVoltage, HoursTest, Period_ms)
 {
-	csv_array = [];
-
-	var counter = 0;
-	var i = 1;
-	var count_plot = 0;
-	var MinutesInMs = 60 * 1000;
-	var end = new Date();
 	var start = new Date();
+	var stop = new Date();
 	var hours = start.getHours() + HoursTest;
-	end.setHours(hours);
+	stop.setHours(hours);
+	var i = 1;
+	var lastPulseStartMs = null;
 
-	csv_array.push("N ; Utm, mV; Itm, A; Ugt, mV; Igt, mA; Hours ; Minutes; Seconds");
+	while((new Date()).getTime() < stop.getTime())
+	{
+		var start_pulse = new Date();
+		var stop_pulse = new Date();
+		var milliseconds = start_pulse.getMilliseconds() + Period_ms;
+		stop_pulse.setMilliseconds(milliseconds);
 
-	while((new Date()).getTime() < end.getTime())
-	{	
-		if (!(counter%2))
+		var beforePulseMs = (new Date()).getTime();
+		if (lastPulseStartMs !== null)
 		{
-			SVTU_StartMeasure(Current_R0);
+			var actualIntervalMs = beforePulseMs - lastPulseStartMs;
+			print("Фактический интервал между импульсами: " + actualIntervalMs + " мс (задано " + Period_ms + " мс)");
 		}
-		else
-		{
-			SVTU_StartMeasure(Current_R1);
-		}
-		counter++;
+		lastPulseStartMs = beforePulseMs;
 
-		dev.co(10);
-		Problem = dev.rf(196);
-		if (Problem)
-		{
-			print("LCSU FOLLOWING ERROR!");
-			dev.co(12);
-			break;
-		}
-		else 
-			dev.co(12);
-
-
-		var left_time = new Date(end.getTime() - (new Date()).getTime());
-		var now_time = new Date();
+		SVTU_StartMeasure(Current, GateVoltage);
+		var left_time = new Date(stop.getTime() - (new Date()).getTime());
 		print("#" + i + " Осталось " + (left_time.getHours() - 3) + " ч и " + left_time.getMinutes() + " мин");
 
-		var elapsed_time = new Date((new Date()).getTime() - start.getTime());
-		if (elapsed_time.getTime() > 10 * MinutesInMs * count_plot)
+		while((new Date()).getTime() < stop_pulse.getTime())
 		{
-			pl(dev.raff(1));
-			p("Вывод графика #" + (count_plot + 1) + " спустя " +
-				(elapsed_time.getHours() - 3) + " ч и " + elapsed_time.getMinutes() + " мин");
-
-			count_plot++;
+			if (anykey()) return;
+			sleep(1);
 		}
 
-		if (anykey()) break;
-
-		csv_array.push( i + ";" + dev.r(198) + ";" + (dev.r(206) + dev.r(205) / 10) + ";" +
-			dev.r(202) + ";" + dev.r(203) + ";" + now_time.getHours() +  ";" +
-			now_time.getMinutes() + ";" + now_time.getSeconds());
-
-		save("data/SVTU_TestUTM" + end.getTime() + ".csv", csv_array);
-
 		i++;
+
+		if (anykey()) break;
 	}
 }
-//--------------------------

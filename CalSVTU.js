@@ -709,7 +709,8 @@ function CALReadArrayTrapeze()
 	var EndNumber = 2;
 	var TrapezeLevel = 0;
 
-	print("Точки для усреднения с DMM:")
+	print("----------------");
+	print("Averaged points DMM:");
 	for(var i = StartNumber; i <= EndNumber; i++)
 	{
 		p(TrapezeArray[i]);
