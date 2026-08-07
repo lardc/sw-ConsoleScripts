@@ -526,6 +526,23 @@ function FWU_RestorePAU()
 }
 //------------------------
 
+// MCS
+function FWU_MCS()
+{
+	FWUpdateSTM("../../hw-MCSControlBoard/Firmware/Release/MCSControlBoard.binary");
+}
+
+function FWU_DumpMCS(Num)
+{
+	FWU_DumpCommon("MCS", Num, 126);
+}
+
+function FWU_RestoreMCS(Num, Nid)
+{
+	FWU_RestoreCommon("MCS", Num, Nid);
+}
+//------------------------
+
 // MCU (v.3.0)
 function FWU_MCU()
 {
@@ -583,14 +600,14 @@ function FWU_PMXU()
 	FWUpdateSTM("../../hw-PMXUControlBoard/Firmware/Release/PMXUControlBoard.binary");
 }
 
-function FWU_DumpPMXU()
+function FWU_DumpPMXU(Num)
 {
-	dev.Dump("../../hw-PMXUControlBoard/Firmware/PMXUControlBoard.regdump", 0, 126);
+	FWU_DumpCommon("PMXU", Num, 126);
 }
 
-function FWU_RestorePMXU()
+function FWU_RestorePMXU(Num, Nid)
 {
-	dev.Restore("../../hw-PMXUControlBoard/Firmware/PMXUControlBoard.regdump");
+	FWU_RestoreCommon("PMXU", Num, Nid);
 }
 //------------------------
 
