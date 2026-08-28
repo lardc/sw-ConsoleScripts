@@ -66,22 +66,26 @@ function CLCTU_Calibrate(Calibration_Type, Cal_Range)
 	CalibrationType = Calibration_Type;
 	Range = Cal_Range;
 	CLCTU_ResetA();
+	var SavedCoef = CLCTU_ReadCal(CalibrationType, Range);
 	CLCTU_ResetCal(CalibrationType, Range);
 	if (CLCTU_Collect(clctu_Iterations, CalibrationType, Range))
+	{
 		CLCTU_Save(CLCTU_NameSwitch(CalibrationType, Range));
 
-	// Plot relative error distribution
-	scattern(clctu_sc, clctu_err, "Messure", "Error (in %)", CLCTU_NameSwitch(CalibrationType, Range)); 
-	sleep(200);
-	scattern(clctu_sc, clctu_err_sum, "Messure", "Sum Error (in %)", CLCTU_NameSwitch(CalibrationType, Range));
-	
-	// Calculate correction
-	clctu_corr = CGEN_GetCorrection2(CLCTU_NameSwitch(CalibrationType, Range));
-	CLCTU_WriteCal(clctu_corr, CalibrationType, Range)
-
+		// Plot relative error distribution
+		scattern(clctu_sc, clctu_err, "Messure", "Error (in %)", CLCTU_NameSwitch(CalibrationType, Range)); 
+		sleep(200);
+		scattern(clctu_sc, clctu_err_sum, "Messure", "Sum Error (in %)", CLCTU_NameSwitch(CalibrationType, Range));
 		
-	// Print correction
-	CLCTU_PrintCoef(CalibrationType, Range)
+		// Calculate correction
+		clctu_corr = CGEN_GetCorrection2(CLCTU_NameSwitch(CalibrationType, Range));
+		CLCTU_WriteCal(clctu_corr, CalibrationType, Range);
+
+		// Print correction
+		CLCTU_PrintCoef(CalibrationType, Range);
+	}
+	else
+		CLCTU_RestoreCal(SavedCoef, CalibrationType, Range);
 }
 //--------------------
 // Верификация
@@ -192,6 +196,7 @@ function CLCTU_Collect(IterationsCount, CalibrationType, Range)
 						case clctu_Cal_Imes_10_100mkA:
 							dev.w(151, Range);
 							LCTU_Start(clctu_Values[j], cal_Ice_PulsePlate * 1e-3);
+							break;
 						case clctu_Cal_Imes_2_30mA:
 							LCTU_Start(clctu_Values[j], cal_Ice_PulsePlate * 1e-3);
 							break;
@@ -387,7 +392,8 @@ function CLCTU_PrintCoef(CalibrationType, Range)
 //
 function CLCTU_Save(Name)
 {
-	CGEN_SaveArrays(Name, clctu, clctu_sc, clctu_err, clctu_err_sum);
+	CGEN_SaveArrays(Name, clctu, clctu_sc, clctu_err);
+	CGEN_SaveArrays2(Name + "_err_sum", clctu, clctu_sc, clctu_err, clctu_err_sum);
 }
 //--------------------
 //
@@ -397,6 +403,27 @@ function CLCTU_WriteCal(Data, CalibrationType, Range)
 	
 	for (var i = 0; i < RegList.length; i++)
 		CLCTU_SetCoef(RegList[i], Data);
+}
+//--------------------
+//
+function CLCTU_ReadCal(CalibrationType, Range)
+{
+	var RegList = CLCTU_GetCoefReg(CalibrationType, Range);
+	var Data = [];
+	
+	for (var i = 0; i < RegList.length; i++)
+		Data.push([dev.rf(RegList[i][0]), dev.rf(RegList[i][1]), dev.rf(RegList[i][2])]);
+	
+	return Data;
+}
+//--------------------
+//
+function CLCTU_RestoreCal(SavedCoef, CalibrationType, Range)
+{
+	var RegList = CLCTU_GetCoefReg(CalibrationType, Range);
+	
+	for (var i = 0; i < RegList.length; i++)
+		CLCTU_SetCoef(RegList[i], SavedCoef[i]);
 }
 //--------------------
 //
