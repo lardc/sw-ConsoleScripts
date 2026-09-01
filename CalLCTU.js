@@ -65,27 +65,28 @@ function CLCTU_Calibrate(Calibration_Type, Cal_Range)
 {
 	CalibrationType = Calibration_Type;
 	Range = Cal_Range;
-	CLCTU_ResetA();
-	var SavedCoef = CLCTU_ReadCal(CalibrationType, Range);
-	CLCTU_ResetCal(CalibrationType, Range);
-	if (CLCTU_Collect(clctu_Iterations, CalibrationType, Range))
+
+	if (CLCTU_CorrectInput())
 	{
-		CLCTU_Save(CLCTU_NameSwitch(CalibrationType, Range));
+		CLCTU_ResetA();
+		CLCTU_ResetCal(CalibrationType, Range);
+		if (CLCTU_Collect(clctu_Iterations, CalibrationType, Range))
+		{
+			CLCTU_Save(CLCTU_NameSwitch(CalibrationType, Range));
 
-		// Plot relative error distribution
-		scattern(clctu_sc, clctu_err, "Messure", "Error (in %)", CLCTU_NameSwitch(CalibrationType, Range)); 
-		sleep(200);
-		scattern(clctu_sc, clctu_err_sum, "Messure", "Sum Error (in %)", CLCTU_NameSwitch(CalibrationType, Range));
-		
-		// Calculate correction
-		clctu_corr = CGEN_GetCorrection2(CLCTU_NameSwitch(CalibrationType, Range));
-		CLCTU_WriteCal(clctu_corr, CalibrationType, Range);
+			// Plot relative error distribution
+			scattern(clctu_sc, clctu_err, "Messure", "Error (in %)", CLCTU_NameSwitch(CalibrationType, Range)); 
+			sleep(200);
+			scattern(clctu_sc, clctu_err_sum, "Messure", "Sum Error (in %)", CLCTU_NameSwitch(CalibrationType, Range));
+			
+			// Calculate correction
+			clctu_corr = CGEN_GetCorrection2(CLCTU_NameSwitch(CalibrationType, Range));
+			CLCTU_WriteCal(clctu_corr, CalibrationType, Range);
 
-		// Print correction
-		CLCTU_PrintCoef(CalibrationType, Range);
-	}
-	else
-		CLCTU_RestoreCal(SavedCoef, CalibrationType, Range);
+			// Print correction
+			CLCTU_PrintCoef(CalibrationType, Range);
+		}	
+	}		
 }
 //--------------------
 // Верификация
@@ -93,14 +94,17 @@ function CLCTU_Verify(Calibration_Type, Cal_Range)
 {
 	CalibrationType = Calibration_Type;
 	Range = Cal_Range;
-	CLCTU_ResetA();
-	if (CLCTU_Collect(clctu_Iterations, CalibrationType, Range))
-		CLCTU_Save(CLCTU_NameSwitch(CalibrationType, Range))
+	if (CLCTU_CorrectInput())
+	{
+		CLCTU_ResetA();
+		if (CLCTU_Collect(clctu_Iterations, CalibrationType, Range))
+			CLCTU_Save(CLCTU_NameSwitch(CalibrationType, Range))
 
-	// Plot relative error distribution
-	scattern(clctu_sc, clctu_err, "Messure", "Error (in %)", CLCTU_NameSwitch(CalibrationType, Range)); 
-	sleep(200);
-	scattern(clctu_sc, clctu_err_sum, "Messure", "Sum Error (in %)", CLCTU_NameSwitch(CalibrationType, Range));
+		// Plot relative error distribution
+		scattern(clctu_sc, clctu_err, "Messure", "Error (in %)", CLCTU_NameSwitch(CalibrationType, Range)); 
+		sleep(200);
+		scattern(clctu_sc, clctu_err_sum, "Messure", "Sum Error (in %)", CLCTU_NameSwitch(CalibrationType, Range));
+	}	
 }
 //--------------------
 // Сбор данных 
@@ -112,32 +116,6 @@ function CLCTU_Collect(IterationsCount, CalibrationType, Range)
 	var clctu_max = RangeData[1];
 	var clctu_stp = RangeData[2];
 	var clctu_Values = CGEN_GetRange(clctu_min, clctu_max, clctu_stp);
-	
-	// Спрашиваем о корректности подключения к СИ
-	if(CalibrationType == clctu_Cal_Imes)
-		connector = "white"
-	else
-		connector = "red"
-	print("Connect in " + connector + " connector?")
-	print("-----------");
-	print("(press 'y' or 'n')")
-	do
-	{
-		key = readkey();
-		if (key == "y")
-			break;
-		else if (key == "n")
-			return;
-	}
-	while (true)
-
-	// Спрашиваем о номинале подключенной нагрузки
-	print("Enter resistance set to Ohms ?");
-	print("-----------");
-	var clctu_Res = parseFloat(readline());
-	
-	if (isNaN(clctu_Res))
-		clctu_Res = 1;
 	
 	clctu_cntTotal = IterationsCount * clctu_Values.length;
 	clctu_cntDone = 0;
@@ -406,27 +384,6 @@ function CLCTU_WriteCal(Data, CalibrationType, Range)
 }
 //--------------------
 //
-function CLCTU_ReadCal(CalibrationType, Range)
-{
-	var RegList = CLCTU_GetCoefReg(CalibrationType, Range);
-	var Data = [];
-	
-	for (var i = 0; i < RegList.length; i++)
-		Data.push([dev.rf(RegList[i][0]), dev.rf(RegList[i][1]), dev.rf(RegList[i][2])]);
-	
-	return Data;
-}
-//--------------------
-//
-function CLCTU_RestoreCal(SavedCoef, CalibrationType, Range)
-{
-	var RegList = CLCTU_GetCoefReg(CalibrationType, Range);
-	
-	for (var i = 0; i < RegList.length; i++)
-		CLCTU_SetCoef(RegList[i], SavedCoef[i]);
-}
-//--------------------
-//
 function CLCTU_KEI_Init(CalibrationType)
 {
 	if(CalibrationType == clctu_Cal_Vmes || CalibrationType == clctu_Cal_Vset) 	
@@ -487,3 +444,35 @@ function CLCTU_NameSwitch(CalibrationType, Range)
 	
 	return 0;
 }
+//--------------------
+//
+function CLCTU_CorrectInput()
+{
+	// Спрашиваем о корректности подключения к СИ
+	if(CalibrationType == clctu_Cal_Imes)
+		connector = "white"
+	else
+		connector = "red"
+	print("Connect in " + connector + " connector?")
+	print("-----------");
+	print("(press 'y' or 'n')")
+	do
+	{
+		key = readkey();
+		if (key == "y")
+			break;
+		else if (key == "n")
+			return;
+	}
+	while (true)
+
+	// Спрашиваем о номинале подключенной нагрузки
+	print("Enter resistance set to Ohms ?");
+	print("-----------");
+	var clctu_Res = parseFloat(readline());
+	
+	if (isNaN(clctu_Res))
+		clctu_Res = 1;
+}
+//--------------------
+//
