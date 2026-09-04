@@ -138,7 +138,7 @@ function CLCTU_Collect(IterationsCount, CalibrationType, Range)
 	print("-----------");
 	var clctu_Res = parseFloat(readline());
 	
-	if (isNaN(clctu_Res))
+	if (!isFinite(clctu_Res) || clctu_Res <= 0)
 		clctu_Res = 1;
 	
 	clctu_cntTotal = IterationsCount * clctu_Values.length;
