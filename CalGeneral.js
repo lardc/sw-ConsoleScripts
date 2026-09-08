@@ -16,6 +16,16 @@ function CGEN_SaveArrays(FileName, UnitData, ScopeData, ErrorData)
 	save(cgen_correctionDir + "/" + FileName + ".csv", csv_array);
 }
 
+function CGEN_SaveArrays2(FileName, UnitData, ScopeData, ErrorData, SumErrorData)
+{
+	var csv_array = [];
+	
+	for (var i = 0; i < UnitData.length; i++)
+		csv_array.push(UnitData[i] + ";" + ScopeData[i] + ";" + ErrorData[i] + ";" + SumErrorData[i]);
+	
+	save(cgen_correctionDir + "/" + FileName + ".csv", csv_array);
+}
+
 function CGEN_UseQuadraticCorrection()
 {
 	// Check connection
