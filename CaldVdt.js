@@ -342,7 +342,7 @@ function CdVdt_CellCalibrateRateA(CellArray)
 	
 	for (var i = 0; i < CellArray.length; i++)
 	{
-		cdvdt_def_VGateMin = dev.r(cdvdt_def_SetpointStartAddr[cdvdt_SelectedRange] + i * cdvdt_def_SetpointCount * 2);
+		cdvdt_def_VGateMin = dev.r(cdvdt_def_SetpointStartAddr[cdvdt_SelectedRange] + (CellArray[i] - 1) * cdvdt_def_SetpointCount * 2);
 		p("Old Vgt, mV: " + cdvdt_def_VGateMin);
 		CdVdt_ResetA();
 		print("CELL       : " + CellArray[i] + " #RangeRate = " + cdvdt_SelectedRange);
