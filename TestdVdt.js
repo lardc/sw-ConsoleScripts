@@ -358,3 +358,51 @@ function dVdt_ResourceTest(dVdt_resource_test, random_test_dut)
 
 	dev.c(2);
 }
+
+// Проверка заряда-разряда ячейки с выводом графика
+function dVdt_PowerDriver(CellNumber)
+{
+	var a = [];
+	var b = [];
+
+	dev.c(1)
+	dev.w(128,4355)
+	dev.c(10)
+	while(dev.r(200) != 1)
+	{
+		a.push(dev.r(206 + CellNumber))
+	}
+
+	dVdt_PrintInfo()
+	plotn(a,1,"","","Charge, CellNumber = " + CellNumber)
+	sleep(100);
+
+	dev.w(128,402)
+	dev.c(10)
+	while(dev.r(200) != 1)
+	{
+		b.push(dev.r(206 + CellNumber))
+	}
+
+	dVdt_PrintInfo()
+	plotn(b,1,"","","Discharge, CellNumber = " + CellNumber)
+	dev.c(2)
+}
+
+// Проверка источников напряжения на ячейках с шагом в 1 В
+function dVdt_PowerTest()
+{
+	var i = 0;
+	dev.c(1)
+	while(i + 402 <= 4355)
+	{
+		if (anykey()) return 0;
+		dev.w(128,402 + i)
+		dev.c(10)
+		sleep(1000)
+		print("U = " + (i + 402))
+		i++;
+	}
+
+	dev.c(2)
+}

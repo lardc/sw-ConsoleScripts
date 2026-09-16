@@ -90,9 +90,10 @@ dVdt_IdleShortTestDetector()
 
 // Переместить сместить серию регистров с одного места, в другое
 include(“CaldVdt.js”)
-cdvdt_DeviderRate = 10 // для того чтобы из старой ппрошивки подстройки ячеек перенсти в регистры нового
-per = load("D:\\reserve hardware\\sw-ConsoleScripts\\regdump\\CROVU_020.regdump")
-CdVdt_ShiftRegisters(per, 30, 40)
+cdvdt_DeviderRate = 10 // делитель, для того, чтобы из старой прошивки подстройки ячеек перенести в регистры нового
+per = load("D:\\reserve hardware\\sw-ConsoleScripts\\regdump\\CROVU_020.regdump") // на примере файла регдампа 020 заносим данные в массив
+CdVdt_ShiftRegisters(per, 30, 40) // при подключенном блоке осуществляем перенос
+
 
 /// ПРЕДКАЛИБРОВКА ЯЧЕЕК С 3-МЯ АППАРТАНЫМИ ДИАПАЗОНАМИ
 // Предкалибровка диапазаона LOW всех ячеек
@@ -168,14 +169,14 @@ CdVdt_Init(12, 13, 1);
 CdVdt_CellCalibrateRateA([1,2,3,4,5]);
 
 // Калибровка скорости для универсальной прошивки
-dev.co(11)
+dev.co(12)
 dev.nid(1)
 dev.c(1)
 dev.c(115)
 include(“CaldVdt.js”);
 cdvdt_HVProbeScale = 1000;
 cdvdt_RatePoint = [500, 1000, 1600, 2000, 2500];
-cdvdt_Vmin = 500;
+cdvdt_Vmin = 800;
 cdvdt_Vmax = 4500;
 cdvdt_Points = 10;
 cdvdt_iterations = 1;

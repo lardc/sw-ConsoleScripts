@@ -24,10 +24,24 @@ CS_Temp(10000);
 
 // Калибровка ЦАП температуры
 include("CalCS.js");
-ccs_t_min = 80;
+ccs_t_min = 25;
 ccs_t_max = 190;
 ccs_t_stp = 5;
-CCS_TempToDACCalibrate(); // Нагрев пресса не нужен
+CCS_TempToDACCalibrate(); // Пресс не будет начинать нагреваться и физический нагрев не нужен
+
+/// Если на комплексе не работает калибровка через MCR (Matlab драйвер)
+// На компе с рабочей калибровкой скопировать из комплекса файлы cs_temp_to_dac1.csv и cs_temp_to_dac3.csv
+i("CalGeneral.js")
+ccs_temp_to_dac_corr = CGEN_GetCorrection2("cs_temp_to_dac1");
+ccs_temp_to_dac_corr = CGEN_GetCorrection2("cs_temp_to_dac2");
+
+// Где калибровать, перикинуть туда же файлы cs_temp_to_dac1_corr.csv и cs_temp_to_dac2_corr.csv где находится exe файл с консолью
+ccs_temp_to_dac_corr = load("cs_temp_to_dac1_corr.csv");
+CCS_TempToDACCal1(ccs_temp_to_dac_corr[0], ccs_temp_to_dac_corr[1], ccs_temp_to_dac_corr[2]);
+ccs_temp_to_dac_corr = load("cs_temp_to_dac2_corr.csv");
+CCS_TempToDACCal2(ccs_temp_to_dac_corr[0], ccs_temp_to_dac_corr[1], ccs_temp_to_dac_corr[2]);
+CCS_PrintTempToDACCal();
+
 
 // Калибровка измерения температуры
 Нагреть до максимальный температуры (190-200 градусов)
