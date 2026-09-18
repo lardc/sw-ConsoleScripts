@@ -187,7 +187,7 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 	
 			// Получаем значения
 			sleep(2000);
-			var scdata = KEI_ReadAverage();
+			var scdata = CIGTU_KEI_Average();
 			
 			if(CalibrationType == cigtu_Cal_Vset || CalibrationType == cigtu_Cal_Iset) 
 				var igtudata = cigtu_Values[j];
@@ -236,6 +236,24 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 	}
 		
 	return 1;
+}
+//--------------------
+// Усреднение измерения на DMM с середины импульса
+function CIGTU_KEI_Average()
+{
+	var FloatArray = KEI_ReadArray();
+	var TrapezeArray = FloatArray.concat(FloatArray.splice(0, 0));
+	var StartNumber = Math.round(TrapezeArray.length / 2);
+	var EndNumber = TrapezeArray.length - 1;
+	var TrapezeLevel = 0;
+	
+	for (var j = StartNumber; j <= EndNumber; j++)
+	{
+		TrapezeLevel = TrapezeLevel + TrapezeArray[j];
+	}
+	TrapezeLevel = (TrapezeLevel / (EndNumber - StartNumber + 1));
+
+	return TrapezeLevel;
 }
 //--------------------
 // 

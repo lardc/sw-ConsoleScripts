@@ -1,5 +1,6 @@
 include("PrintStatus.js")
-
+igtu_uge 	= 1;
+igtu_iges 	= 2;
 
 function IGTU_Res()
 {
@@ -76,6 +77,46 @@ function IGTU_Vgs(Current)
 	}
 }
 //--------------------
+// Ресурсный тест при максимальном токе (igtu_uge) и при максимальном напряжении (igtu_iges)
+function IGTU_ResourceTest(Measure, HoursTest)
+{
+	var i = 1;
+	var MinutesInMs = 60 * 1000;
+	var end = new Date();
+	var start = new Date();
+	var hours = start.getHours() + HoursTest;
+	end.setHours(hours);
+
+	while((new Date()).getTime() < end.getTime())
+	{
+		switch (Measure)
+		{
+		case igtu_uge:
+			dev.w(92,500);
+			IGTU_Vgs(500);
+			sleep(10000);
+			break;
+		case igtu_iges:
+			dev.w(91, 5000);
+			IGTU_Iges(30000);
+			sleep(5000);
+			break;
+		default:
+			print("Incorrect Measure.");
+			break;
+		}
+
+		var left_time = new Date(end.getTime() - (new Date()).getTime());
+		print("#" + i + " Осталось " + (left_time.getHours() - 3) + " ч и " + left_time.getMinutes() + " мин");
+
+		var elapsed_time = new Date((new Date()).getTime() - start.getTime());
+
+		if (anykey()) break;
+
+		i++;
+	}
+}
+//--------------------
 
 function IGTU_SaveCSV_EP()
 {
@@ -88,7 +129,6 @@ function IGTU_SaveCSV_EP()
 	save("data/IGTU_EP5_RegulatorCorrection_" + Suffix + ".csv", dev.raff(5));
 	save("data/IGTU_EP6_RegulatorError_" + Suffix + ".csv", dev.raff(6));
 	save("data/IGTU_EP7_DACRaw_" + Suffix + ".csv", dev.raff(7));
-	save("data/IGTU_EP20_ExtInfoData_" + Suffix + ".csv", dev.raff(20));
 }
 
 function GetDateTimeSuffix()
