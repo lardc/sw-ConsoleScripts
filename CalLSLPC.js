@@ -3,8 +3,7 @@ include("Tektronix.js")
 include("CalGeneral.js")
 include("TEK_GetData.js")
 
-// Переменные совместимости
-clslpc_Compatibility = 1;	// 0 - если прошивка блока на IAR, 1 - если прошивка на Atolic
+// clslpc_Compatibility задаётся в TestLSLPC.js: 0 — IAR, 1 — Atolic
 clslpc_UseLinearSlope = 0;	// спад тока идёт по линейному закону
 
 // Calibration setup parameters
@@ -74,6 +73,8 @@ function CLSLPC_Init(portDevice, portTek, channelMeasureId)
 
 function CLSLPC_TekInit()
 {
+	LSLPC_ApplyCompatibility();
+
 	TEK_ChannelInit(clslpc_chMeasureId, "1", "0.01");
 	TEK_TriggerPulseInit(clslpc_chMeasureId, "0.04");
 	TEK_Horizontal("1e-3", "-1e-3");
@@ -103,8 +104,20 @@ function CLSLPC_CheckRegulatorStatus()
 		return false;
 }
 
+function CLSLPC_CheckCurrentRange()
+{
+	if (clslpc_CurrentRange == 0 || clslpc_CurrentRange == 1 || clslpc_CurrentRange == 2)
+		return true;
+
+	print("Wrong current range: " + clslpc_CurrentRange);
+	return false;
+}
+
 function CLSLPC_CalibrateDAC()
 {
+	if (!CLSLPC_CheckCurrentRange())
+		return;
+
 	if(CLSLPC_CheckRegulatorStatus())
 	{
 		p("Regulator is active. DAC calibration unavailable");
@@ -121,6 +134,12 @@ function CLSLPC_CalibrateDAC()
 	
 	if (CLSLPC_CollectId(CurrentArray, clslpc_Iterations))
 	{
+		if (clslpc_IdDAC.length == 0)
+		{
+			print("DAC codes were not collected. DAC calibration unavailable");
+			return;
+		}
+
 		CLSLPC_RefreshDACSettings();
 		CLSLPC_SaveRawId("LSLPC_IdRaw");
 
@@ -149,6 +168,9 @@ function CLSLPC_RefreshDACSettings()
 
 function CLSLPC_ReadCoefDAC()
 {
+	var K;
+	var B;
+
 	switch(clslpc_CurrentRange)
 	{
 		case 0:
@@ -171,12 +193,21 @@ function CLSLPC_ReadCoefDAC()
 			B = dev.rs(25);
 		}
 		break;
+
+		default:
+		{
+			print("Wrong current range: " + clslpc_CurrentRange);
+			return null;
+		}
 	}
 	return {K : K, B : B};
 }
 
 function CLSLPC_CalibrateId()
-{		
+{
+	if (!CLSLPC_CheckCurrentRange())
+		return;
+
 	CLSLPC_ResetA();
 	CLSLPC_ResetIdCal();
 	
@@ -203,7 +234,10 @@ function CLSLPC_CalibrateId()
 //--------------------
 
 function CLSLPC_VerifyId()
-{		
+{
+	if (!CLSLPC_CheckCurrentRange())
+		return;
+
 	CLSLPC_ResetA();
 	
 	// Tektronix init
@@ -364,7 +398,7 @@ function CLSLPC_SetCoefId(P2, P1, P0)
 		{
 			dev.ws(31, Math.round(P2 * 1e6));
 			dev.w(32, Math.round(P1 * 1000));
-			dev.ws(33, Math.round(P0) * 10);
+			dev.ws(33, Math.round(P0 * 10));
 		}
 		break;
 		
@@ -372,7 +406,7 @@ function CLSLPC_SetCoefId(P2, P1, P0)
 		{
 			dev.ws(37, Math.round(P2 * 1e6));
 			dev.w(38, Math.round(P1 * 1000));
-			dev.ws(39, Math.round(P0) * 10);
+			dev.ws(39, Math.round(P0 * 10));
 		}
 		break;
 		
@@ -380,7 +414,13 @@ function CLSLPC_SetCoefId(P2, P1, P0)
 		{
 			dev.ws(43, Math.round(P2 * 1e6));
 			dev.w(44, Math.round(P1 * 1000));
-			dev.ws(45, Math.round(P0) * 10);
+			dev.ws(45, Math.round(P0 * 10));
+		}
+		break;
+
+		default:
+		{
+			print("Wrong current range: " + clslpc_CurrentRange);
 		}
 		break;
 	}
@@ -409,6 +449,12 @@ function CLSLPC_SetCoefIdRaw(K, B)
 		{
 			dev.w(24, Math.round(K * 1000));
 			dev.ws(25, Math.round(B));
+		}
+		break;
+
+		default:
+		{
+			print("Wrong current range: " + clslpc_CurrentRange);
 		}
 		break;
 	}
@@ -442,13 +488,22 @@ function CLSLPC_PrintCoefId()
 			print("Id 2 P0 x10		: " + dev.rs(45));
 		}
 		break;
+
+		default:
+		{
+			print("Wrong current range: " + clslpc_CurrentRange);
+		}
+		break;
 	}
 }
 //--------------------
 
 function CLSLPC_PrintCoefIdRaw()
 {
-	CoefDACObject = CLSLPC_ReadCoefDAC();
+	var CoefDACObject = CLSLPC_ReadCoefDAC();
+	if (!CoefDACObject)
+		return;
+
 	print("IdDAC " + clslpc_CurrentRange + " K x1000		: " + CoefDACObject.K);
 	print("IdDAC " + clslpc_CurrentRange + " B x1		: " + CoefDACObject.B);
 }
