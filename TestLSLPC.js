@@ -5,6 +5,9 @@ include("PrintStatus.js")
 if (typeof clslpc_Compatibility == "undefined")
 	clslpc_Compatibility = 1;
 
+if (typeof lslpc_print == "undefined")
+	lslpc_print = 1;
+
 function LSLPC_ApplyCompatibility()
 {
 	if (clslpc_Compatibility)
@@ -47,12 +50,6 @@ function LSLPC_SineConfig(Current)
 			if(anykey())
 				return false;
 		}
-	}
-
-	if (dev.r(LSLPC_REG_DEV_STATE) == LSLPC_DS_Fault)	
-	{
-		p("Fault");
-		return false;
 	}
 
 	if(clslpc_Compatibility == 0)
@@ -106,7 +103,7 @@ function LSLPC_Start(Current)
 	{
 		sleep(100);
 		
-		if(dev.r(LSLPC_REG_DEV_STATE) == LSLPC_DS_Fault)
+		if(dev.r(LSLPC_REG_DEV_STATE) == LSLPC_DS_Fault || dev.r(LSLPC_REG_PROBLEM) != 0)
 		{
 			PrintStatus();
 			return false;
@@ -115,10 +112,26 @@ function LSLPC_Start(Current)
 		if(anykey())
 			return false;
 	}
-	
+
+	if (lslpc_print)
+	{
+		print("DAC,    A: " + (clslpc_Compatibility ? dev.r(202) : "NaN"));
+		print("Idset,  A: " + (clslpc_Compatibility ? (dev.r(128) / 10) : dev.r(64)));
+		print("Idunit, A: " + CLSLPC_GetMeasuredCurrent());
+	}
+
 	return true;
 }
 //--------------------------
+
+function CLSLPC_GetMeasuredCurrent()
+{
+	if(dev.r(203) == 0)
+		return dev.r(200) / 10;
+	else
+		return dev.r(203) + dev.r(204) / 1000;
+}
+//--------------------
 
 function LSLPC_HoursMinutes(ms)
 {
