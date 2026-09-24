@@ -169,7 +169,7 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 				dev.w(92,CAL_Ugeth_PulsePlate * 1e-3);
 				dev.c(100);
 			}	
-			else if(CurrentRange == cigtu_Cal_Vpotmes_300_3000_mV || CurrentRange == cigtu_Cal_Vpotmes_3_9_V)
+			else if(CurrentRange == cigtu_Cal_Vpotmes_300_700_mV || CurrentRange == cigtu_Cal_Vpotmes_3_9_V)
 			{
 				dev.w(151,cigtu_Cal_Imes_50_500mkA);
 				dev.wf(136, cigtu_Values[j] * 1e3);
@@ -187,7 +187,7 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 	
 			// Получаем значения
 			sleep(2000);
-			var scdata = KEI_ReadAverage();
+			var scdata = CIGTU_KEI_Average();
 			
 			if(CalibrationType == cigtu_Cal_Vset || CalibrationType == cigtu_Cal_Iset) 
 				var igtudata = cigtu_Values[j];
@@ -204,8 +204,13 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 			// DMM6500 data
 			cigtu_sc.push(scdata);
 			// relative error
-			var errdata = ((igtudata - scdata) / scdata * 100).toFixed(4);
+			if(CalibrationType == cigtu_Cal_Vset || CalibrationType == cigtu_Cal_Iset)
+				var errdata = ((scdata - igtudata) / igtudata * 100).toFixed(4);
+			else
+				var errdata = ((igtudata - scdata) / scdata * 100).toFixed(4);
+			
 			cigtu_err.push(errdata);
+
 			// Summary error
 			if(CalibrationType == cigtu_Cal_Vmes || CalibrationType == cigtu_Cal_Vpotmes || CalibrationType == cigtu_Cal_Vset)
 				var E0 = KEI_V_Err(cigtu_Values[j]);
@@ -214,21 +219,41 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 			var err_sumdata = Math.sign_ma(errdata) * (Math.abs(errdata) + E0);
 			cigtu_err_sum.push(err_sumdata);
 				
-				
+			print("Set: " + cigtu_Values[j]);
 			print("IGTU: " + igtudata);
 			print("DMM6500: " + scdata);
+			print("Err, %: " + errdata);
 			
 			cigtu_cntDone++;
 			print("-- result " + cigtu_cntDone + " of " + cigtu_cntTotal + " --");
 			
 			sleep(1000);
 			dev.w(151,0);
+			if (anykey()) return 0;
 		}
 			
 		if (anykey()) return 0;
 	}
 		
 	return 1;
+}
+//--------------------
+// Усреднение измерения на DMM с середины импульса
+function CIGTU_KEI_Average()
+{
+	var FloatArray = KEI_ReadArray();
+	var TrapezeArray = FloatArray.concat(FloatArray.splice(0, 0));
+	var StartNumber = Math.round(TrapezeArray.length / 2);
+	var EndNumber = TrapezeArray.length - 1;
+	var TrapezeLevel = 0;
+	
+	for (var j = StartNumber; j <= EndNumber; j++)
+	{
+		TrapezeLevel = TrapezeLevel + TrapezeArray[j];
+	}
+	TrapezeLevel = (TrapezeLevel / (EndNumber - StartNumber + 1));
+
+	return TrapezeLevel;
 }
 //--------------------
 // 
@@ -256,7 +281,7 @@ function CIGTU_GetRange(CalibrationType, Range)
 	switch(CalibrationType)
 	{
 		case cigtu_Cal_Vmes:
-			return [2, 30, 1];							// [min, max, step] in V
+			return [2, 30, 2];							// [min, max, step] in V
 
 		case cigtu_Cal_Vpotmes:
 			switch(Range)
@@ -268,25 +293,25 @@ function CIGTU_GetRange(CalibrationType, Range)
 			}		
 
 		case cigtu_Cal_Vset:
-			return [2, 30, 1];							// [min, max, step] in V
+			return [2, 30, 2];							// [min, max, step] in V
 			
 		case cigtu_Cal_Imes:
 			switch(Range)
 			{
 				case cigtu_Cal_Imes_50_500_mA:
-					return [0.05, 0.4, 0.05];			// [min, max, step] in A 20 Om
+					return [0.05, 0.5, 0.05];			// [min, max, step] in A 20 Om
 				case cigtu_Cal_Imes_5_50_mA:
-					return [0.005, 0.05, 0.01];			// [min, max, step] in A 150 Om
+					return [0.005, 0.05, 0.01];			// [min, max, step] in A 200 Om
 				case cigtu_Cal_Imes_05_5mA:
-					return [3, 28, 1];					// [min, max, step] in V 5.6 kOm
+					return [3, 27, 2];					// [min, max, step] in V 5.47 kOm
 				case cigtu_Cal_Imes_50_500mkA:
-					return [2, 27, 1];					// [min, max, step] in V 51 kOm
+					return [2.5, 25, 2];				// [min, max, step] in V 49.8 kOm
 				case cigtu_Cal_Imes_2_50mkA:
-					return [2, 28, 1];					// [min, max, step] in V 560 kOm
+					return [1.1, 28.15, 2];				// [min, max, step] in V 563 kOm
 				case cigtu_Cal_Imes_200_2000nA:
-					return [2, 22, 2];					// [min, max, step] in V 10 MOm
+					return [2, 19.9, 2];				// [min, max, step] in V 9.95 MOm
 				case cigtu_Cal_Imes_20_200nA:
-					return [3, 21, 2];					// [min, max, step]	in V 110 MOm
+					return [2, 20, 2];					// [min, max, step]	in V 110 MOm
 				case cigtu_Cal_Imes_2_20nA:
 					return [5.5, 20, 1];				// [min, max, step]	in V 1 GOm
 				default:
@@ -297,9 +322,9 @@ function CIGTU_GetRange(CalibrationType, Range)
 			switch(Range)
 			{
 				case cigtu_Cal_Imes_50_500_mA:
-					return [0.05, 0.4, 0.05];			// [min, max, step] in A 20 Om
+					return [0.05, 0.5, 0.05];			// [min, max, step] in A 20 Om
 				case cigtu_Cal_Imes_5_50_mA:
-					return [0.005, 0.05, 0.01];			// [min, max, step] in A 150 Om
+					return [0.005, 0.05, 0.01];			// [min, max, step] in A 200 Om
 				default:
 					return [];
 			}
@@ -411,7 +436,7 @@ function CIGTU_KEI_Init(CalibrationType)
 
 	if(CurrentRange == cigtu_Cal_Imes_50_500_mA || CurrentRange == cigtu_Cal_Imes_5_50_mA)
 	{
-		KEI_MakeTestBufferVoltageDC(CAL_NPLC, (CAL_Ugeth_PulsePlate * 0.9 - CAL_Ugeth_TriggerDelay));
+		KEI_MakeTestBufferVoltageDC(CAL_NPLC, (CAL_Ugeth_PulsePlate * 0.6 - CAL_Ugeth_TriggerDelay));
 		KEI_ConfigExtTrigger(CAL_Ugeth_TriggerDelay * 1e-6);
 	}
 	else

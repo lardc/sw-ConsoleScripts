@@ -1,30 +1,42 @@
 include("PrintStatus.js")
 
-// Переменные совместимости
-cal_LSLPC_Compatibility = 1; // 0 - если прошивка блока на IAR, 1 - если прошивка на Atolic
+// 0 — прошивка IAR, 1 — прошивка Atolic.
+// LSLPC_Start и CLSLPC_TekInit читают текущее значение.
+if (typeof clslpc_Compatibility == "undefined")
+	clslpc_Compatibility = 1;
 
-if (cal_LSLPC_Compatibility)
+if (typeof lslpc_print == "undefined")
+	lslpc_print = 1;
+
+function LSLPC_ApplyCompatibility()
 {
-	LSLPC_REG_USE_LINEAR_DOWN = 130;
-	LSLPC_REG_DEV_STATE = 192;
-	LSLPC_DS_None = 0;
-	LSLPC_DS_Fault = 1;
-	LSLPC_DS_Disabled = 2;
-	LSLPC_DS_Ready = 3;
-	LSLPC_DS_ConfigReady = 4;
-	LSLPC_DS_InProcess = 5;
+	if (clslpc_Compatibility)
+	{
+		LSLPC_REG_USE_LINEAR_DOWN = 130;
+		LSLPC_REG_DEV_STATE = 192;
+		LSLPC_REG_PROBLEM = 196;
+		LSLPC_DS_None = 0;
+		LSLPC_DS_Fault = 1;
+		LSLPC_DS_Disabled = 2;
+		LSLPC_DS_Ready = 3;
+		LSLPC_DS_ConfigReady = 4;
+		LSLPC_DS_InProcess = 5;
+	}
+	else
+	{
+		LSLPC_REG_DEV_STATE = 96;
+		LSLPC_REG_PROBLEM = 100;
+		LSLPC_DS_None = 0;
+		LSLPC_DS_Fault = 1;
+		LSLPC_DS_Disabled = 2;
+		LSLPC_DS_BatteryCharging = 3;
+		LSLPC_DS_Ready = 4;
+		LSLPC_DS_ConfigReady = 7;
+		LSLPC_DS_InProcess = 8;
+	}
 }
-else
-{
-	LSLPC_REG_DEV_STATE = 96;
-	LSLPC_DS_None = 0;
-	LSLPC_DS_Fault = 1;
-	LSLPC_DS_Disabled = 2;
-	LSLPC_DS_BatteryCharging = 3;
-	LSLPC_DS_Ready = 4;
-	LSLPC_DS_ConfigReady = 7;
-	LSLPC_DS_InProcess = 8;
-}
+
+LSLPC_ApplyCompatibility();
 
 function LSLPC_SineConfig(Current)
 {
@@ -40,13 +52,7 @@ function LSLPC_SineConfig(Current)
 		}
 	}
 
-	if (dev.r(LSLPC_REG_DEV_STATE) == LSLPC_DS_Fault)	
-	{
-		p("Fault");
-		return false;
-	}
-
-	if(cal_LSLPC_Compatibility == 0)
+	if(clslpc_Compatibility == 0)
 		if(dev.r(LSLPC_REG_DEV_STATE) == LSLPC_DS_BatteryCharging)
 		{
 			while (dev.r(LSLPC_REG_DEV_STATE) != LSLPC_DS_Ready)
@@ -58,7 +64,7 @@ function LSLPC_SineConfig(Current)
 		}
 
 
-	cal_LSLPC_Compatibility == 1 ? dev.w(128, Current * 10) : dev.w(64, Current);
+	clslpc_Compatibility == 1 ? dev.w(128, Current * 10) : dev.w(64, Current);
 	sleep(100)
 	dev.c(100);
 	
@@ -68,11 +74,17 @@ function LSLPC_SineConfig(Current)
 		if(anykey())
 			return false;
 		
-		if(dev.r(LSLPC_REG_DEV_STATE) == LSLPC_DS_Fault)
+		if(dev.r(LSLPC_REG_DEV_STATE) == LSLPC_DS_Fault || dev.r(LSLPC_REG_PROBLEM) != 0)
 		{
 			PrintStatus();
 			return false;
 		}
+	}
+
+	if(dev.r(LSLPC_REG_DEV_STATE) == LSLPC_DS_Fault || dev.r(LSLPC_REG_PROBLEM) != 0)
+	{
+		PrintStatus();
+		return false;
 	}
 	
 	return true;
@@ -80,8 +92,10 @@ function LSLPC_SineConfig(Current)
 
 function LSLPC_Start(Current)
 {
-	LSLPC_SineConfig(Current);
-	
+	LSLPC_ApplyCompatibility();
+	if (!LSLPC_SineConfig(Current))
+		return false;
+
 	dev.c(101);
 	sleep(20);
 	
@@ -89,7 +103,7 @@ function LSLPC_Start(Current)
 	{
 		sleep(100);
 		
-		if(dev.r(LSLPC_REG_DEV_STATE) == LSLPC_DS_Fault)
+		if(dev.r(LSLPC_REG_DEV_STATE) == LSLPC_DS_Fault || dev.r(LSLPC_REG_PROBLEM) != 0)
 		{
 			PrintStatus();
 			return false;
@@ -98,18 +112,46 @@ function LSLPC_Start(Current)
 		if(anykey())
 			return false;
 	}
-	
+
+	if (lslpc_print)
+	{
+		print("DAC,    A: " + (clslpc_Compatibility ? dev.r(202) : "NaN"));
+		print("Idset,  A: " + (clslpc_Compatibility ? (dev.r(128) / 10) : dev.r(64)));
+		print("Idunit, A: " + CLSLPC_GetMeasuredCurrent());
+	}
+
 	return true;
 }
 //--------------------------
 
+function CLSLPC_GetMeasuredCurrent()
+{
+	if(dev.r(203) == 0)
+		return dev.r(200) / 10;
+	else
+		return dev.r(203) + dev.r(204) / 1000;
+}
+//--------------------
+
+function LSLPC_HoursMinutes(ms)
+{
+	if (ms < 0)
+		ms = 0;
+
+	var totalMinutes = Math.floor(ms / 60000);
+	var hours = Math.floor(totalMinutes / 60);
+	var minutes = totalMinutes % 60;
+	return hours + " ч и " + minutes + " мин";
+}
+
 function LSLPC_Pulses(Current, N)
 {
-	for(i = 0; i < N; i++)
+	for(var i = 0; i < N; i++)
 	{
 		print("#" + i);
-		LSLPC_Start(Current);
-		
+		if (!LSLPC_Start(Current))
+			break;
+
 		if(anykey())
 			break;
 	}
@@ -128,16 +170,17 @@ function LSLPC_ResourceTest(Current, HoursTest)
 
 	while((new Date()).getTime() < end.getTime())
 	{
-		LSLPC_Start(Current);
+		if (!LSLPC_Start(Current))
+			break;
 
-		var left_time = new Date(end.getTime() - (new Date()).getTime());
-		print("#" + i + " Осталось " + (left_time.getHours() - 3) + " ч и " + left_time.getMinutes() + " мин");
+		var now = (new Date()).getTime();
+		print("#" + i + " Осталось " + LSLPC_HoursMinutes(end.getTime() - now));
 
-		var elapsed_time = new Date((new Date()).getTime() - start.getTime());
-		if (elapsed_time.getTime() > 10 * MinutesInMs * count_plot)
+		var elapsed = now - start.getTime();
+		if (elapsed > 10 * MinutesInMs * count_plot)
 		{
 			pl(dev.rafs(1));
-			p("Вывод графика #" + (count_plot + 1) + " спустя " + (elapsed_time.getHours() - 3) + " ч и " + elapsed_time.getMinutes() + " мин");
+			p("Вывод графика #" + (count_plot + 1) + " спустя " + LSLPC_HoursMinutes(elapsed));
 			count_plot++;
 		}
 

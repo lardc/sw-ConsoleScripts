@@ -1,4 +1,4 @@
-﻿//подключение к библиотекам
+//подключение к библиотекам
 i("TestIGTU_303.js");
 i("CalIGTU_303.js");
 
@@ -7,6 +7,11 @@ IGTU_Res(); // измерение сопротивления термистор�
 IGTU_Iges(Voltage); // измерение тока утечки затвора
 IGTU_Vgs(Current); // измерение порогового напряжения затвор эмиттер  
 
+IGTU_ResourceTest(Measure, HoursTest) // функция ресурсного теста
+
+// Варианты Measure
+igtu_uge 	= 1; // нагрузка 8 Ом, задание тока 500 мА
+igtu_iges 	= 2; // нагрузка 20 МОм, задание 30 В
 
 // Пояснения
 CIGTU_Init(portDevice); // инициализация c DMM6500
@@ -19,9 +24,8 @@ cigtu_Cal_Imes = 3;	// Нагрузка в CurrentRange
 cigtu_Cal_Iset = 4;	// Нагрузка 20МОм
 
 // Варианты CurrentRange
-
 cigtu_Cal_Imes_50_500_mA = 1; 	// Нагрузка 20Ом
-cigtu_Cal_Imes_5_50_mA = 2;	// Нагрузка 150Ом	
+cigtu_Cal_Imes_5_50_mA = 2;	// Нагрузка 200Ом	
 cigtu_Cal_Imes_0.5_5mA = 3;	// Нагрузка 5.6кОм
 cigtu_Cal_Imes_50_500mkA = 4;	// Нагрузка 51кОм
 cigtu_Cal_Imes_2_50mkA = 5;	// Нагрузка 560кОм
@@ -30,7 +34,6 @@ cigtu_Cal_Imes_20_200nA = 7;	// Нагрузка 110МОм
 cigtu_Cal_Imes_2_20nA = 8;	// Нагрузка 1ГОм
 
 // Варианты VoltageRange
-
 cigtu_Cal_Vpotmes_300_700_mV = 11;	// Нагрузка 
 cigtu_Cal_Vpotmes_3_9_V = 12; 		// Нагрузка 
 
