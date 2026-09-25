@@ -89,3 +89,19 @@ function LCTU_Messure(Voltage, PreVoltage, CurrentCH)
 	dev.w(152,0);
 	dev.c(21);
 }
+
+function LCTU_Plot()
+{
+	a=dev.raff(1);
+	plotn(a,1,"steps","Amperage", "Regulator Ig");
+	a=dev.raff(2);
+	plotn(a,1,"steps","Voltage", "Regulator Uce");
+	a=dev.raff(4);
+	plotn(a,1,"steps","Voltage", "Regulator Setpoint");
+	a=dev.raff(5);
+	plotn(a,1,"steps","Voltage", "Regulator Correction");
+	a=dev.raff(6);
+	plotn(a,1,"steps","Voltage", "Regulator Error");
+	a=dev.raff(7);
+	plotn(a,1,"steps","Voltage", "DacRaw");
+}
