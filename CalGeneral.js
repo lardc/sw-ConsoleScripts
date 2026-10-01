@@ -1,3 +1,21 @@
+/*
+	Функции для расчёта корректировочных коэффицентов по данным из файлов
+	для совместимости возвращают результат в порядке [P2, P1, P0]:
+	
+	CGEN_GetCorrection(FileName)
+	CGEN_GetCorrection2(FileName)
+	CGEN_GetFileNumericCorrectionX(FileName, Order)
+	CGEN_GetFileNumericCorrectionWeightedX(FileName, Order)
+	
+	
+	Функции, принимающие на фход массивы, возвращают коэффициенты в порядке [P0, P1, P2],
+	т.е. порядок коэффициента соответсвует его индексу в массиве:
+	CGEN_GetNumericCorrection(arrayUnit, arrayReference)
+	CGEN_GetNumericCorrection2(arrayUnit, arrayReference)
+	CGEN_NumericCorrectionWeighted(arrayUnit, arrayReference)
+	CGEN_NumericCorrectionWeighted2(arrayUnit, arrayReference)
+*/
+
 include("Numeric.js")
 
 // Correction
@@ -79,29 +97,29 @@ function CGEN_WaitForCorrection(Message)
 }
 
 // Linear correction
-function CGEN_GetCorrection(Filename)
+function CGEN_GetCorrection(FileName)
 {
 	// reset flag
 	save(cgen_correctionDir + "/" + cgen_correctionFlag, [0])
 	
-	var Args = cgen_correctionDir + " " + Filename + " " + cgen_correctionFlag
+	var Args = cgen_correctionDir + " " + FileName + " " + cgen_correctionFlag
 	exec(cgen_correctionApp, Args)
 	
-	CGEN_WaitForCorrection("Correcting " + Filename + "...")
-	return CGEN_CorrectionToFloat(load(cgen_correctionDir + "/" + Filename + "_corr.csv"))
+	CGEN_WaitForCorrection("Correcting " + FileName + "...")
+	return CGEN_CorrectionToFloat(load(cgen_correctionDir + "/" + FileName + "_corr.csv"))
 }
 
 // Quadratic correction
-function CGEN_GetCorrection2(Filename)
+function CGEN_GetCorrection2(FileName)
 {
 	// reset flag
 	save(cgen_correctionDir + "/" + cgen_correctionFlag, [0])
 	
-	var Args = cgen_correctionDir + " " + Filename + " " + cgen_correctionFlag
+	var Args = cgen_correctionDir + " " + FileName + " " + cgen_correctionFlag
 	exec(cgen_correction2App, Args)
 	
-	CGEN_WaitForCorrection("Correcting " + Filename + "...")
-	return CGEN_CorrectionToFloat(load(cgen_correctionDir + "/" + Filename + "_corr.csv"))
+	CGEN_WaitForCorrection("Correcting " + FileName + "...")
+	return CGEN_CorrectionToFloat(load(cgen_correctionDir + "/" + FileName + "_corr.csv"))
 }
 
 function CGEN_NumericCorrectionX(arrayUnit, arrayReference, order)
@@ -144,9 +162,9 @@ function CGEN_GetNumericCorrection2(arrayUnit, arrayReference)
 	return CGEN_NumericCorrectionX(arrayUnit, arrayReference, 2);
 }
 
-function CGEN_GetFileNumericCorrectionX(Filename, Order)
+function CGEN_GetFileNumericCorrectionX(FileName, Order)
 {
-	var InputArrays = CGEN_LoadArrays(Filename)
+	var InputArrays = CGEN_LoadArrays(FileName)
 	var Corr = CGEN_NumericCorrectionX(InputArrays[0], InputArrays[1], Order)
 	
 	var Res = []
@@ -157,12 +175,11 @@ function CGEN_GetFileNumericCorrectionX(Filename, Order)
 		Res.push(Corr[j])
 	}
 	
-	save(cgen_correctionDir + "/" + Filename + "_corr.csv", [CorrFileStr])
+	save(cgen_correctionDir + "/" + FileName + "_corr.csv", [CorrFileStr])
 	return Res
 }
 
 // Взвешенный МНК, вес 1/эталон^2.
-// Коэффициенты от старшей степени к свободному члену: для order = 2 это [P2, P1, P0].
 function CGEN_NumericCorrectionWeightedX(arrayUnit, arrayReference, order)
 {
 	var maxAbs = 0;
@@ -215,15 +232,25 @@ function CGEN_NumericCorrectionWeightedX(arrayUnit, arrayReference, order)
 	return ResultCoefficients;
 }
 
+function CGEN_NumericCorrectionWeighted(arrayUnit, arrayReference)
+{
+	return CGEN_NumericCorrectionWeightedX(arrayUnit, arrayReference, 1);
+}
+
 function CGEN_NumericCorrectionWeighted2(arrayUnit, arrayReference)
 {
 	return CGEN_NumericCorrectionWeightedX(arrayUnit, arrayReference, 2);
 }
 
-function CGEN_FileNumericCorrectionWeightedX(Filename, Order)
+function CGEN_GetFileNumericCorrectionWeightedX(FileName, Order)
 {
-	var InputArrays = CGEN_LoadArrays(Filename)
-	return CGEN_NumericCorrectionWeightedX(InputArrays[0], InputArrays[1], Order)
+	var InputArrays = CGEN_LoadArrays(FileName)
+	var Corr = CGEN_NumericCorrectionWeightedX(InputArrays[0], InputArrays[1], Order)
+	
+	var Res = []
+	for (var j = Order; j >= 0; j--)
+		Res.push(Corr[j])
+	return Res
 }
 
 function CGEN_CorrectionToFloat(InputData)
