@@ -192,7 +192,7 @@ function CGEN_NumericCorrectionXWeighted(arrayUnit, arrayReference, order)
 	// y*s = a0 + a1*(x*s) + a2*(x*s)^2 + ...
 	// коэффициент при x^k равен a_k * s^(k-1)
 	var ResultCoefficients = [];
-	for (var k = order; k >= 0; k--)
+	for (var k = 0; k <= order; k++)
 		ResultCoefficients.push(Coefficients[k][0] * Math.pow(s, k - 1));
 
 	return ResultCoefficients;
