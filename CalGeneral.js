@@ -144,9 +144,26 @@ function CGEN_GetNumericCorrection2(arrayUnit, arrayReference)
 	return CGEN_NumericCorrectionX(arrayUnit, arrayReference, 2);
 }
 
+function CGEN_GetFileNumericCorrectionX(Filename, Order)
+{
+	var InputArrays = CGEN_LoadArrays(Filename)
+	var Corr = CGEN_NumericCorrectionX(InputArrays[0], InputArrays[1], Order)
+	
+	var Res = []
+	var CorrFileStr = ""
+	for (var j = Order; j >= 0; j--)
+	{
+		CorrFileStr += Corr[j].toExponential(6) + ";"
+		Res.push(Corr[j])
+	}
+	
+	save(cgen_correctionDir + "/" + Filename + "_corr.csv", [CorrFileStr])
+	return Res
+}
+
 // Взвешенный МНК, вес 1/эталон^2.
 // Коэффициенты от старшей степени к свободному члену: для order = 2 это [P2, P1, P0].
-function CGEN_NumericCorrectionXWeighted(arrayUnit, arrayReference, order)
+function CGEN_NumericCorrectionWeightedX(arrayUnit, arrayReference, order)
 {
 	var maxAbs = 0;
 
@@ -198,9 +215,15 @@ function CGEN_NumericCorrectionXWeighted(arrayUnit, arrayReference, order)
 	return ResultCoefficients;
 }
 
-function CGEN_GetNumericCorrection2Weighted(arrayUnit, arrayReference)
+function CGEN_NumericCorrectionWeighted2(arrayUnit, arrayReference)
 {
-	return CGEN_NumericCorrectionXWeighted(arrayUnit, arrayReference, 2);
+	return CGEN_NumericCorrectionWeightedX(arrayUnit, arrayReference, 2);
+}
+
+function CGEN_FileNumericCorrectionWeightedX(Filename, Order)
+{
+	var InputArrays = CGEN_LoadArrays(Filename)
+	return CGEN_NumericCorrectionWeightedX(InputArrays[0], InputArrays[1], Order)
 }
 
 function CGEN_CorrectionToFloat(InputData)
