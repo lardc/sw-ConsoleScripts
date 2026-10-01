@@ -1,3 +1,21 @@
+/*
+	Функции для расчёта корректировочных коэффицентов по данным из файлов
+	для совместимости возвращают результат в порядке [P2, P1, P0]:
+	
+	CGEN_GetCorrection(FileName)
+	CGEN_GetCorrection2(FileName)
+	CGEN_GetFileNumericCorrectionX(FileName, Order)
+	CGEN_GetFileNumericCorrectionWeightedX(FileName, Order)
+	
+	
+	Функции, принимающие на фход массивы, возвращают коэффициенты в порядке [P0, P1, P2],
+	т.е. порядок коэффициента соответсвует его индексу в массиве:
+	CGEN_NumericCorrection(arrayUnit, arrayReference)
+	CGEN_NumericCorrection2(arrayUnit, arrayReference)
+	CGEN_NumericCorrectionWeighted(arrayUnit, arrayReference)
+	CGEN_NumericCorrectionWeighted2(arrayUnit, arrayReference)
+*/
+
 include("Numeric.js")
 
 // Correction
@@ -5,6 +23,30 @@ cgen_correctionDir = "data"
 cgen_correctionApp = "correction_calc.exe"		// Linear polyfit function
 cgen_correction2App = "correction2_calc.exe"	// Quadratic polyfit function
 cgen_correctionFlag = "correction_flag.csv"
+
+function CGEN_LoadArrays(FileName)
+{
+	var UnitData = []
+	var ScopeData = []
+	
+	var Lines = loadlines(cgen_correctionDir + "/" + FileName + ".csv")
+	for (var i = 0; i < Lines.length; i++)
+	{
+		if (Lines[i])
+		{
+			var spl = Lines[i].split(';')
+			if (spl[0] && spl[1])
+			{
+				UnitData.push(parseFloat(spl[0]))
+				ScopeData.push(parseFloat(spl[1]))
+			}
+			else
+				p('Bad values detected in line: ' + i + ', values: ' + Lines[i])
+		}
+	}
+	
+	return [UnitData, ScopeData]
+}
 
 function CGEN_SaveArrays(FileName, UnitData, ScopeData, ErrorData)
 {
@@ -55,29 +97,15 @@ function CGEN_WaitForCorrection(Message)
 }
 
 // Linear correction
-function CGEN_GetCorrection(Filename)
+function CGEN_GetCorrection(FileName)
 {
-	// reset flag
-	save(cgen_correctionDir + "/" + cgen_correctionFlag, [0])
-	
-	var Args = cgen_correctionDir + " " + Filename + " " + cgen_correctionFlag
-	exec(cgen_correctionApp, Args)
-	
-	CGEN_WaitForCorrection("Correcting " + Filename + "...")
-	return CGEN_CorrectionToFloat(load(cgen_correctionDir + "/" + Filename + "_corr.csv"))
+	return CGEN_GetFileNumericCorrectionX(FileName, 1)
 }
 
 // Quadratic correction
-function CGEN_GetCorrection2(Filename)
+function CGEN_GetCorrection2(FileName)
 {
-	// reset flag
-	save(cgen_correctionDir + "/" + cgen_correctionFlag, [0])
-	
-	var Args = cgen_correctionDir + " " + Filename + " " + cgen_correctionFlag
-	exec(cgen_correction2App, Args)
-	
-	CGEN_WaitForCorrection("Correcting " + Filename + "...")
-	return CGEN_CorrectionToFloat(load(cgen_correctionDir + "/" + Filename + "_corr.csv"))
+	return CGEN_GetFileNumericCorrectionX(FileName, 2)
 }
 
 function CGEN_NumericCorrectionX(arrayUnit, arrayReference, order)
@@ -110,14 +138,105 @@ function CGEN_NumericCorrectionX(arrayUnit, arrayReference, order)
 	return ResultCoefficients;
 }
 
-function CGEN_GetNumericCorrection(arrayUnit, arrayReference)
+function CGEN_NumericCorrection(arrayUnit, arrayReference)
 {
 	return CGEN_NumericCorrectionX(arrayUnit, arrayReference, 1);
 }
 
-function CGEN_GetNumericCorrection2(arrayUnit, arrayReference)
+function CGEN_NumericCorrection2(arrayUnit, arrayReference)
 {
 	return CGEN_NumericCorrectionX(arrayUnit, arrayReference, 2);
+}
+
+function CGEN_GetFileNumericCorrectionX(FileName, Order)
+{
+	var InputArrays = CGEN_LoadArrays(FileName)
+	var Corr = CGEN_NumericCorrectionX(InputArrays[0], InputArrays[1], Order)
+	
+	var Res = []
+	var CorrFileStr = ""
+	for (var j = Order; j >= 0; j--)
+	{
+		CorrFileStr += Corr[j].toExponential(6) + ";"
+		Res.push(Corr[j])
+	}
+	
+	save(cgen_correctionDir + "/" + FileName + "_corr.csv", [CorrFileStr])
+	return Res
+}
+
+// Взвешенный МНК, вес 1/эталон^2.
+function CGEN_NumericCorrectionWeightedX(arrayUnit, arrayReference, order)
+{
+	var maxAbs = 0;
+
+	for (var i = 0; i < arrayUnit.length; i++)
+		if (Math.abs(arrayUnit[i]) > maxAbs)
+			maxAbs = Math.abs(arrayUnit[i]);
+
+	if (maxAbs == 0)
+		return [];
+
+	// Нормализация значений
+	var s = 1 / maxAbs;
+	var XMatrix = [];
+	var YColumn = [];
+
+	for (var i = 0; i < arrayUnit.length; i++)
+	{
+		if (arrayReference[i] == 0)
+			continue;
+
+		var xScaled = arrayUnit[i] * s;
+		var yScaled = arrayReference[i] * s;
+		var sw = 1 / Math.abs(yScaled);
+		var TempMatrix = [];
+
+		for (var j = 0; j <= order; j++)
+			TempMatrix.push(Math.pow(xScaled, j) * sw);
+
+		XMatrix.push(TempMatrix);
+		YColumn.push(yScaled * sw);
+	}
+
+	if (XMatrix.length <= order)
+		return [];
+
+	var YMatrix = numeric.transpose([YColumn]);
+	var XMatrixT = numeric.transpose(XMatrix);
+	var Dot1 = numeric.dot(XMatrixT, XMatrix);
+	var Dot2 = numeric.dot(XMatrixT, YMatrix);
+	var DotInv = numeric.inv(Dot1);
+	var Coefficients = numeric.dot(DotInv, Dot2);
+
+	// y*s = a0 + a1*(x*s) + a2*(x*s)^2 + ...
+	// коэффициент при x^k равен a_k * s^(k-1)
+	var ResultCoefficients = [];
+	for (var k = 0; k <= order; k++)
+		ResultCoefficients.push(Coefficients[k][0] * Math.pow(s, k - 1));
+
+	return ResultCoefficients;
+}
+
+function CGEN_NumericCorrectionWeighted(arrayUnit, arrayReference)
+{
+	return CGEN_NumericCorrectionWeightedX(arrayUnit, arrayReference, 1);
+}
+
+function CGEN_NumericCorrectionWeighted2(arrayUnit, arrayReference)
+{
+	return CGEN_NumericCorrectionWeightedX(arrayUnit, arrayReference, 2);
+}
+
+function CGEN_GetFileNumericCorrectionWeightedX(FileName, Order)
+{
+	var InputArrays = CGEN_LoadArrays(FileName)
+	var Corr = CGEN_NumericCorrectionWeightedX(InputArrays[0], InputArrays[1], Order)
+	
+	var Res = []
+	for (var j = Order; j >= 0; j--)
+		Res.push(Corr[j])
+	return Res
 }
 
 function CGEN_CorrectionToFloat(InputData)
@@ -195,7 +314,7 @@ function CGEN_ComputeRawArray(y, P2, P1, P0, P2del, P1del, P0del)
 
 	for (var i = 0; i < y.length; i++)
 	{
-	if (P2 === 0)
+		if (P2 === 0)
 		{
 			// Линейный случай
 			rawArray[i] = (y[i] - c) / b;

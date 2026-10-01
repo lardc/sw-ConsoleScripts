@@ -164,23 +164,23 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 			KEI_ActivateTrigger();
 			if (CurrentRange == cigtu_Cal_Imes_50_500_mA || CurrentRange == cigtu_Cal_Imes_5_50_mA)
 			{ 
-				dev.w(151,CurrentRange);
+				dev.w(151, CurrentRange);
 				dev.wf(128, cigtu_Values[j] * 1e3);
-				dev.w(92,CAL_Ugeth_PulsePlate * 1e-3);
+				dev.w(153, CAL_Ugeth_PulsePlate * 1e-3);
 				dev.c(100);
 			}	
 			else if(CurrentRange == cigtu_Cal_Vpotmes_300_700_mV || CurrentRange == cigtu_Cal_Vpotmes_3_9_V)
 			{
-				dev.w(151,cigtu_Cal_Imes_50_500mkA);
+				dev.w(151, cigtu_Cal_Imes_50_500mkA);
 				dev.wf(136, cigtu_Values[j] * 1e3);
-				dev.w(91,CAL_Iges_PulsePlate * 1e-3);
+				dev.w(153, CAL_Iges_PulsePlate * 1e-3);
 				dev.c(102);
 			}	
 			else 
 			{
-				dev.w(151,CurrentRange);
+				dev.w(151, CurrentRange);
 				dev.wf(136, cigtu_Values[j] * 1e3);
-				dev.w(91,CAL_Iges_PulsePlate * 1e-3);
+				dev.w(153, CAL_Iges_PulsePlate * 1e-3);
 				dev.c(102);
 			}	
 			while (dev.r(192) != 3) sleep(500);
@@ -205,11 +205,11 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 			cigtu_sc.push(scdata);
 			// relative error
 			if(CalibrationType == cigtu_Cal_Vset || CalibrationType == cigtu_Cal_Iset)
-				var errdata = ((scdata - igtudata) / igtudata * 100).toFixed(4);
+				var errdata = (scdata - igtudata) / igtudata * 100;
 			else
-				var errdata = ((igtudata - scdata) / scdata * 100).toFixed(4);
+				var errdata = (igtudata - scdata) / scdata * 100;
 			
-			cigtu_err.push(errdata);
+			cigtu_err.push(errdata.toFixed(4));
 
 			// Summary error
 			if(CalibrationType == cigtu_Cal_Vmes || CalibrationType == cigtu_Cal_Vpotmes || CalibrationType == cigtu_Cal_Vset)
@@ -219,10 +219,10 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 			var err_sumdata = Math.sign_ma(errdata) * (Math.abs(errdata) + E0);
 			cigtu_err_sum.push(err_sumdata);
 				
-			print("Set: " + cigtu_Values[j]);
-			print("IGTU: " + igtudata);
-			print("DMM6500: " + scdata);
-			print("Err, %: " + errdata);
+			print("Set:     " + cigtu_Values[j]);
+			print("IGTU:    " + igtudata.toExponential(4));
+			print("DMM6500: " + scdata.toExponential(4));
+			print("Err, %:  " + errdata.toFixed(3));
 			
 			cigtu_cntDone++;
 			print("-- result " + cigtu_cntDone + " of " + cigtu_cntTotal + " --");
