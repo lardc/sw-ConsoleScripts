@@ -10,8 +10,8 @@
 	
 	Функции, принимающие на фход массивы, возвращают коэффициенты в порядке [P0, P1, P2],
 	т.е. порядок коэффициента соответсвует его индексу в массиве:
-	CGEN_GetNumericCorrection(arrayUnit, arrayReference)
-	CGEN_GetNumericCorrection2(arrayUnit, arrayReference)
+	CGEN_NumericCorrection(arrayUnit, arrayReference)
+	CGEN_NumericCorrection2(arrayUnit, arrayReference)
 	CGEN_NumericCorrectionWeighted(arrayUnit, arrayReference)
 	CGEN_NumericCorrectionWeighted2(arrayUnit, arrayReference)
 */
@@ -152,12 +152,12 @@ function CGEN_NumericCorrectionX(arrayUnit, arrayReference, order)
 	return ResultCoefficients;
 }
 
-function CGEN_GetNumericCorrection(arrayUnit, arrayReference)
+function CGEN_NumericCorrection(arrayUnit, arrayReference)
 {
 	return CGEN_NumericCorrectionX(arrayUnit, arrayReference, 1);
 }
 
-function CGEN_GetNumericCorrection2(arrayUnit, arrayReference)
+function CGEN_NumericCorrection2(arrayUnit, arrayReference)
 {
 	return CGEN_NumericCorrectionX(arrayUnit, arrayReference, 2);
 }
