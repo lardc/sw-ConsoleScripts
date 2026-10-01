@@ -99,27 +99,13 @@ function CGEN_WaitForCorrection(Message)
 // Linear correction
 function CGEN_GetCorrection(FileName)
 {
-	// reset flag
-	save(cgen_correctionDir + "/" + cgen_correctionFlag, [0])
-	
-	var Args = cgen_correctionDir + " " + FileName + " " + cgen_correctionFlag
-	exec(cgen_correctionApp, Args)
-	
-	CGEN_WaitForCorrection("Correcting " + FileName + "...")
-	return CGEN_CorrectionToFloat(load(cgen_correctionDir + "/" + FileName + "_corr.csv"))
+	return CGEN_GetFileNumericCorrectionX(FileName, 1)
 }
 
 // Quadratic correction
 function CGEN_GetCorrection2(FileName)
 {
-	// reset flag
-	save(cgen_correctionDir + "/" + cgen_correctionFlag, [0])
-	
-	var Args = cgen_correctionDir + " " + FileName + " " + cgen_correctionFlag
-	exec(cgen_correction2App, Args)
-	
-	CGEN_WaitForCorrection("Correcting " + FileName + "...")
-	return CGEN_CorrectionToFloat(load(cgen_correctionDir + "/" + FileName + "_corr.csv"))
+	return CGEN_GetFileNumericCorrectionX(FileName, 2)
 }
 
 function CGEN_NumericCorrectionX(arrayUnit, arrayReference, order)
