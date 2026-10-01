@@ -6,6 +6,30 @@ cgen_correctionApp = "correction_calc.exe"		// Linear polyfit function
 cgen_correction2App = "correction2_calc.exe"	// Quadratic polyfit function
 cgen_correctionFlag = "correction_flag.csv"
 
+function CGEN_LoadArrays(FileName)
+{
+	var UnitData = []
+	var ScopeData = []
+	
+	var Lines = loadlines(cgen_correctionDir + "/" + FileName + ".csv")
+	for (var i = 0; i < Lines.length; i++)
+	{
+		if (Lines[i])
+		{
+			var spl = Lines[i].split(';')
+			if (spl[0] && spl[1])
+			{
+				UnitData.push(parseFloat(spl[0]))
+				ScopeData.push(parseFloat(spl[1]))
+			}
+			else
+				p('Bad values detected in line: ' + i + ', values: ' + Lines[i])
+		}
+	}
+	
+	return [UnitData, ScopeData]
+}
+
 function CGEN_SaveArrays(FileName, UnitData, ScopeData, ErrorData)
 {
 	var csv_array = [];
@@ -120,6 +144,65 @@ function CGEN_GetNumericCorrection2(arrayUnit, arrayReference)
 	return CGEN_NumericCorrectionX(arrayUnit, arrayReference, 2);
 }
 
+// Взвешенный МНК, вес 1/эталон^2.
+// Коэффициенты от старшей степени к свободному члену: для order = 2 это [P2, P1, P0].
+function CGEN_NumericCorrectionXWeighted(arrayUnit, arrayReference, order)
+{
+	var maxAbs = 0;
+
+	for (var i = 0; i < arrayUnit.length; i++)
+		if (Math.abs(arrayUnit[i]) > maxAbs)
+			maxAbs = Math.abs(arrayUnit[i]);
+
+	if (maxAbs == 0)
+		return [];
+
+	// Нормализация значений
+	var s = 1 / maxAbs;
+	var XMatrix = [];
+	var YColumn = [];
+
+	for (var i = 0; i < arrayUnit.length; i++)
+	{
+		if (arrayReference[i] == 0)
+			continue;
+
+		var xScaled = arrayUnit[i] * s;
+		var yScaled = arrayReference[i] * s;
+		var sw = 1 / Math.abs(yScaled);
+		var TempMatrix = [];
+
+		for (var j = 0; j <= order; j++)
+			TempMatrix.push(Math.pow(xScaled, j) * sw);
+
+		XMatrix.push(TempMatrix);
+		YColumn.push(yScaled * sw);
+	}
+
+	if (XMatrix.length <= order)
+		return [];
+
+	var YMatrix = numeric.transpose([YColumn]);
+	var XMatrixT = numeric.transpose(XMatrix);
+	var Dot1 = numeric.dot(XMatrixT, XMatrix);
+	var Dot2 = numeric.dot(XMatrixT, YMatrix);
+	var DotInv = numeric.inv(Dot1);
+	var Coefficients = numeric.dot(DotInv, Dot2);
+
+	// y*s = a0 + a1*(x*s) + a2*(x*s)^2 + ...
+	// коэффициент при x^k равен a_k * s^(k-1)
+	var ResultCoefficients = [];
+	for (var k = order; k >= 0; k--)
+		ResultCoefficients.push(Coefficients[k][0] * Math.pow(s, k - 1));
+
+	return ResultCoefficients;
+}
+
+function CGEN_GetNumericCorrection2Weighted(arrayUnit, arrayReference)
+{
+	return CGEN_NumericCorrectionXWeighted(arrayUnit, arrayReference, 2);
+}
+
 function CGEN_CorrectionToFloat(InputData)
 {
 	for(var i = 0; i < InputData.length; i++)
@@ -195,7 +278,7 @@ function CGEN_ComputeRawArray(y, P2, P1, P0, P2del, P1del, P0del)
 
 	for (var i = 0; i < y.length; i++)
 	{
-	if (P2 === 0)
+		if (P2 === 0)
 		{
 			// Линейный случай
 			rawArray[i] = (y[i] - c) / b;
