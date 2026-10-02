@@ -1,7 +1,7 @@
 include("PrintStatus.js")
 
-PrintData = 1;
-CurrentCutOff = 20 // in mA
+PrintData = 0;
+CurrentCutOff = 300 // in mA
 
 function LCTU_Start(Voltage, PulseWidth)
 {

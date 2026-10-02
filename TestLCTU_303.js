@@ -1,7 +1,7 @@
 include("PrintStatus.js")
 
 PrintData = 1;
-CurrentCutOff = 20 // in mA
+CurrentCutOff = 300 // in mA
 
 function LCTU_Power()
 {
@@ -104,4 +104,18 @@ function LCTU_Plot()
 	plotn(a,1,"steps","Voltage", "Regulator Error");
 	a=dev.raff(7);
 	plotn(a,1,"steps","Voltage", "DacRaw");
+}
+
+function LCTU_PulseMes(V,R,Ran)
+{
+	KEI_ClearBuffer();
+	KEI_SetCurrentDCRange(V / R);
+	KEI_OPC();
+	KEI_ActivateTrigger();
+	dev.w(151, Ran);
+	LCTU_Start(V, 100);
+	sleep(2000);
+	var data = KEI_ReadAverage();
+	p(data);
+	dev.w(151,0);
 }

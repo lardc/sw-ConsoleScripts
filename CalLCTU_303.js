@@ -242,7 +242,7 @@ function CLCTU_Collect(IterationsCount, CalibrationType, Range)
 			clctu_err_sum.push(err_sumdata);
 				
 			print("Set:     " + (clctu_Values[j] / clctu_Res).toExponential(4));	
-			print("LCTU: " + lctudata.toExponential(4));
+			print("LCTU:    " + lctudata.toExponential(4));
 			print("DMM6500: " + scdata);
 			print("Err, %:  " + errdata.toFixed(3));
 			
@@ -251,6 +251,7 @@ function CLCTU_Collect(IterationsCount, CalibrationType, Range)
 			
 			sleep(1000);
 			dev.w(151,0);	// reset range
+			if (anykey()) return 0;
 		}
 			
 		if (anykey()) return 0;
@@ -303,7 +304,7 @@ function CLCTU_GetRange(CalibrationType, Range)
 			switch(Range)
 			{
 				case clctu_Cal_Imes_100_300_mA:
-					return [540, 1640, 500];			// [min, max, step] in V xx Om
+					return [540, 1500, 200];			// [min, max, step] in V xx Om
 				case clctu_Cal_Imes_10_100_mA:
 					return [540, 5200, 500];			// [min, max, step] in V xx Om
 				case clctu_Cal_Imes_1_10mA:
