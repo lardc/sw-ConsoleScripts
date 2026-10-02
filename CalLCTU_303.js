@@ -231,7 +231,7 @@ function CLCTU_Collect(IterationsCount, CalibrationType, Range)
 			// DMM6500 data
 			clctu_sc.push(scdata);
 			// relative error
-			var errdata = ((lctudata - scdata) / scdata * 100).toFixed(4);
+			var errdata = (lctudata - scdata) / scdata * 100;
 			clctu_err.push(errdata);
 			// Summary error
 			if(CalibrationType == clctu_Cal_Vmes || CalibrationType == clctu_Cal_Vset)
@@ -241,9 +241,10 @@ function CLCTU_Collect(IterationsCount, CalibrationType, Range)
 			var err_sumdata = Math.sign_ma(errdata) * (Math.abs(errdata) + E0);
 			clctu_err_sum.push(err_sumdata);
 				
-				
-			print("LCTU: " + lctudata);
+			print("Set:     " + (clctu_Values[j] / clctu_Res).toExponential(4));	
+			print("LCTU: " + lctudata.toExponential(4));
 			print("DMM6500: " + scdata);
+			print("Err, %:  " + errdata.toFixed(3));
 			
 			clctu_cntDone++;
 			print("-- result " + clctu_cntDone + " of " + clctu_cntTotal + " --");
@@ -404,11 +405,11 @@ function CLCTU_Save(Name)
 	switch(CalibrationType)
 	{
 		case clctu_Cal_Vmes:
+		case clctu_Cal_Imes:
 			CGEN_SaveArrays(Name, clctu, clctu_sc, clctu_err);
 			CGEN_SaveArrays2(Name + "_err_sum", clctu, clctu_sc, clctu_err, clctu_err_sum);
 			break;
 		case clctu_Cal_Vset:	
-		case clctu_Cal_Imes:
 			CGEN_SaveArrays(Name, clctu_sc, clctu, clctu_err);
 			CGEN_SaveArrays2(Name + "_err_sum", clctu, clctu_sc, clctu_err, clctu_err_sum);
 			break;
