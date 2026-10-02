@@ -184,9 +184,15 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 				dev.c(102);
 			}	
 			while (dev.r(192) != 3) sleep(500);
-	
+			
+			if(dev.r(197) != 1)
+			{
+				PrintStatus()
+				throw new Error('Finished with problem');
+			}
+			
 			// Получаем значения
-			sleep(2000);
+			sleep(100);
 			var scdata = CIGTU_KEI_Average();
 			
 			if(CalibrationType == cigtu_Cal_Vset || CalibrationType == cigtu_Cal_Iset) 
@@ -227,8 +233,8 @@ function CIGTU_Collect(IterationsCount, CalibrationType, CurrentRange)
 			cigtu_cntDone++;
 			print("-- result " + cigtu_cntDone + " of " + cigtu_cntTotal + " --");
 			
-			sleep(1000);
-			dev.w(151,0);
+			sleep(100);
+			dev.w(151, 0);
 			if (anykey()) return 0;
 		}
 			
@@ -449,7 +455,7 @@ function CIGTU_KEI_Init(CalibrationType)
 //
 function CIGTU_NameSwitch(CalibrationType, CurrentRange) 
 {
- switch(CalibrationType)
+	switch(CalibrationType)
 	{
 		case cigtu_Cal_Vmes:
 			return "cigtu_Cal_Vmes";
