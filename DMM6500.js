@@ -249,6 +249,12 @@ function KEI_MakeTestBufferVoltageDC(NPLC, Pulse_uS)
 	KEI_MakeTestBuffer(SampleRate, Pulse_uS);
 }
 
+function KEI_MakeTestBufferCurrentDC(NPLC, Pulse_uS) 
+{
+	var SampleRate = (1 / (20660 * NPLC * 2 + 29)) * 1e6;
+	KEI_MakeTestBuffer(SampleRate, Pulse_uS);
+}
+
 function KEI_OPC()
 {
 	while(tmc.q('*OPC?') == 0)

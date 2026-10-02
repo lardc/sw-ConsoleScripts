@@ -222,7 +222,7 @@ function CLCTU_Collect(IterationsCount, CalibrationType, Range)
 					break;
 				case clctu_Cal_Imes:
 					var scdata = KEI_ReadAverage();
-					var lctudata = dev.rf(201) * 1e3
+					var lctudata = dev.rf(201);
 					break;
 			}
 
@@ -302,17 +302,17 @@ function CLCTU_GetRange(CalibrationType, Range)
 			switch(Range)
 			{
 				case clctu_Cal_Imes_100_300_mA:
-					return [500, 7000, 500];			// [min, max, step] in V xx Om
+					return [540, 1640, 500];			// [min, max, step] in V xx Om
 				case clctu_Cal_Imes_10_100_mA:
-					return [500, 7000, 500];			// [min, max, step] in V xx Om
+					return [540, 5200, 500];			// [min, max, step] in V xx Om
 				case clctu_Cal_Imes_1_10mA:
-					return [500, 7000, 500];			// [min, max, step] in V xx kOm
+					return [540, 5200, 500];			// [min, max, step] in V xx kOm
 				case clctu_Cal_Imes_100_1000mkA:
-					return [500, 7000, 500];			// [min, max, step] in V xx kOm
+					return [540, 5200, 500];			// [min, max, step] in V xx kOm
 				case clctu_Cal_Imes_10_100mkA:
-					return [500, 7000, 500];			// [min, max, step] in V xx kOm
+					return [540, 5200, 500];			// [min, max, step] in V xx kOm
 				case clctu_Cal_Imes_2_30mA:
-					return [500, 7000, 500];			// [min, max, step] in V xx kOm
+					return [200, 3300, 500];			// [min, max, step] in V xx kOm
 				default:
 					return [];
 			}
@@ -452,15 +452,16 @@ function CLCTU_KEI_Init(CalibrationType)
 	{
 		KEI_ConfigVoltageDC(CAL_NPLC, 'OFF');
 		KEI_FilterConfig('VOLT' , 1, 'MOV', 10);
+		KEI_MakeTestBufferVoltageDC(CAL_NPLC, (cal_Ice_PulsePlate - cal_Ice_TriggerDelay));
 	}
 	else
 	{
 		KEI_ConfigCurrentDC(CAL_NPLC, "ON");
-		KEI_FilterConfig('CURR' , 1, 'MOV', 100);	
+		KEI_FilterConfig('CURR' , 1, 'MOV', 100);
+		KEI_MakeTestBufferCurrentDC(CAL_NPLC, (cal_Ice_PulsePlate - cal_Ice_TriggerDelay));	
 	}
 
-	KEI_MakeTestBufferVoltageDC(CAL_NPLC, (cal_Ice_PulsePlate - cal_Ice_TriggerDelay));
-	KEI_ConfigExtTrigger(0 * 1e-6);
+	KEI_ConfigExtTrigger(0);
 }
 //--------------------
 //
