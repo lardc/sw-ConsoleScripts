@@ -3,9 +3,9 @@ include("DMM6500.js")
 include("CalGeneral.js")
 
 // Setup parameters for "DMM6000"
-cal_Ice_PulsePlate 		= 10000 		// in us
-cal_Ice_TriggerDelay	= 50000 		// in us
-cal_VmsrProbe 			= 500 			// in Vout/Vin
+cal_Ice_PulsePlate 		= 100000 		// in us
+cal_Ice_TriggerDelay	= 5000 			// in us
+cal_VmsrProbe 			= 0.0009939 	// in K Vout/Vin
 CAL_NPLC = 0.02;
 
 // Counters
@@ -158,7 +158,7 @@ function CLCTU_Collect(IterationsCount, CalibrationType, Range)
 			{
 				case clctu_Cal_Vmes:
 				case clctu_Cal_Vset:
-					KEI_SetVoltageDCRange(clctu_Values[j] / cal_VmsrProbe);
+					KEI_SetVoltageDCRange(clctu_Values[j] * cal_VmsrProbe);
 					break;
 				case clctu_Cal_Imes:
 					KEI_SetCurrentDCRange(clctu_Values[j] / clctu_Res);
@@ -210,15 +210,21 @@ function CLCTU_Collect(IterationsCount, CalibrationType, Range)
 			
 			// Получаем значения
 			sleep(2000);
-			var scdata = KEI_ReadAverage();
-			
-			if(CalibrationType == clctu_Cal_Vset) 
-				var lctudata = clctu_Values[j];
-			else if(CalibrationType == clctu_Cal_Vmes) 	
-				var lctudata = dev.rf(200);	
-			else
-				var lctudata = dev.rf(201) * 1e3;
-
+			switch(CalibrationType)
+			{
+				case clctu_Cal_Vmes:
+					var scdata = KEI_ReadAverage() / cal_VmsrProbe;	
+					var lctudata = dev.rf(200);
+					break;
+				case clctu_Cal_Vset:
+					var scdata = KEI_ReadAverage() / cal_VmsrProbe;
+					var lctudata = clctu_Values[j];
+					break;
+				case clctu_Cal_Imes:
+					var scdata = KEI_ReadAverage();
+					var lctudata = dev.rf(201) * 1e3
+					break;
+			}
 
 			// gtu data
 			clctu.push(lctudata);
@@ -394,8 +400,19 @@ function CLCTU_PrintCoef(CalibrationType, Range)
 //
 function CLCTU_Save(Name)
 {
-	CGEN_SaveArrays(Name, clctu, clctu_sc, clctu_err);
-	CGEN_SaveArrays2(Name + "_err_sum", clctu, clctu_sc, clctu_err, clctu_err_sum);
+
+	switch(CalibrationType)
+	{
+		case clctu_Cal_Vmes:
+			CGEN_SaveArrays(Name, clctu, clctu_sc, clctu_err);
+			CGEN_SaveArrays2(Name + "_err_sum", clctu, clctu_sc, clctu_err, clctu_err_sum);
+			break;
+		case clctu_Cal_Vset:	
+		case clctu_Cal_Imes:
+			CGEN_SaveArrays(Name, clctu_sc, clctu, clctu_err);
+			CGEN_SaveArrays2(Name + "_err_sum", clctu, clctu_sc, clctu_err, clctu_err_sum);
+			break;
+	}		
 }
 //--------------------
 //
@@ -442,8 +459,8 @@ function CLCTU_KEI_Init(CalibrationType)
 		KEI_FilterConfig('CURR' , 1, 'MOV', 100);	
 	}
 
-	KEI_MakeTestBufferVoltageDC(CAL_NPLC, (cal_Ice_PulsePlate * 0.6 - cal_Ice_TriggerDelay));
-	KEI_ConfigExtTrigger(cal_Ice_TriggerDelay * 1e-6);
+	KEI_MakeTestBufferVoltageDC(CAL_NPLC, (cal_Ice_PulsePlate - cal_Ice_TriggerDelay));
+	KEI_ConfigExtTrigger(0 * 1e-6);
 }
 //--------------------
 //
