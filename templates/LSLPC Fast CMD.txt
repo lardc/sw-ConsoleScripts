@@ -53,7 +53,7 @@ LSLPC_ResourceTest(6500, 8)
 // Грубая калибровка АЦП, 0 диапазон, проход 150 - 999 А
 / [N: 34] [D: 35] [B: 36] [Kamp: 28]
 include("CalLSLPC.js")
-clslpc_IdMin = [150, 1001]
+clslpc_IdMin = [160, 1001]
 clslpc_IdMax = [1000, 6500]
 clslpc_CurrentRange = 0
 clslpc_Points = 10
@@ -70,7 +70,7 @@ CLSLPC_VerifyId()
 // Грубая калибровка АЦП, 1 диапазон, проход 1000 - 6500 А
 / [N: 40] [D: 41] [B: 42] [Kamp: 29]
 include("CalLSLPC.js")
-clslpc_IdMin = [150, 1001]
+clslpc_IdMin = [160, 1001]
 clslpc_IdMax = [1000, 6500]
 clslpc_CurrentRange = 1
 clslpc_Points = 10
@@ -91,7 +91,7 @@ CLSLPC_VerifyId()
 // Тонкая калибровка, 0 диапазон, проход 150 - 999 А
 / [P0: 33] [P1: 32] [P2: 31]
 include("CalLSLPC.js")
-clslpc_IdMin = [150, 1000]
+clslpc_IdMin = [160, 1000]
 clslpc_IdMax = [999, 6500]
 clslpc_CurrentRange = 0
 clslpc_Points = 10
@@ -108,7 +108,7 @@ CLSLPC_CalibrateId()
 // Тонкая калибровка, 1 диапазон, проход 1000 - 6500 А
 / [P0: 39] [P1: 38] [P2: 37]
 include("CalLSLPC.js")
-clslpc_IdMin = [150, 1000]
+clslpc_IdMin = [160, 1000]
 clslpc_IdMax = [999, 6500]
 clslpc_CurrentRange = 1
 clslpc_Points = 10
@@ -127,7 +127,7 @@ CLSLPC_CalibrateId()
 / [N: 34] [D: 35] [B: 36]
 / [P0: 33] [P1: 32] [P2: 31]
 include("CalLSLPC.js")
-clslpc_IdMin = [150, 1000]
+clslpc_IdMin = [160, 1000]
 clslpc_IdMax = [999, 6500]
 clslpc_CurrentRange = 0
 clslpc_Points = 7
@@ -146,7 +146,7 @@ CLSLPC_VerifyId()
 // 0 диапазон, проход 150 - 349 А
 / [K: 20] [B: 21]
 include("CalLSLPC.js")
-clslpc_IdMin = [150, 350, 1100]
+clslpc_IdMin = [160, 350, 1100]
 clslpc_IdMax = [349, 1099, 6500]
 clslpc_CurrentRange = 0
 clslpc_Points = 10
@@ -161,7 +161,7 @@ CLSLPC_CalibrateDAC()
 // 1 диапазон, проход 350 - 1099 А
 / [K: 22] [B: 23]
 include("CalLSLPC.js")
-clslpc_IdMin = [150, 350, 1100]
+clslpc_IdMin = [160, 350, 1100]
 clslpc_IdMax = [349, 1099, 6500]
 clslpc_CurrentRange = 1
 clslpc_Points = 10
@@ -176,7 +176,7 @@ CLSLPC_CalibrateDAC()
 // 2 диапазон, проход 1100 - 6500 А
 / [K: 24] [B: 25]
 include("CalLSLPC.js")
-clslpc_IdMin = [150, 350, 1100]
+clslpc_IdMin = [160, 350, 1100]
 clslpc_IdMax = [349, 1099, 6500]
 clslpc_CurrentRange = 2
 clslpc_Points = 10
