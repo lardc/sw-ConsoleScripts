@@ -23,6 +23,7 @@ clslpc_SaveImage = 0;
 // Counters
 clslpc_CntTotal = 0;
 clslpc_CntDone = 0;
+clslpc_AcquireMode = "";
 
 // Channels
 clslpc_chMeasureId = 1;
@@ -78,7 +79,6 @@ function CLSLPC_TekInit()
 
 	TEK_ChannelInit(clslpc_chMeasureId, "1", "0.01");
 	TEK_TriggerPulseInit(clslpc_chMeasureId, "0.04");
-	TEK_Horizontal("1e-3", "-1e-3");
 	TEK_MeasMaxInit(clslpc_chMeasureId, clslpc_chMeasureId);
 
 	if (clslpc_UseLinearSlope)
@@ -174,7 +174,7 @@ function CLSLPC_CalibrateDAC()
 			CLSLPC_RefreshDACSettings();
 			CLSLPC_SaveRawId("LSLPC_IdRaw");
 
-			scattern(clslpc_IdSc, clslpc_IdErr, "Current (in A)", "Error (in %)", "Calibrate current setpoint relative error "
+			scattern(clslpc_IdSc, clslpc_IdErr, "Current (in A)", "Error (in %)", "Calibrate DAC, current setpoint relative error "
 					+ clslpc_IdMin[clslpc_CurrentRange] + " A ... " + clslpc_IdMax[clslpc_CurrentRange] + " A");
 
 			print("Before");
@@ -280,7 +280,7 @@ function CLSLPC_CalibrateADC()
 			print("Unit current was not collected. ADC calibration unavailable");
 		else
 		{
-			scattern(clslpc_IdSc, clslpc_IdUnitErr, "Current (in A)", "Error (in %)", "Calibrate ADC relative error "
+			scattern(clslpc_IdSc, clslpc_IdUnitErr, "Current (in A)", "Error (in %)", "Calibrate ADC, unit relative error "
 					+ clslpc_IdMin[clslpc_CurrentRange] + " A ... " + clslpc_IdMax[clslpc_CurrentRange] + " A");
 
 			// Uadc = K * ADC + B; функция возвращает [B, K]
@@ -365,7 +365,7 @@ function CLSLPC_CalibrateId()
 		CLSLPC_SaveId("LSLPC_Id");
 
 		// Plot relative error distribution
-		scattern(clslpc_IdSc, clslpc_IdErr, "Current (in A)", "Error (in %)", "Current setpoint relative error "
+		scattern(clslpc_IdSc, clslpc_IdErr, "Current (in A)", "Error (in %)", "Calibrate Id, current setpoint relative error "
 				+ clslpc_IdMin[clslpc_CurrentRange] + " A ... " + clslpc_IdMax[clslpc_CurrentRange] + " A");
 
 		// IdSc = P0 + P1 * IdSet + P2 * IdSet^2; функция возвращает [P0, P1, P2]
@@ -397,9 +397,9 @@ function CLSLPC_VerifyId()
 		CLSLPC_SaveId("LSLPC_Id_fixed");
 
 		// Plot relative error distribution
-		scattern(clslpc_IdSc, clslpc_IdErr, "Current (in A)", "Error (in %)", "Current setpoint relative error "
+		scattern(clslpc_IdSc, clslpc_IdErr, "Current (in A)", "Error (in %)", "Verify, current setpoint relative error "
 				+ clslpc_IdMin[clslpc_CurrentRange] + " A ... " + clslpc_IdMax[clslpc_CurrentRange] + " A");
-		scattern(clslpc_IdSc, clslpc_IdUnitErr, "Current (in A)", "Error (in %)", "Current unit relative error "
+		scattern(clslpc_IdSc, clslpc_IdUnitErr, "Current (in A)", "Error (in %)", "Verify, current unit relative error "
 				+ clslpc_IdMin[clslpc_CurrentRange] + " A ... " + clslpc_IdMax[clslpc_CurrentRange] + " A");
 	}
 }
@@ -409,6 +409,7 @@ function CLSLPC_CollectId(CurrentValues, IterationsCount)
 {
 	clslpc_CntTotal = IterationsCount * CurrentValues.length;
 	clslpc_CntDone = 1;
+	clslpc_AcquireMode = "";
 	
 	for (var i = 0; i < IterationsCount; i++)
 	{
@@ -419,19 +420,34 @@ function CLSLPC_CollectId(CurrentValues, IterationsCount)
 			if (CurrentValues[j] * clslpc_Rshunt / 1e6 < 0.1)
 			{
 				AvgNum = 4;
-				TEK_AcquireAvg(AvgNum);
+				if (clslpc_AcquireMode != "average")
+				{
+					TEK_AcquireAvg(AvgNum);
+					clslpc_AcquireMode = "average";
+				}
 			}
 			else
 			{
 				AvgNum = 1;
-				TEK_AcquireSample();
+				if (clslpc_AcquireMode != "sample")
+				{
+					TEK_AcquireSample();
+					clslpc_AcquireMode = "sample";
+				}
 			}
 			print("-- result " + clslpc_CntDone++ + " of " + clslpc_CntTotal + " --");
 			
 			TEK_ScaleVertical(clslpc_chMeasureId, CurrentValues[j] * clslpc_Rshunt / 1e6,
 				clslpc_UseLinearSlope ? 77.5 : 90);
-			TEK_TriggerPulseInit(clslpc_chMeasureId, CurrentValues[j] * clslpc_Rshunt / 1e6 / 4);
-			sleep(1000)
+			// Тип, связь, ширина и источник уже заданы в CLSLPC_TekInit. На точке меняется уровень.
+			TEK_Send("trigger:main:level " + (CurrentValues[j] * clslpc_Rshunt / 1e6 / 4));
+
+			TEK_ArmSequence();
+			if (!TEK_WaitTriggerReady())
+			{
+				TEK_StopAcquire();
+				return 0;
+			}
 			
 			var lslpc_print_copy = lslpc_print;
 			lslpc_print = 0;
@@ -446,8 +462,15 @@ function CLSLPC_CollectId(CurrentValues, IterationsCount)
 			}
 			lslpc_print = lslpc_print_copy;
 			if (!pulseOk)
+			{
+				TEK_StopAcquire();
 				return false;
-			sleep(500)
+			}
+			if (!TEK_WaitAcquire())
+			{
+				TEK_StopAcquire();
+				return 0;
+			}
 			
 			if (clslpc_Compatibility)
 			{
@@ -462,8 +485,15 @@ function CLSLPC_CollectId(CurrentValues, IterationsCount)
 			clslpc_Id.push(IdSet);
 			print("Idset,     A: " + IdSet);
 			
-			// Scope data
-			var IdSc = (TEK_Measure(clslpc_chMeasureId) / clslpc_Rshunt * 1e6).toFixed(2);
+			// Scope data, слот MEAS
+			var vSc = TEK_Measure(clslpc_chMeasureId);
+			if (isNaN(vSc) || vSc >= 9.9e36)
+			{
+				print("Idtek: измерение не готово");
+				return 0;
+			}
+
+			var IdSc = (vSc / clslpc_Rshunt * 1e6).toFixed(2);
 			clslpc_IdSc.push(IdSc);
 			print("Idtek,     A: " + IdSc);
 
