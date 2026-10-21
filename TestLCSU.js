@@ -20,6 +20,22 @@ clcsu_RegulatorProp2 = 0;
 clcsu_RegulatorIntegral2 = 0;
 
 lcsu_print = 1;
+lcsu_pulsePending = 0;
+
+function LCSU_WaitReady()
+{
+	while (dev.r(192) != LCSU_DS_Ready)
+	{
+		if (dev.r(192) == LCSU_DS_Fault)
+		{
+			PrintStatus();
+			return 0;
+		}
+		sleep(50);
+	}
+
+	return 1;
+}
 
 function LCSU_Start(Type, Current, Pulse_ms)
 {
@@ -46,6 +62,13 @@ function LCSU_Start(Type, Current, Pulse_ms)
 		}
 		p("Напряжение на ячейках = " + dev.r(201) + " В");
 	}
+	else if (lcsu_pulsePending && dev.r(192) != LCSU_DS_Ready)
+	{
+		if (!LCSU_WaitReady())
+			return false;
+	}
+
+	lcsu_pulsePending = 0;
 
 	dev.wf(128, Current);
 	dev.w(129, Pulse_ms);
@@ -63,25 +86,21 @@ function LCSU_Start(Type, Current, Pulse_ms)
 	}
 	
 	dev.c(101);
-	
-	sleep(20);
-	
 
-	while(dev.r(192) != LCSU_DS_Ready)
+	sleep(20);
+
+	if (dev.r(192) == LCSU_DS_Fault)
 	{
-		sleep(50);
-		
-		if(dev.r(192) == LCSU_DS_Fault)
-		{
-			PrintStatus();
-			return false;
-		}
+		PrintStatus();
+		return false;
 	}
+
+	lcsu_pulsePending = (dev.r(192) != LCSU_DS_Ready) ? 1 : 0;
 
 	if(lcsu_print)
 	{
 		print("IdMeas, A: " + dev.rf(200));
-		print("DAC " + Math.max.apply(null, dev.raff(6)))
+		print("DAC " + dev.rf(202))
 	}
 
 	if (dev.rf(196) == 1)
@@ -106,6 +125,7 @@ function LCSU_Start_KEI(Type, Current, Pulse_ms)
 
 	sleep(500);
 	LCSU_Start(Type, Current, Pulse_ms)
+	sleep(Pulse_ms + 50);
 
 	if(Type == 0 || Type == 1)
 		IdSc = (KEI_ReadArrayMaximum() / LCSU_Rshunt).toFixed(2);
