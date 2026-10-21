@@ -1,0 +1,42 @@
+// Пояснения
+// Цепь: LCSU — ECH381V/EC381V — EK500BD — шунт 250 мкОм.
+// TPS2024: один канал — ток по шунту, два других — падение на каждой нагрузке.
+// Импульс трапеции: LCSU_Start(). Контактора и аппаратной синхронизации нет.
+//
+// Loads_Init(portLCSU, portTek, channelCurrent, channelECH, channelEK)
+// Loads_Pulse(Current, Pulse_ms)                 // 0 — серия прошла; ток в А, полка в мс
+// Loads_ResourceTest(Current, Pulse_ms, Counter) // 0 — вышло ResourceTestHours
+//
+// Амплитуда — среднее по полке, слоты meas1 (ток), meas2 (ECH), meas3 (EK)
+// Loads_Rshunt = 0.00025            // Ом
+// Loads_Pulse: масштаб каналов напряжения из Loads_Rexpect_ECH и Loads_Rexpect_EK.
+// Loads_ResourceTest: перед периодом Loads_AutoscaleSteps импульсов подбирают масштаб.
+// Первый ток — задание / число шагов, но не ниже Loads_AutoscaleMinCurrent, далее рост до задания.
+// Старт оценки — Loads_Rstart = 0.01 Ом. Loads_Autoscale = 0 оставляет ручные Loads_Rexpect.
+// Если сопротивление выше Loads_Rstart или падение ушло за верх экрана, расчёт останавливается.
+// Loads_MeanMargin = 0.1            // доля полки, отступаемая с каждого края
+// Loads_LCSU_Nid = 0                // для CAN, например, 110
+// Loads_Probe = "1"                // канал тока
+// Loads_ProbeVoltage = "10"        // делитель каналов напряжения
+// PulsesInASeries, SeriesPauseSeconds, DelayBetweenSeriesSeconds, ResourceTestHours
+// Результат: data/Loads_ECH_EK.csv
+// R нагрузки = U нагрузки / I шунта, R цепи = сумма двух
+
+// Один импульс трапеции: 100 А, полка 1 мс. Амплитуда — среднее по полке
+include("TestConnector.js");
+Loads_Pulse(100, 1);
+
+// Серия импульсов
+include("TestConnector.js");
+PulsesInASeries = 5;
+SeriesPauseSeconds = 2;
+Loads_Pulse(100, 1);
+
+// Ресурсный тест. Счётчик в csv начинается с 1, длительность — ResourceTestHours
+include("TestConnector.js");
+PulsesInASeries = 1;
+SeriesPauseSeconds = 0;
+DelayBetweenSeriesSeconds = 3;
+ResourceTestHours = 8;
+Loads_Init(5, 7, 2, 1, 3);
+Loads_ResourceTest(1142, 1, 1);
