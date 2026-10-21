@@ -3,6 +3,164 @@ include("Tektronix.js")
 include("CalGeneral.js")
 include("TEK_GetData.js")
 
+// Переопределения Tektronix.js для TPS2024 на этом стенде (библиотека в git без них).
+
+function TEK_PortInit(PortNumber, BaudeRate)
+{
+	if (typeof devTek !== "undefined")
+		devTek.Disconnect();
+	else
+		devTek = cfg.CreateDevice();
+
+	if (typeof BaudeRate === "undefined")
+		BaudeRate = 19200;
+
+	devTek.Connect(PortNumber, BaudeRate);
+}
+
+function TEK_CommandPause(Request)
+{
+	var cmd = (Request + "").toLowerCase();
+
+	if (cmd.indexOf("sel:") == 0)
+		return 900;
+	if (cmd.indexOf("trigger:main:type") == 0)
+		return 700;
+	if (cmd.indexOf("horizontal:scale") == 0)
+		return 650;
+	if (cmd.indexOf("acquire:mode") == 0)
+		return 550;
+	if (cmd.indexOf("trigger:main:mode") == 0 || cmd.indexOf("trigger:main:pulse:source") == 0
+			|| cmd.indexOf("trigger:main:edge:source") == 0)
+		return 500;
+	if (cmd.indexOf("acquire:stopafter") == 0 || cmd.indexOf(":probe") >= 0)
+		return 500;
+	if (cmd.indexOf("acquire:state") == 0 || cmd.indexOf(":position") >= 0)
+		return 450;
+	if (cmd.indexOf(":scale") >= 0 || cmd.indexOf("acquire:numavg") == 0)
+		return 400;
+	if (cmd.indexOf("measurement:") == 0 || cmd.indexOf("trigger force") == 0
+			|| cmd.indexOf("trigger:main:level") == 0
+			|| cmd.indexOf("trigger:main:edge:") == 0
+			|| cmd.indexOf("trigger:main:pulse:width:") == 0
+			|| cmd.indexOf(":bandwidth") >= 0 || cmd.indexOf(":coupling") >= 0
+			|| cmd.indexOf(":invert") >= 0)
+		return 300;
+
+	return 400;
+}
+
+function TEK_Send(Request)
+{
+	devTek.ss(Request);
+	sleep(TEK_CommandPause(Request));
+}
+
+function TEK_Exec(Request)
+{
+	try
+	{
+		var r = devTek.sswr(Request);
+		if (!r)
+			return "";
+		return r.join("").replace(/(\n)/, "");
+	}
+	catch (e)
+	{
+		return "";
+	}
+}
+
+function TEK_ReplyToken(Reply)
+{
+	var text = (Reply + "").replace(/[\r\n]/g, " ").replace(/^\s+|\s+$/g, "");
+	var parts = text.split(/[\s:]+/);
+	if (!parts.length)
+		return "";
+	return parts[parts.length - 1];
+}
+
+function TEK_ArmSequence()
+{
+	TEK_Send("acquire:stopafter sequence");
+	TEK_Send("acquire:state run");
+}
+
+function TEK_StopAcquire()
+{
+	TEK_Send("acquire:state stop");
+}
+
+function TEK_WaitTriggerReady(Attempts, PauseMs)
+{
+	if (typeof Attempts === "undefined")
+		Attempts = 100;
+	if (typeof PauseMs === "undefined")
+		PauseMs = 50;
+
+	var reply = "";
+	var state = "";
+	var prev = "";
+	for (var n = 0; n < Attempts; n++)
+	{
+		reply = TEK_Exec("trigger:state?");
+		if (reply == "")
+			return 0;
+		state = TEK_ReplyToken(reply).toUpperCase();
+		if (state != prev)
+		{
+			if (typeof tek_wait_log === "undefined" || tek_wait_log)
+				print("TEK trigger: " + reply);
+			prev = state;
+		}
+		if (state.indexOf("REA") == 0)
+			return 1;
+		if (anykey())
+		{
+			print("TEK trigger wait aborted, last: " + reply);
+			return 0;
+		}
+		sleep(PauseMs);
+	}
+	print("TEK trigger timeout, last: " + reply);
+	return 0;
+}
+
+function TEK_WaitAcquire(Attempts, PauseMs)
+{
+	if (typeof Attempts === "undefined")
+		Attempts = 100;
+	if (typeof PauseMs === "undefined")
+		PauseMs = 50;
+
+	var reply = "";
+	var state = "";
+	var prev = "";
+	for (var n = 0; n < Attempts; n++)
+	{
+		reply = TEK_Exec("acquire:state?");
+		if (reply == "")
+			return 0;
+		state = TEK_ReplyToken(reply);
+		if (state != prev)
+		{
+			if (typeof tek_wait_log === "undefined" || tek_wait_log)
+				print("TEK acquire: " + reply);
+			prev = state;
+		}
+		if (state == "0")
+			return 1;
+		if (anykey())
+		{
+			print("TEK acquire wait aborted, last: " + reply);
+			return 0;
+		}
+		sleep(PauseMs);
+	}
+	print("TEK acquire timeout, last: " + reply);
+	return 0;
+}
+
 // clslpc_Compatibility задаётся в TestLSLPC.js: 0 — IAR, 1 — Atolic
 clslpc_UseLinearSlope = 0;	// спад тока идёт по линейному закону
 
