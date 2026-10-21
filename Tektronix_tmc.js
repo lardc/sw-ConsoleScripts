@@ -154,41 +154,75 @@ function TEK_tmc_ChannelOff(ChannelID)
 		tmc.w("sel:ch" + ChannelID + " off");
 }
 
-function TEK_tmc_PlotChannel(Channel)
+// tmc.q заменяет конец строки пробелом, поэтому у ответа висит хвостовой пробел.
+function TEK_tmc_ReplyNumber(Reply)
 {
-	tmc.w("data:encdg rpb");
-	tmc.w("data:width 2");
-	tmc.w("data:start 1");
-	tmc.w("data:stop 2000");
-
-	plot(TEK_tmc_GetChannelData(Channel), 1,1);
+	var text = (Reply + "").replace(/^\s+|\s+$/g, "");
+	var parts = text.split(" ");
+	return parseFloat(parts[parts.length - 1]);
 }
 
-function TEK_tmc_GetChannelData(Channel) 
+// tmc.q читает не больше 1024 символов. Кусок ASCII-кривой должен уложиться в этот предел.
+TEK_tmc_CurveChunk = 100;
+
+// Шаг и ноль оси времени последней считанной кривой, секунды.
+// Время точки i: TEK_tmc_LastXZero + i * TEK_tmc_LastXIncr
+TEK_tmc_LastXIncr = 0;
+TEK_tmc_LastXZero = 0;
+
+function TEK_tmc_PlotChannel(Channel)
 {
-	// read basic data
-	var p_scale = tmc.q("ch" + Channel + ":scale?");
-	var p_position = tmc.q("ch" + Channel + ":position?");
+	plot(TEK_tmc_GetChannelData(Channel), 1, 1);
+}
 
-	// init data read
-	tmc.w("data:source ch" + Channel);
-
-	// read curve
-	data_input = tmc.q("curve?");
-	print("Channel " + Channel + " loaded");
-
-	// validate data
-	if ((data_input[0] != ":") || (data_input[1] != "C") || (data_input[2] != "U") ||
-		(data_input[3] != "R") || (data_input[4] != "V") || (data_input[5] != "E"))
+// Оцифровка выбранного канала в вольтах.
+// TBS1052C: CURVE? в ASCII, перевод по WFMOUTPRE (уже с учётом пробника).
+// wave = TEK_tmc_GetChannelData(1);
+function TEK_tmc_GetChannelData(Channel)
+{
+	if (Channel < 1 || Channel > 2)
 	{
-		print("Invalid CH" + Channel + " data.");
-		return;
+		print("Invalid channel number");
+		return [];
 	}
 
-	// adjust data
-	var res = [];
-	for (var i = 6; i < 2048; ++i)
-		res[i - 6] = (((data_input[i].charCodeAt(0) - 128 - p_position * 25) * p_scale / 25)*10000).toFixed(0);
+	tmc.w("data:source ch" + Channel);
+	tmc.w("data:encdg ascii");
+	tmc.w("data:width 1");
 
+	var points = TEK_tmc_ReplyNumber(tmc.q("horizontal:recordlength?"));
+	var ymult = TEK_tmc_ReplyNumber(tmc.q("wfmoutpre:ymult?"));
+	var yoff = TEK_tmc_ReplyNumber(tmc.q("wfmoutpre:yoff?"));
+	var yzero = TEK_tmc_ReplyNumber(tmc.q("wfmoutpre:yzero?"));
+	TEK_tmc_LastXIncr = TEK_tmc_ReplyNumber(tmc.q("wfmoutpre:xincr?"));
+	TEK_tmc_LastXZero = TEK_tmc_ReplyNumber(tmc.q("wfmoutpre:xzero?"));
+
+	var res = [];
+	var chunk = TEK_tmc_CurveChunk;
+	for (var start = 1; start <= points; start += chunk)
+	{
+		var stop = start + chunk - 1;
+		if (stop > points)
+			stop = points;
+
+		tmc.w("data:start " + start);
+		tmc.w("data:stop " + stop);
+
+		var raw = (tmc.q("curve?") + "").replace(/^\s+|\s+$/g, "");
+		var sp = raw.indexOf(" ");
+		if (raw.charAt(0) == ":" && sp >= 0)
+			raw = raw.substring(sp + 1).replace(/^\s+|\s+$/g, "");
+
+		var codes = raw.split(",");
+		for (var i = 0; i < codes.length; i++)
+		{
+			var token = codes[i].replace(/^\s+|\s+$/g, "");
+			if (token == "")
+				continue;
+			res.push((parseFloat(token) - yoff) * ymult + yzero);
+		}
+	}
+
+	print("CH" + Channel + " points " + res.length);
 	return res;
 }
