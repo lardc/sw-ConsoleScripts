@@ -1,0 +1,40 @@
+// Пояснения
+ITU_Start(Voltage, Current, VReadyCallback, MutePrint); // Voltage in V, Current in mA
+ITU_Cycle(Count, Voltage, Current, Sleep) // Count in , Voltage in V, Current in mA, Sleep in ms
+
+// Посмотреть версию прошивки
+PrintFWInfo();
+
+// Обновление прошивки
+FWU_ITU()
+
+// Скачать дамп регистров
+FWU_DumpITU(Num)
+
+// Загрузить на блок дамп регистров
+FWU_RestoreITU(Num)
+
+
+// Формирование и измерение
+include("TestITU.js")
+ITU_Start(500, 5, 5)
+
+// Ресурсный тест
+include("TestITU.js")
+ITU_Cycle(300, 10500, 5)
+
+// Сохранить оцифровку напряжения
+Vd_ITU = dev.raff(1)
+save('Vd_ITU.csv', Vd_ITU)
+
+// Диагностика измерения первичного напряжения
+dev.c(1)
+while(!anykey()) {p(dev.rf(230));sleep(500)}
+
+dev.c(1)
+a = Date.now(); while(!anykey()) {dev.c(16); p("ADC, V " + dev.rf(230).toFixed(1) + "; time = " + (Date.now() - a) + " ms"); sleep(100)}
+
+dev.c(1)
+a = Date.now(); while(!anykey()) {dev.c(16); p("ADC = " + dev.rf(175) + " tick; time = " + (Date.now() - a) + " ms");sleep(100)}
+
+
