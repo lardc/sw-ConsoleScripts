@@ -81,7 +81,7 @@ function CLCSU_CalibrateDAC() // калибровка ЦАП с выключен
 	{
 		CLCSU_Plot(1, 0);
 	
-		var DACCoefficients = CGEN_GetNumericCorrection(clcsu_IdSc, clcsu_IdDAC);
+		var DACCoefficients = CGEN_NumericCorrection(clcsu_IdSc, clcsu_IdDAC);
 		
 		if(clcsu_CurrentRange == 1 || clcsu_CurrentRange == 2)
 			DACCoefficients[1] = DACCoefficients[1] * 6; // в формировании тока участвуют 6 силовых плат
@@ -116,7 +116,7 @@ function CLCSU_CalibrateDAC_Fine() // калибровка ЦАП с выклю�
 		CLCSU_Plot(1, 0);
 
 		// Calculate correction
-		var DAC_FineCoefficients = CGEN_GetNumericCorrection2(clcsu_IdSc, clcsu_IdSet);
+		var DAC_FineCoefficients = CGEN_NumericCorrection2(clcsu_IdSc, clcsu_IdSet);
 		CLCSU_CalIdSet(DAC_FineCoefficients[0], DAC_FineCoefficients[1], DAC_FineCoefficients[2]);
 		CLCSU_PrintCoefIdSet();
 	}
@@ -148,7 +148,7 @@ function CLCSU_CalibrateADC() // калибровка АЦП с выключен
 
 		var clcsu_RawUnitValues = CLCSU_RawUnitValues();
 		var clcsu_RawScValues = CLCSU_RawScValuesForADC();
-		var ADCCoefficients = CGEN_GetNumericCorrection(clcsu_RawUnitValues, clcsu_RawScValues);
+		var ADCCoefficients = CGEN_NumericCorrection(clcsu_RawUnitValues, clcsu_RawScValues);
 		CLCSU_CalADC(ADCCoefficients[1], ADCCoefficients[0]);
 		CLCSU_PrintCoefADC();
 	}
@@ -182,7 +182,7 @@ function CLCSU_CalibrateId() // калибровка задания тока с 
 		CLCSU_Plot(1, 1);
 
 		// Calculate correction
-		var ADCCoefficients = CGEN_GetNumericCorrection2(clcsu_IdSet, clcsu_IdSc);
+		var ADCCoefficients = CGEN_NumericCorrection2(clcsu_IdSet, clcsu_IdSc);
 		CLCSU_CalId(ADCCoefficients[0], ADCCoefficients[1], ADCCoefficients[2]);
 		CLCSU_PrintCoefId();
 	}

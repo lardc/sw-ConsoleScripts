@@ -181,7 +181,7 @@ function CLSLPC_CalibrateDAC()
 			CLSLPC_PrintCoefIdRaw();
 
 			// IdRaw = B + K * IdSc; функция возвращает [B, K]
-			var dacCoefficients = CGEN_GetNumericCorrection(clslpc_IdSc, clslpc_IdRaw);
+			var dacCoefficients = CGEN_NumericCorrection(clslpc_IdSc, clslpc_IdRaw);
 			CLSLPC_SetCoefIdRaw(dacCoefficients[0], dacCoefficients[1]);
 			print("After");
 			CLSLPC_PrintCoefIdRaw();
@@ -284,7 +284,7 @@ function CLSLPC_CalibrateADC()
 					+ clslpc_IdMin[clslpc_CurrentRange] + " A ... " + clslpc_IdMax[clslpc_CurrentRange] + " A");
 
 			// Uadc = K * ADC + B; функция возвращает [B, K]
-			var adcCoefficients = CGEN_GetNumericCorrection(CLSLPC_RawAdcValues(), CLSLPC_UadcScValues());
+			var adcCoefficients = CGEN_NumericCorrection(CLSLPC_RawAdcValues(), CLSLPC_UadcScValues());
 			CLSLPC_SetCoefADC(adcCoefficients[0], adcCoefficients[1]);
 			print("After");
 			CLSLPC_PrintCoefADC();
@@ -369,7 +369,7 @@ function CLSLPC_CalibrateId()
 				+ clslpc_IdMin[clslpc_CurrentRange] + " A ... " + clslpc_IdMax[clslpc_CurrentRange] + " A");
 
 		// IdSc = P0 + P1 * IdSet + P2 * IdSet^2; функция возвращает [P0, P1, P2]
-		var idCoefficients = CGEN_GetNumericCorrection2(clslpc_Id, clslpc_IdSc);
+		var idCoefficients = CGEN_NumericCorrection2(clslpc_Id, clslpc_IdSc);
 		CLSLPC_SetCoefId(idCoefficients[0], idCoefficients[1], idCoefficients[2]);
 		CLSLPC_PrintCoefId();
 	}
