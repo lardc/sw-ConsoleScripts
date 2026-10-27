@@ -27,7 +27,7 @@ FWU_RestoreLSLPC()
 
 // Подготовка блока
 dev.co(7) //  номер COM-порта блока pp()
-dev.nid(150) // 151 для второго блока в связке
+dev.nid(151) // 151 для второго блока в связке
 dev.c(1)
 include("TestLSLPC.js")
 
@@ -38,6 +38,55 @@ LSLPC_Start(100)
 dev.co(12)
 include("TestLSLPC.js")
 LSLPC_ResourceTest(6500, 8)
+
+/// КАЛИБРОВКА ЦАП
+// CLSLPC_CalibrateDAC пишет K и B.
+// Перед проходом дважды подтверждается состояние регулятора (49-57) и слежения ошибки (73).
+// 0 диапазон, проход 150 - 349 А
+/ [K: 20] [B: 21]
+include("CalLSLPC.js")
+clslpc_IdMin = [160, 350, 1100]
+clslpc_IdMax = [349, 1099, 6500]
+clslpc_CurrentRange = 0
+clslpc_Points = 10
+clslpc_Rshunt = 250
+CLSLPC_Init(6, 7, 1)
+dev.nid(151)
+//dev.w(20, 507)
+//dev.w(21, 45)
+
+CLSLPC_CalibrateDAC()
+
+// 1 диапазон, проход 350 - 1099 А
+/ [K: 22] [B: 23]
+include("CalLSLPC.js")
+clslpc_IdMin = [160, 350, 1100]
+clslpc_IdMax = [349, 1099, 6500]
+clslpc_CurrentRange = 1
+clslpc_Points = 10
+clslpc_Rshunt = 250
+CLSLPC_Init(6, 7, 1)
+dev.nid(151)
+//dev.w(22, 322)
+//dev.w(23, 116)
+
+CLSLPC_CalibrateDAC()
+
+// 2 диапазон, проход 1100 - 6500 А
+/ [K: 24] [B: 25]
+include("CalLSLPC.js")
+clslpc_IdMin = [160, 350, 1100]
+clslpc_IdMax = [349, 1099, 6500]
+clslpc_CurrentRange = 2
+clslpc_Points = 10
+clslpc_Rshunt = 250
+CLSLPC_Init(6, 7, 1)
+dev.nid(151)
+//dev.w(24, 252)
+//dev.w(25, 202)
+
+CLSLPC_CalibrateDAC()
+
 
 /// КАЛИБРОВКА ИЗМЕРЕНИЯ
 // Диапазон АЦП задают регистры 0 и 1 (А * 10). Границы ЦАП — регистры 17 и 18.
@@ -58,10 +107,10 @@ clslpc_IdMax = [1000, 6500]
 clslpc_CurrentRange = 0
 clslpc_Points = 10
 clslpc_Rshunt = 250
-clslpc_Iterations = 3
+clslpc_Iterations = 1
 clslpc_SaveImage = 0
 CLSLPC_Init(6, 7, 1)
-dev.nid(150)
+dev.nid(151)
 
 CLSLPC_CalibrateADC()
 
@@ -78,7 +127,7 @@ clslpc_Rshunt = 250
 clslpc_Iterations = 1
 clslpc_SaveImage = 0
 CLSLPC_Init(6, 7, 1)
-dev.nid(150)
+dev.nid(151)
 
 CLSLPC_CalibrateADC()
 
@@ -91,15 +140,15 @@ CLSLPC_VerifyId()
 // Тонкая калибровка, 0 диапазон, проход 150 - 999 А
 / [P0: 33] [P1: 32] [P2: 31]
 include("CalLSLPC.js")
-clslpc_IdMin = [160, 1000]
-clslpc_IdMax = [999, 6500]
+clslpc_IdMin = [160, 1001]
+clslpc_IdMax = [1000, 6500]
 clslpc_CurrentRange = 0
 clslpc_Points = 10
 clslpc_Rshunt = 250
-clslpc_Iterations = 1
+clslpc_Iterations = 3
 clslpc_SaveImage = 0
 CLSLPC_Init(6, 7, 1)
-dev.nid(150)
+dev.nid(151)
 
 CLSLPC_VerifyId()
 
@@ -108,15 +157,15 @@ CLSLPC_CalibrateId()
 // Тонкая калибровка, 1 диапазон, проход 1000 - 6500 А
 / [P0: 39] [P1: 38] [P2: 37]
 include("CalLSLPC.js")
-clslpc_IdMin = [160, 1000]
-clslpc_IdMax = [999, 6500]
+clslpc_IdMin = [160, 1001]
+clslpc_IdMax = [1000, 6500]
 clslpc_CurrentRange = 1
 clslpc_Points = 10
 clslpc_Rshunt = 250
-clslpc_Iterations = 1
+clslpc_Iterations = 3
 clslpc_SaveImage = 0
 CLSLPC_Init(6, 7, 1)
-dev.nid(150)
+dev.nid(151)
 
 CLSLPC_VerifyId()
 
@@ -127,8 +176,8 @@ CLSLPC_CalibrateId()
 / [N: 34] [D: 35] [B: 36]
 / [P0: 33] [P1: 32] [P2: 31]
 include("CalLSLPC.js")
-clslpc_IdMin = [160, 1000]
-clslpc_IdMax = [999, 6500]
+clslpc_IdMin = [160, 1001]
+clslpc_IdMax = [1000, 6500]
 clslpc_CurrentRange = 0
 clslpc_Points = 7
 clslpc_Rshunt = 250
@@ -136,54 +185,7 @@ clslpc_Iterations = 1
 clslpc_SaveImage = 1
 clslpc_UseLinearSlope = 1
 CLSLPC_Init(6, 7, 1)
-dev.nid(150)
+dev.nid(151)
 
 CLSLPC_VerifyId()
 
-/// КАЛИБРОВКА ЦАП
-// CLSLPC_CalibrateDAC пишет K и B.
-// Перед проходом дважды подтверждается состояние регулятора (49-57) и слежения ошибки (73).
-// 0 диапазон, проход 150 - 349 А
-/ [K: 20] [B: 21]
-include("CalLSLPC.js")
-clslpc_IdMin = [160, 350, 1100]
-clslpc_IdMax = [349, 1099, 6500]
-clslpc_CurrentRange = 0
-clslpc_Points = 10
-clslpc_Rshunt = 250
-CLSLPC_Init(6, 7, 1)
-dev.nid(150)
-//dev.w(20, 507)
-//dev.w(21, 45)
-
-CLSLPC_CalibrateDAC()
-
-// 1 диапазон, проход 350 - 1099 А
-/ [K: 22] [B: 23]
-include("CalLSLPC.js")
-clslpc_IdMin = [160, 350, 1100]
-clslpc_IdMax = [349, 1099, 6500]
-clslpc_CurrentRange = 1
-clslpc_Points = 10
-clslpc_Rshunt = 250
-CLSLPC_Init(6, 7, 1)
-dev.nid(150)
-//dev.w(22, 322)
-//dev.w(23, 116)
-
-CLSLPC_CalibrateDAC()
-
-// 2 диапазон, проход 1100 - 6500 А
-/ [K: 24] [B: 25]
-include("CalLSLPC.js")
-clslpc_IdMin = [160, 350, 1100]
-clslpc_IdMax = [349, 1099, 6500]
-clslpc_CurrentRange = 2
-clslpc_Points = 10
-clslpc_Rshunt = 250
-CLSLPC_Init(6, 7, 1)
-dev.nid(150)
-//dev.w(24, 252)
-//dev.w(25, 202)
-
-CLSLPC_CalibrateDAC()

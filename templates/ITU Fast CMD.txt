@@ -1,5 +1,5 @@
 // Пояснения
-ITU_Start(Voltage, Current, VReadyCallback, MutePrint); // Voltage in V, Current in mA
+ITU_Start(Voltage, Current, Time, VReadyCallback, MutePrint); // Voltage in V, Current in mA, Time in sec
 ITU_Cycle(Count, Voltage, Current, Sleep) // Count in , Voltage in V, Current in mA, Sleep in ms
 
 // Посмотреть версию прошивки
@@ -14,14 +14,23 @@ FWU_DumpITU(Num)
 // Загрузить на блок дамп регистров
 FWU_RestoreITU(Num)
 
+// Калибровка нуля АЦП каналов тока
+include("TestITU.js")
+dev.c(1)
+ITU_Start(500, 5, 5)
+ITU_CalibrateRawOffset()
 
 // Формирование и измерение
 include("TestITU.js")
-ITU_Start(500, 5, 5)
+dev.c(1)
+ITU_Start(1000, 1, 5)
 
 // Ресурсный тест
+dev.co(4)
+dev.nid(24)
+dev.c(1)
 include("TestITU.js")
-ITU_Cycle(300, 10500, 5)
+ITU_Cycle(200, 14000, 5, 60, 3000)
 
 // Сохранить оцифровку напряжения
 Vd_ITU = dev.raff(1)

@@ -37,15 +37,39 @@ LSLH_ResourceTest(6000, 4)
 / (Offset: 2) (K: 3)
 / [P0: 4] [P1: 5] [P2: 6]
 include("CalLSL.js");
+clsl_ItmMin = 400
+clsl_ItmMax = 3000
+clsl_Points = 10;
+clsl_Rshunt = 250; // мкОм
+clsl_CurrentRange = 0;
+clsl_UseAvg = 0;
+clsl_Iterations = 1;
+LSLH_Compatibility = 0;
+CLSL_Init_Tek(14,16,1,2,3);
+clsl_measuring_device = "TPS2000";
+
+CLSL_VerifyItm();
+
+CLSL_CalibrateItm();
+
+////Калибровка с помощью DMM6500\\\\
+
+// Измерение тока Itm 0 диапазон DMM6500
+/ (Offset: 2) (K: 3)
+/ [P0: 4] [P1: 5] [P2: 6]
+include("CalLSL.js");
 clsl_ItmMin = 50
 clsl_ItmMax = 1000
 clsl_Points = 10;
-clsl_Rshunt = 750; // мкОм
+clsl_Rshunt = 250; // в мкОм
 clsl_CurrentRange = 0;
-clsl_UseAvg = 0;
 clsl_Iterations = 3;
-CLSL_Init_Tek(5,6,1,2,3);
-clsl_measuring_device = "TPS2000";
+clsl_UseAvg = 0;
+clsl_V_PulsePlate = 4000
+clsl_V_TriggerDelay = 3000e-6
+clsl_measuring_device = "DMM6000";
+CLSL_Init_DMM(8);
+dev.nid(9)
 
 CLSL_VerifyItm();
 
@@ -55,14 +79,15 @@ CLSL_CalibrateItm();
 / (Offset: 7) (K: 8)
 / [P0: 9] [P1: 10] [P2: 11]
 include("CalLSL.js");
-clsl_ItmMin = 1001
-clsl_ItmMax = 6000
+clsl_ItmMin = 3001
+clsl_ItmMax = 8000
 clsl_Points = 10;
 clsl_Rshunt = 250; // мкОм
 clsl_CurrentRange = 1;
-clsl_Iterations = 3;
 clsl_UseAvg = 0;
-CLSL_Init_Tek(5,6,1,2,3);
+clsl_Iterations = 1;
+LSLH_Compatibility = 0;
+CLSL_Init_Tek(14,16,1,2,3);
 clsl_measuring_device = "TPS2000";
 
 CLSL_VerifyItm();
@@ -73,13 +98,14 @@ CLSL_CalibrateItm();
 / (Offset: ) (K: )
 / [P0: 41] [P1: 42] [P2: 43]
 include("CalLSL.js");
-clsl_ItmMin = 50;
-clsl_ItmMax = 6000;
+clsl_ItmMin = 400;
+clsl_ItmMax = 8000;
 clsl_Points = 10;
 clsl_Rshunt = 250; // мкОм
-clsl_Iterations = 3;
 clsl_UseAvg = 0;
-CLSL_Init_Tek(5,6,1,2,3);
+clsl_Iterations = 1;
+LSLH_Compatibility = 0;
+CLSL_Init_Tek(14,16,1,2,3);
 clsl_measuring_device = "TPS2000";
 
 CLSL_VerifyIset();
@@ -90,14 +116,15 @@ CLSL_CalibrateIset();
 / (Offset: 12) (K: 13)
 / [P0: 14] [P1: 15] [P2: 16]
 include("CalLSL.js");
-clsl_UtmMin = 300;
-clsl_UtmMax = 5000;
+clsl_UtmMin = 400;
+clsl_UtmMax = 4500;
 clsl_Points = 10;
-clsl_Rload = 0.22 / 63 * 1000000; // мкОм
+clsl_Rload = 1000; // мкОм
 clsl_CurrentRange = 0;
-clsl_Iterations = 3;
 clsl_UseAvg = 0;
-CLSL_Init_Tek(5,6,1,2,3);
+clsl_Iterations = 3;
+LSLH_Compatibility = 0;
+CLSL_Init_Tek(14,16,2,1,3);
 clsl_measuring_device = "TPS2000";
 
 CLSL_VerifyUtm();
@@ -117,7 +144,7 @@ clsl_UgMax = 10000;
 clsl_Points = 10;
 clsl_Iterations = 3;
 clsl_UseAvg = 0;
-CLSL_Init_Tek(5,6,1,2,3);
+CLSL_Init_Tek(14,16,1,2,3);
 clsl_measuring_device = "TPS2000";
 
 CLSL_VerifyUg();
@@ -138,7 +165,7 @@ clsl_Points = 10;
 clsl_GateRshunt = 10531; // в мОм
 clsl_Iterations = 3;
 clsl_UseAvg = 0;
-CLSL_Init_Tek(5,6,1,2,3);
+CLSL_Init_Tek(14,16,1,2,3);
 clsl_measuring_device = "TPS2000";
 
 CLSL_VerifyIg();

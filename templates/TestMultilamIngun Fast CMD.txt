@@ -1,0 +1,68 @@
+// Тест Multilam / Ingun
+include("TestSCPC.js")
+dev.co(5)
+dev.c(2)
+SC_Sine(300, 0)
+
+
+
+include("TestContacts.js")
+Contacts_Init_TMC(1,2)
+Contacts_Connect(SCPC)
+dev.c(2)
+p(dev.r(96)/10 + " В")
+
+Contacts_ResourceTest(361, 10166) // 350 А
+
+
+Contacts_TestContactor(1)
+
+Contacts_Pulse(100)
+
+
+Contacts_Connect(CUHV)
+dev.c(Action_ContacsOn);
+
+Contacts_Connect(CUHV)
+dev.c(Action_ContacsOff);
+
+Contacts_Connect(SCPC)
+dev.w(0,175)
+dev.w(1,3300)
+dev.w(2,359)
+dev.w(3,37)
+dev.w(4,830)
+dev.w(5,100)
+for(reg = 6; reg <= 64; reg++){dev.w(reg,0)}
+
+
+
+
+for(reg = 0; reg <= 101; reg++){p("reg N " + reg + " = "+ dev.r(reg))}
+
+include("Tektronix_tmc.js")
+tmc.co()
+TEK_tmc_PlotChannel(2)
+
+
+include("TEK_GetData.js")
+TEK_GD_Init(11)
+
+TEK_tmc_Measure()
+
+include("TestSCPC.js")
+dev.co(6)
+dev.c(2)
+p(dev.r(96)/10 + " В")
+
+SC_Sine(150, 0)
+
+FWUpdateSTM("D:/Avocado/SCTU/SCPC/Controller soft/Version 1.1/Soft/Debug/Exe/SCPowerCell.bin");
+
+// Old
+Contacts_Init(11,1,2,3)
+
+Ж - напряжение на шунте 0,1 Ом, ток первички 7,8 А
+С - напряжение на затворе нижнего мосфета
+Р - напряжение на выходной нагрузке 10 Ом, выходной ток 222 мА
+
