@@ -24,11 +24,11 @@ FWU_CROVU();
 
 // Скачать дамп регистров
 i("FWUpdate.js");
-FWU_DumpCROVU(000);
+FWU_DumpCROVU(1);
 
 // Загрузить дамп регистров
 i("FWUpdate.js");
-FWU_RestoreCROVU(000);
+FWU_RestoreCROVU(1);
 
 // Подготовка блока
 dev.co(4); //  номер COM-порта блока pp()
@@ -42,13 +42,19 @@ dev.c(1);
 include("TestdVdt.js");
 dvdt_DeviderRate = 1;
 dVdt_CellPulse(1, 900, 2000, 0, 1);
-dVdt_StartPulse(400, 20);
+dVdt_StartPulse(500, 20);
 
 // Отладка в комплексе
 dev.co(1)
 dev.nid(1)
 dev.c(115)
 dev.nid(7)
+
+//
+dev.co(4)
+dev.nid(7)
+include("TestdVdt.js");
+dVdt_PowerDriver(3)
 
 // Получение dVdt по точкам осциллографа
 include("Tektronix.js")
@@ -169,22 +175,22 @@ CdVdt_Init(12, 13, 1);
 CdVdt_CellCalibrateRateA([1,2,3,4,5]);
 
 // Калибровка скорости для универсальной прошивки
-dev.co(12)
-dev.nid(1)
-dev.c(1)
-dev.c(115)
+//dev.co(12)
+//dev.nid(1)
+//dev.c(1)
+//dev.c(115)
 include(“CaldVdt.js”);
 cdvdt_HVProbeScale = 1000;
-cdvdt_RatePoint = [500, 1000, 1600, 2000, 2500];
-cdvdt_Vmin = 800;
-cdvdt_Vmax = 4500;
+cdvdt_RatePoint = [20, 50, 100, 200];
+cdvdt_Vmin = 402;
+cdvdt_Vmax = 4355;
 cdvdt_Points = 10;
 cdvdt_iterations = 1;
-cdvdt_MeasureMethod = dVdt_Approx; // dVdt_AutoCursor, dVdt_Approx
+cdvdt_MeasureMethod = dVdt_AutoCursor; // dVdt_AutoCursor, dVdt_Approx
 cdvdt_def_UseSaveImage = false;
 cdvdt_def_UseAverage = cdvdt_NO_AVERAGES
-CdVdt_Init(12, 13, 1);
-// dev.nid(7)
+CdVdt_Init(4, 8, 1);
+dev.nid(7)
 
 CdVdt_VerifyRate()
 
@@ -199,14 +205,14 @@ include(“CaldVdt.js”);
 cdvdt_HVProbeScale = 1000;
 cdvdt_RatePoint = [500, 1000, 1600, 2000, 2500];
 cdvdt_Vmin = 1000;
-cdvdt_Vmax = 3500;
+cdvdt_Vmax = 4500;
 cdvdt_Points = 10;
-cdvdt_iterations = 1;
-cdvdt_MeasureMethod = dVdt_Approx; // dVdt_AutoCursor, dVdt_Approx
+cdvdt_iterations = 10;
+cdvdt_MeasureMethod = dVdt_AutoCursor; // dVdt_AutoCursor, dVdt_Approx
 cdvdt_def_UseSaveImage = false;
 cdvdt_def_UseAverage = cdvdt_NO_AVERAGES
-CdVdt_Init(12, 13, 1);
-// dev.nid(7)
+CdVdt_Init(3, 4, 1);
+//dev.nid(7)
 
 CdVdt_CalibrateV()
 
