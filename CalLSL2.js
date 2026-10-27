@@ -5,6 +5,7 @@ include("Tektronix.js")
 include("DMM6500.js")
 include("PrintStatus.js")
 include("Numeric.js")
+include("TestLSLH.js")
 
 // variables
 clsl_Rshunt = 750;					// in uOhms
@@ -178,6 +179,11 @@ function CLSL_CheckVersion()
 // general
 function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channelSync)
 {
+	// Init device port
+	dev.Disconnect();
+	dev.co(portDevice);
+	dev.nid(2)
+
 	CLSL_CheckVersion();
 
 	if (channelMeasureU < 1 || channelMeasureU > 4 ||
@@ -186,10 +192,6 @@ function CLSL_Init(portDevice, portTek, channelMeasureI, channelMeasureU, channe
 		print("Wrong channel numbers");
 		return;
 	}
-
-	// Init device port
-	dev.Disconnect();
-	dev.co(portDevice);
 
 	// Copy channel information
 	clsl_chMeasureU = channelMeasureU;
@@ -1350,7 +1352,7 @@ function CLSL_CollectItm(CurrentValues, IterationsCount)
 			var AvgNum;
 			if(clsl_measuring_device == "TPS2000")
 			{
-				if (CurrentValues[j] * clsl_Rshunt < 0.3)
+				if (CurrentValues[j] * clsl_Rshunt / 1000000 < 0.3)
 				{
 					AvgNum = 4;
 					TEK_AcquireAvg(AvgNum);
@@ -1367,10 +1369,10 @@ function CLSL_CollectItm(CurrentValues, IterationsCount)
 			print("-- result " + clsl_CntDone++ + " of " + clsl_CntTotal + " --");
 			//
 			if(clsl_measuring_device == "TPS2000")
-				CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_Rshunt);
+				CLSL_TekScale(clsl_chMeasureI, CurrentValues[j] * clsl_Rshunt / 1000000);
 			else if (clsl_measuring_device == "DMM6000")
 			{
-				KEI_SetVoltageRange(CurrentValues[j] * clsl_Rshunt);
+				KEI_SetVoltageRange(CurrentValues[j] * clsl_Rshunt / 1000000);
 				KEI_ActivateTrigger();
 			}
 
@@ -1392,9 +1394,9 @@ function CLSL_CollectItm(CurrentValues, IterationsCount)
 
 			// Scope data
 			if(clsl_measuring_device == "TPS2000")
-				var ItmSc = (CLSL_Measure(clsl_chMeasureI) / clsl_Rshunt).toFixed(2);
+				var ItmSc = (CLSL_Measure(clsl_chMeasureI) / clsl_Rshunt * 1000000).toFixed(2);
 			else if (clsl_measuring_device == "DMM6000")
-				var ItmSc = (KEI_ReadArrayMaximum() / clsl_Rshunt).toFixed(3);
+				var ItmSc = (KEI_ReadArrayMaximum() / clsl_Rshunt * 1000000).toFixed(3);
 
 			clsl_ItmSc.push(ItmSc);
 
