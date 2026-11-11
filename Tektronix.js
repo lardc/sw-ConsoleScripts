@@ -10,7 +10,7 @@ function TEK_PortInit(PortNumber, BaudeRate)
 		devTek = cfg.CreateDevice();
 	
 	if (typeof BaudeRate === 'undefined')
-		BaudeRate = 9600;
+		BaudeRate = 19200;
 	
 	devTek.Connect(PortNumber, BaudeRate);
 }
