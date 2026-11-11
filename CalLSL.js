@@ -84,6 +84,8 @@ function CLSL_Init_Tek(portDevice, nid, portTek, channelMeasureI, channelMeasure
 	clsl_chSync = channelSync;
 
 	TEK_PortInit(portTek);
+	if (!CLSL_TekCheck(portTek))
+		return;
 	TEK_ChannelInit(clsl_chMeasureI, "1", "1");
 	TEK_ChannelInit(clsl_chMeasureU, "1", "1");
 	CLSL_SyncInit();
@@ -108,6 +110,42 @@ function CLSL_ConnectDevice(portDevice, nid)
 	print("Nid " + nid + (nid == 0 ? ", RS-232" : ", CAN"));
 	PrintFWInfo();
 	LSLH_CheckVersion();
+}
+
+// Связь с осциллографом: запрос *idn?. TEK_Send ответа не ждёт, без проверки команды теряются молча.
+clsl_TekReady = true;
+
+function CLSL_TekCheck(portTek)
+{
+	var id = "";
+	try
+	{
+		id = TEK_Exec("*idn?");
+	}
+	catch (e)
+	{
+		id = "";
+	}
+
+	clsl_TekReady = (id != "");
+	if (clsl_TekReady)
+		print("Осциллограф, порт " + portTek + ": " + id);
+	else
+		print("Осциллограф не отвечает на порту " + portTek + ". Проверьте кабель, порт и скорость RS-232 (19200).");
+
+	return clsl_TekReady;
+}
+
+// Перед калибровкой: если выбран осциллограф и он не ответил в CLSL_Init_Tek, коэффициенты не трогаем
+function CLSL_MeterReady()
+{
+	if (CLSL_IsTek() && !clsl_TekReady)
+	{
+		print("Осциллограф не отвечает. Повторите CLSL_Init_Tek после проверки связи.");
+		return false;
+	}
+
+	return true;
 }
 
 function CLSL_ChannelOk(Channel)
@@ -135,7 +173,7 @@ function CLSL_RequireLinear()
 {
 	LSLH_CheckVersion();
 	if (LSLH_Linear)
-		return true;
+		return CLSL_MeterReady();
 
 	print("Команда только для линейного блока, включая SCHead. Сейчас: " + LSLH_VersionText);
 	return false;
@@ -145,7 +183,7 @@ function CLSL_RequireGateControl()
 {
 	LSLH_CheckVersion();
 	if (LSLH_GateControl)
-		return true;
+		return CLSL_MeterReady();
 
 	print("Калибровка управления только для линейного блока без SCHead и без ШИМ. Сейчас: " + LSLH_VersionText);
 	return false;
@@ -155,7 +193,7 @@ function CLSL_RequirePwmOrIar()
 {
 	LSLH_CheckVersion();
 	if (LSLH_PWM || LSLH_LinearIAR)
-		return true;
+		return CLSL_MeterReady();
 
 	print("Команда только для ШИМ и линейного IAR. Сейчас: " + LSLH_VersionText);
 	return false;
@@ -462,6 +500,9 @@ function CLSL_VerifyIset()
 function CLSL_RunIset(Calibrate)
 {
 	LSLH_CheckVersion();
+
+	if (!CLSL_MeterReady())
+		return;
 
 	if (LSLH_PWM)
 	{
