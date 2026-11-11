@@ -14,12 +14,59 @@ GatePulseDelay	= 0;		// uS
 //
 LSLH_Print = 1;
 
-// Переменные совместимости
-LSLH_Compatibility = 1; // 0 для LSLH, в которых отсуствует возможность программной настройки сигнала управления
+// Версия определяется по регистрам в LSLH_CheckVersion().
+// Пустой LSLH_VersionText — версия ещё не определялась.
+LSLH_PWM = false;
+LSLH_LinearIAR = false;
+LSLH_Linear = false;
+LSLH_SCHead = false;
+LSLH_GateControl = false;
+LSLH_VersionText = "";
+
+// Узел выбирает пользователь до вызова функций: dev.nid(0) — блок напрямую по RS-232,
+// dev.nid(2) — блок на CAN за платой ControlUnitBoard.
+
+function LSLH_RegsZero(First, Last)
+{
+	for (var i = First; i <= Last; i++)
+		if (dev.r(i) != 0)
+			return false;
+
+	return true;
+}
+
+// ШИМ — регистры 4–8 равны 0. Линейный IAR — регистры 31–33 равны 0. Иначе линейный Atolic.
+// Регистр 71 — признак старой платы SCHead, только у линейного Atolic.
+function LSLH_CheckVersion()
+{
+	LSLH_PWM = LSLH_RegsZero(4, 8);
+	LSLH_LinearIAR = !LSLH_PWM && LSLH_RegsZero(31, 33);
+	LSLH_Linear = !LSLH_PWM && !LSLH_LinearIAR;
+	LSLH_SCHead = LSLH_Linear && dev.r(71) != 0;
+	LSLH_GateControl = LSLH_Linear && !LSLH_SCHead;
+
+	var versionText = "ШИМ";
+	if (LSLH_LinearIAR)
+		versionText = "линейный IAR";
+	else if (LSLH_SCHead)
+		versionText = "линейный SCHead";
+	else if (LSLH_Linear)
+		versionText = "линейный, управление доступно";
+
+	if (versionText != LSLH_VersionText)
+	{
+		LSLH_VersionText = versionText;
+		print("Версия LSL: " + versionText);
+	}
+}
 
 function LSLH_StartMeasure(Current)
 {
-	if (LSLH_Compatibility)
+	// Версия определяется один раз. После смены блока вызвать LSLH_CheckVersion() заново.
+	if (LSLH_VersionText == "")
+		LSLH_CheckVersion();
+
+	if (LSLH_GateControl)
 	{
 		dev.w(150, GatePulseTime);
 		dev.w(151, GateVoltage);
@@ -66,11 +113,9 @@ function LSLH_StartMeasure(Current)
 		while(dev.r(192) != DS_Ready) sleep(500);
 		
 		if(LSLH_Print)
-		{			
-			var Current = dev.r(206) + dev.r(205) / 10;
-			
+		{
 			print("DutVoltage, mV : " + dev.r(198));
-			print("DutCurrent, A  : " + Current);
+			print("DutCurrent, A  : " + (dev.r(206) + dev.r(205) / 10));
 			print("GateVoltage, mV: " + dev.r(202));
 			print("GateCurrent, mA: " + dev.r(203));
 			print("---------------------------");
@@ -82,6 +127,25 @@ function LSLH_StartMeasure(Current)
 		PrintStatus();
 	
 	return 0;
+}
+//--------------------------
+
+function LSLH_Pad2(Value)
+{
+	return (Value < 10 ? "0" : "") + Value;
+}
+
+// EP16: 1 Id, 2 Vd, 3 Ig, 4 Vg. Имя файла: номер EP, название графика, дата и время.
+function LSLH_SaveCSV_EP()
+{
+	var now = new Date();
+	var Suffix = LSLH_Pad2(now.getDate()) + "." + LSLH_Pad2(now.getMonth() + 1) + "." + now.getFullYear() + "_"
+		+ LSLH_Pad2(now.getHours()) + "-" + LSLH_Pad2(now.getMinutes()) + "-" + LSLH_Pad2(now.getSeconds());
+
+	save("data/LSLH_EP1_Id_" + Suffix + ".csv", dev.rafs(1));
+	save("data/LSLH_EP2_Vd_" + Suffix + ".csv", dev.rafs(2));
+	save("data/LSLH_EP3_Ig_" + Suffix + ".csv", dev.rafs(3));
+	save("data/LSLH_EP4_Vg_" + Suffix + ".csv", dev.rafs(4));
 }
 //--------------------------
 
@@ -458,4 +522,4 @@ function LVTM_TEK_Cursor(Channel)
 	TEK_Send("cursor:function vbars");
 	TEK_Send("cursor:vbars:position1 5e-3");
 }
-//----------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------
