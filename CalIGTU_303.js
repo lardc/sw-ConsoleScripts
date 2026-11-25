@@ -80,22 +80,40 @@ function CIGTU_Calibrate(Calibration_Type, Current_Range)
 	CalibrationType = Calibration_Type;
 	CurrentRange = Current_Range;
 	CIGTU_ResetA();
+
+	var SavedCoef = CIGTU_ReadCal(CalibrationType, CurrentRange);
 	CIGTU_ResetCal(CalibrationType, CurrentRange);
-	if (CIGTU_Collect(cigtu_Iterations, CalibrationType, CurrentRange))
-		CIGTU_Save(CIGTU_NameSwitch(CalibrationType, CurrentRange));
+
+	var CollectOk = 0;
+	try
+	{
+		CollectOk = CIGTU_Collect(cigtu_Iterations, CalibrationType, CurrentRange);
+	}
+	catch (e)
+	{
+		CIGTU_RestoreCal(SavedCoef, CalibrationType, CurrentRange);
+		throw e;
+	}
+
+	if (!CollectOk)
+	{
+		CIGTU_RestoreCal(SavedCoef, CalibrationType, CurrentRange);
+		return;
+	}
+
+	CIGTU_Save(CIGTU_NameSwitch(CalibrationType, CurrentRange));
 
 	// Plot relative error distribution
-	scattern(cigtu_sc, cigtu_err, "Messure", "Error (in %)", CIGTU_NameSwitch(CalibrationType, CurrentRange)); 
+	scattern(cigtu_sc, cigtu_err, "Messure", "Error (in %)", CIGTU_NameSwitch(CalibrationType, CurrentRange));
 	sleep(200);
 	scattern(cigtu_sc, cigtu_err_sum, "Messure", "Sum Error (in %)", CIGTU_NameSwitch(CalibrationType, CurrentRange));
-	
+
 	// Calculate correction
 	cigtu_corr = CGEN_GetCorrection2(CIGTU_NameSwitch(CalibrationType, CurrentRange));
-	CIGTU_WriteCal(cigtu_corr, CalibrationType, CurrentRange)
+	CIGTU_WriteCal(cigtu_corr, CalibrationType, CurrentRange);
 
-		
 	// Print correction
-	CIGTU_PrintCoef(CalibrationType, CurrentRange)
+	CIGTU_PrintCoef(CalibrationType, CurrentRange);
 }
 //--------------------
 // Верификация
@@ -104,11 +122,13 @@ function CIGTU_Verify(Calibration_Type, Current_Range)
 	CalibrationType = Calibration_Type;
 	CurrentRange = Current_Range;
 	CIGTU_ResetA();
-	if (CIGTU_Collect(cigtu_Iterations, CalibrationType, CurrentRange))
-		CIGTU_Save(CIGTU_NameSwitch(CalibrationType, CurrentRange))
+	if (!CIGTU_Collect(cigtu_Iterations, CalibrationType, CurrentRange))
+		return;
+
+	CIGTU_Save(CIGTU_NameSwitch(CalibrationType, CurrentRange));
 
 	// Plot relative error distribution
-	scattern(cigtu_sc, cigtu_err, "Messure", "Error (in %)", CIGTU_NameSwitch(CalibrationType, CurrentRange)); 
+	scattern(cigtu_sc, cigtu_err, "Messure", "Error (in %)", CIGTU_NameSwitch(CalibrationType, CurrentRange));
 	sleep(200);
 	scattern(cigtu_sc, cigtu_err_sum, "Messure", "Sum Error (in %)", CIGTU_NameSwitch(CalibrationType, CurrentRange));
 }
@@ -412,6 +432,27 @@ function CIGTU_SetCoef(Reg, Data)
 }
 //--------------------
 //
+function CIGTU_ReadCal(CalibrationType, CurrentRange)
+{
+	var RegList = CIGTU_GetCoefReg(CalibrationType, CurrentRange);
+	var Result = [];
+
+	for (var i = 0; i < RegList.length; i++)
+		Result.push([dev.rf(RegList[i][0]), dev.rf(RegList[i][1]), dev.rf(RegList[i][2])]);
+
+	return Result;
+}
+//--------------------
+//
+function CIGTU_RestoreCal(SavedData, CalibrationType, CurrentRange)
+{
+	var RegList = CIGTU_GetCoefReg(CalibrationType, CurrentRange);
+
+	for (var i = 0; i < RegList.length; i++)
+		CIGTU_SetCoef(RegList[i], SavedData[i]);
+}
+//--------------------
+//
 function CIGTU_ResetCal(CalibrationType, CurrentRange)
 {
 	var RegList = CIGTU_GetCoefReg(CalibrationType, CurrentRange);
@@ -555,63 +596,111 @@ function CIGTU_ApplyHMIUArgs(calType, rangeId, rangeMin, rangeMax, count, verifi
 function CIGTU_VerifyVmes(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	CIGTU_ApplyHMIUArgs(cigtu_Cal_Vmes, rangeId, rangeMin, rangeMax, count, verificationCount, resistance);
-	CIGTU_Verify(cigtu_Cal_Vmes, rangeId);
-	cigtu_HMIU = 0;
-	return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	try
+	{
+		CIGTU_Verify(cigtu_Cal_Vmes, rangeId);
+		return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	}
+	finally
+	{
+		cigtu_HMIU = 0;
+	}
 }
 
 function CIGTU_CalibrateVmes(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	CIGTU_ApplyHMIUArgs(cigtu_Cal_Vmes, rangeId, rangeMin, rangeMax, count, verificationCount, resistance);
-	CIGTU_Calibrate(cigtu_Cal_Vmes, rangeId);
-	cigtu_HMIU = 0;
-	return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	try
+	{
+		CIGTU_Calibrate(cigtu_Cal_Vmes, rangeId);
+		return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	}
+	finally
+	{
+		cigtu_HMIU = 0;
+	}
 }
 
 function CIGTU_VerifyVpotmes(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	CIGTU_ApplyHMIUArgs(cigtu_Cal_Vpotmes, rangeId, rangeMin, rangeMax, count, verificationCount, resistance);
-	CIGTU_Verify(cigtu_Cal_Vpotmes, rangeId);
-	cigtu_HMIU = 0;
-	return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	try
+	{
+		CIGTU_Verify(cigtu_Cal_Vpotmes, rangeId);
+		return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	}
+	finally
+	{
+		cigtu_HMIU = 0;
+	}
 }
 
 function CIGTU_CalibrateVpotmes(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	CIGTU_ApplyHMIUArgs(cigtu_Cal_Vpotmes, rangeId, rangeMin, rangeMax, count, verificationCount, resistance);
-	CIGTU_Calibrate(cigtu_Cal_Vpotmes, rangeId);
-	cigtu_HMIU = 0;
-	return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	try
+	{
+		CIGTU_Calibrate(cigtu_Cal_Vpotmes, rangeId);
+		return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	}
+	finally
+	{
+		cigtu_HMIU = 0;
+	}
 }
 
 function CIGTU_VerifyVset(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	CIGTU_ApplyHMIUArgs(cigtu_Cal_Vset, rangeId, rangeMin, rangeMax, count, verificationCount, resistance);
-	CIGTU_Verify(cigtu_Cal_Vset, rangeId);
-	cigtu_HMIU = 0;
-	return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	try
+	{
+		CIGTU_Verify(cigtu_Cal_Vset, rangeId);
+		return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	}
+	finally
+	{
+		cigtu_HMIU = 0;
+	}
 }
 
 function CIGTU_CalibrateVset(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	CIGTU_ApplyHMIUArgs(cigtu_Cal_Vset, rangeId, rangeMin, rangeMax, count, verificationCount, resistance);
-	CIGTU_Calibrate(cigtu_Cal_Vset, rangeId);
-	cigtu_HMIU = 0;
-	return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	try
+	{
+		CIGTU_Calibrate(cigtu_Cal_Vset, rangeId);
+		return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	}
+	finally
+	{
+		cigtu_HMIU = 0;
+	}
 }
 
 function CIGTU_VerifyImes(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	CIGTU_ApplyHMIUArgs(cigtu_Cal_Imes, rangeId, rangeMin, rangeMax, count, verificationCount, resistance);
-	CIGTU_Verify(cigtu_Cal_Imes, rangeId);
-	cigtu_HMIU = 0;
-	return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	try
+	{
+		CIGTU_Verify(cigtu_Cal_Imes, rangeId);
+		return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	}
+	finally
+	{
+		cigtu_HMIU = 0;
+	}
 }
 
 function CIGTU_CalibrateImes(rangeId, rangeMin, rangeMax, count, verificationCount, resistance, addedResistance)
 {
 	CIGTU_ApplyHMIUArgs(cigtu_Cal_Imes, rangeId, rangeMin, rangeMax, count, verificationCount, resistance);
-	CIGTU_Calibrate(cigtu_Cal_Imes, rangeId);
-	cigtu_HMIU = 0;
-	return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	try
+	{
+		CIGTU_Calibrate(cigtu_Cal_Imes, rangeId);
+		return [cigtu_set, cigtu, cigtu_sc, cigtu_err];
+	}
+	finally
+	{
+		cigtu_HMIU = 0;
+	}
 }
